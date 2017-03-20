@@ -16,9 +16,6 @@
 
 package io.vitess.jdbc;
 
-import io.vitess.proto.Topodata;
-import io.vitess.util.Constants;
-import io.vitess.util.StringUtils;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.sql.SQLException;
@@ -28,6 +25,9 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
+import io.vitess.util.Constants;
+import io.vitess.util.StringUtils;
 
 /**
  * VitessJDBCUrl is responsible for parsing a driver URL and Properties object,
@@ -44,12 +44,9 @@ import java.util.regex.Pattern;
  */
 public class VitessJDBCUrl {
 
-    private final String username;
     private final String url;
     private final List<HostInfo> hostInfos;
-    private final String keyspace;
     private final Properties info;
-    private String catalog;
 
     /*
      Assuming List of vtGate ips could be given in url, separated by ","
@@ -149,25 +146,42 @@ public class VitessJDBCUrl {
 
         info = getURLParamProperties(m.group(12), info);
 
-        this.username =
-            (m.group(3) == null ? info.getProperty(Constants.Property.USERNAME) : m.group(3));
+        addParameterIfNew(Constants.Property.USERNAME, m.group(3), info);
         // Will add password property once its supported from vitess
-        // this.password = (m.group(5) == null ? info.getProperty("password") : m.group(5));
+        // addParameterIfNew(Constants.Property.PASSWORD, m.group(5), info)
+        String keyspaceShard = m.group(8);
+        String dbName = m.group(10);
+
+        // keyspaceShard can contain just a keyspace, or have a shard suffix if it is quoted. Shard suffix is
+        // separated by a slash. If dbName is empty, use keyspace but don't include the shard suffix
+        if (!StringUtils.isNullOrEmptyWithoutWS(keyspaceShard)) {
+            char start = keyspaceShard.charAt(0);
+            if (start == keyspaceShard.charAt(keyspaceShard.length() - 1) &&
+                start == '\'' || start == '`' || start == '"') {
+                keyspaceShard = keyspaceShard.substring(1, keyspaceShard.length() - 1);
+                if (StringUtils.isNullOrEmptyWithoutWS(dbName)) {
+                    dbName = keyspaceShard;
+                    int idx = dbName.indexOf("/");
+                    if (idx != -1) {
+                        dbName = dbName.substring(0, idx);
+                    }
+                }
+            } else if (StringUtils.isNullOrEmptyWithoutWS(dbName)) {
+                dbName = keyspaceShard;
+            }
+        }
+
+        addParameterIfNew(Constants.Property.KEYSPACE, keyspaceShard, info);
+        addParameterIfNew(Constants.Property.DBNAME, dbName, info);
+
         String postUrl = m.group(6);
         if (null == postUrl) {
             throw new SQLException(Constants.SQLExceptionMessages.MALFORMED_URL);
         }
 
-        this.keyspace = StringUtils.isNullOrEmptyWithoutWS(m.group(8)) ? null : m.group(8);
-        this.catalog =
-            StringUtils.isNullOrEmptyWithoutWS(m.group(10)) ? this.keyspace : m.group(10);
         this.hostInfos = getURLHostInfos(postUrl);
         this.url = url;
         this.info = info;
-    }
-
-    public String getUsername() {
-        return username;
     }
 
     public String getUrl() {
@@ -176,18 +190,6 @@ public class VitessJDBCUrl {
 
     public List<HostInfo> getHostInfos() {
         return hostInfos;
-    }
-
-    public String getKeyspace() {
-        return keyspace;
-    }
-
-    public String getCatalog() {
-        return catalog;
-    }
-
-    public void setCatalog(String catalog) {
-        this.catalog = catalog;
     }
 
     /**
@@ -221,19 +223,31 @@ public class VitessJDBCUrl {
                     }
                 }
 
-                // Per the mysql-connector-java docs, passed in Properties values should take precedence over
-                // those in the URL. See javadoc for NonRegisteringDriver#connect
-                if ((null != value && value.length() > 0) && (parameter.length() > 0) && null == info.getProperty(parameter)) {
-                    try {
-                        info.put(parameter, URLDecoder.decode(value, "UTF-8"));
-                    } catch (UnsupportedEncodingException | NoSuchMethodError badEncoding) {
-                        throw new SQLException(Constants.SQLExceptionMessages.MALFORMED_URL);
-                    }
-                }
+                addParameterIfNew(parameter, value, info);
             }
         }
 
         return info;
+    }
+
+    /**
+     * Per the mysql-connector-java docs, passed in Properties values should take precedence over
+     * those in the URL. See javadoc for NonRegisteringDriver#connect
+     * @param parameter
+     *          parameter to set if it doesn't already exist in the properties object
+     * @param value
+     *          value to set for the parameter
+     * @param info
+     *          properties object to set the value on
+     */
+    private static void addParameterIfNew(String parameter, String value, Properties info) throws SQLException {
+        if (!StringUtils.isNullOrEmptyWithoutWS(value) && null == info.getProperty(parameter)) {
+            try {
+                info.put(parameter, URLDecoder.decode(value, "UTF-8"));
+            } catch (UnsupportedEncodingException | NoSuchMethodError badEncoding) {
+                throw new SQLException(Constants.SQLExceptionMessages.MALFORMED_URL);
+            }
+        }
     }
 
     /**

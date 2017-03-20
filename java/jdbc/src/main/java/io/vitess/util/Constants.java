@@ -27,7 +27,7 @@ public class Constants {
     public static final boolean JDBC_COMPLIANT = false;
     public static final String URL_PREFIX = "jdbc:vitess://";
     public static final String URL_PATTERN =
-        "^jdbc:(vitess)://((\\w+)(:(\\w*))?@)?([^/?]*)(/([^/?]*))?(/(\\w+))?(\\?(\\S+))?";
+        "^jdbc:(vitess)://((\\w+)(:(\\w*))?@)?([^/?]*)(/([^'\"`/?]+|['\"`][^'\"`]+['\"`]))?(/(\\w+))?(\\?(\\S+))?";
     public static final String VITESS_HOST = "Hostname of Vitess Server";
     public static final String VITESS_PORT = "Port number of Vitess Server";
     public static final String VITESS_DB_NAME = "Database name";
@@ -45,7 +45,7 @@ public class Constants {
     //Default Timeout in miliseconds
     public static final int DEFAULT_TIMEOUT = 30000;
     public static final String SQL_SHOW = "show";
-    public static final String VITESS_KEYSPACE = "Keyspace name in Vitess Server";
+    public static final String VITESS_KEYSPACE = "Keyspace name in Vitess Server, with optional shard separated by /";
     public static final Constants.QueryExecuteType DEFAULT_EXECUTE_TYPE = QueryExecuteType.SIMPLE;
     public static final String EXECUTE_TYPE_DESC = "Query execution type: simple or stream \n";
     public static final String USERNAME_DESC = "Username used for ACL validation \n";

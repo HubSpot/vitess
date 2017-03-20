@@ -16,9 +16,23 @@
 
 package io.vitess.client.grpc;
 
+import java.io.IOException;
+import java.sql.SQLException;
+import java.sql.SQLIntegrityConstraintViolationException;
+import java.sql.SQLInvalidAuthorizationSpecException;
+import java.sql.SQLNonTransientException;
+import java.sql.SQLRecoverableException;
+import java.sql.SQLSyntaxErrorException;
+import java.sql.SQLTimeoutException;
+import java.sql.SQLTransientException;
+import java.util.concurrent.TimeUnit;
+
+import org.joda.time.Duration;
+
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+
 import io.grpc.ManagedChannel;
 import io.grpc.StatusRuntimeException;
 import io.vitess.client.Context;
@@ -62,17 +76,6 @@ import io.vitess.proto.Vtgate.StreamExecuteShardsResponse;
 import io.vitess.proto.grpc.VitessGrpc;
 import io.vitess.proto.grpc.VitessGrpc.VitessFutureStub;
 import io.vitess.proto.grpc.VitessGrpc.VitessStub;
-import java.io.IOException;
-import java.sql.SQLException;
-import java.sql.SQLIntegrityConstraintViolationException;
-import java.sql.SQLInvalidAuthorizationSpecException;
-import java.sql.SQLNonTransientException;
-import java.sql.SQLRecoverableException;
-import java.sql.SQLSyntaxErrorException;
-import java.sql.SQLTimeoutException;
-import java.sql.SQLTransientException;
-import java.util.concurrent.TimeUnit;
-import org.joda.time.Duration;
 
 /**
  * GrpcClient is a gRPC-based implementation of Vitess RpcClient.

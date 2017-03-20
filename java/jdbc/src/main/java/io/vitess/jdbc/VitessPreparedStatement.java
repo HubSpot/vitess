@@ -59,6 +59,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Logger;
 
+
 /**
  * Created by harshit.gangal on 25/01/16.
  * <p>
@@ -125,7 +126,7 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
 
         showSql = StringUtils.startsWithIgnoreCaseAndWs(this.sql, Constants.SQL_SHOW);
         try {
-            if (showSql) {
+            if (showSql && !vitessConnection.getIsSingleShard()) {
                 cursor = this.executeShow(this.sql);
             } else {
                 if (tabletType != Topodata.TabletType.MASTER || this.vitessConnection
@@ -134,7 +135,7 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
                         this.vitessConnection.createContext(this.queryTimeoutInMillis);
                     if (vitessConnection.isSimpleExecute()) {
                         cursor =
-                            vtGateConn.execute(context, this.sql, this.bindVariables, tabletType, vitessConnection.getIncludedFields())
+                            vtGateConn.execute(context, this.sql, this.bindVariables, tabletType, vitessConnection.getIncludedFields(), vitessConnection.getSession())
                                 .checkedGet();
                     } else {
                         cursor = vtGateConn
@@ -145,7 +146,7 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
                     if (vtGateTx == null) {
                         Context context =
                             this.vitessConnection.createContext(this.queryTimeoutInMillis);
-                        vtGateTx = vtGateConn.begin(context).checkedGet();
+                        vtGateTx = vtGateConn.begin(context, vitessConnection.getIsSingleShard()).checkedGet();
                         this.vitessConnection.setVtGateTx(vtGateTx);
                     }
                     Context context =
@@ -189,14 +190,14 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
         try {
             if (this.vitessConnection.getAutoCommit()) {
                 Context context = this.vitessConnection.createContext(this.queryTimeoutInMillis);
-                cursor = vtGateConn.execute(context, this.sql, this.bindVariables, tabletType, vitessConnection.getIncludedFields())
+                cursor = vtGateConn.execute(context, this.sql, this.bindVariables, tabletType, vitessConnection.getIncludedFields(), vitessConnection.getSession())
                     .checkedGet();
             } else {
                 VTGateTx vtGateTx = this.vitessConnection.getVtGateTx();
                 if (null == vtGateTx) {
                     Context context =
                         this.vitessConnection.createContext(this.queryTimeoutInMillis);
-                    vtGateTx = vtGateConn.begin(context).checkedGet();
+                    vtGateTx = vtGateConn.begin(context, vitessConnection.getIsSingleShard()).checkedGet();
                     this.vitessConnection.setVtGateTx(vtGateTx);
                 }
 
@@ -245,6 +246,10 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
         showSql = StringUtils.startsWithIgnoreCaseAndWs(this.sql, Constants.SQL_SHOW);
 
         if (showSql) {
+            if (vitessConnection.getIsSingleShard()) {
+                this.executeQuery();
+                return true;
+            }
             cursor = this.executeShow(this.sql);
             if (!(null == cursor || null == cursor.getFields() || cursor.getFields().isEmpty())) {
                 this.vitessResultSet = new VitessResultSet(cursor, this);
@@ -466,14 +471,14 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
             if (this.vitessConnection.getAutoCommit()) {
                 Context context = this.vitessConnection.createContext(this.queryTimeoutInMillis);
                 cursorWithErrorList =
-                    vtGateConn.executeBatch(context, batchedQueries, batchedArgs, tabletType, vitessConnection.getIncludedFields())
+                    vtGateConn.executeBatch(context, batchedQueries, batchedArgs, tabletType, vitessConnection.getIncludedFields(), vitessConnection.getSession())
                         .checkedGet();
             } else {
                 vtGateTx = this.vitessConnection.getVtGateTx();
                 if (null == vtGateTx) {
                     Context context =
                         this.vitessConnection.createContext(this.queryTimeoutInMillis);
-                    vtGateTx = vtGateConn.begin(context).checkedGet();
+                    vtGateTx = vtGateConn.begin(context, vitessConnection.getIsSingleShard()).checkedGet();
                     this.vitessConnection.setVtGateTx(vtGateTx);
                 }
 

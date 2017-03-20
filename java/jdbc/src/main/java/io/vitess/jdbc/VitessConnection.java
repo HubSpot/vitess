@@ -16,12 +16,6 @@
 
 package io.vitess.jdbc;
 
-import io.vitess.client.Context;
-import io.vitess.client.VTGateConn;
-import io.vitess.client.VTGateTx;
-import io.vitess.util.CommonUtils;
-import io.vitess.util.Constants;
-import io.vitess.util.MysqlDefs;
 import java.sql.Array;
 import java.sql.Blob;
 import java.sql.CallableStatement;
@@ -49,6 +43,15 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.logging.Logger;
 
+import io.vitess.client.Context;
+import io.vitess.client.VTGateConn;
+import io.vitess.client.VTGateTx;
+import io.vitess.proto.Vtgate;
+import io.vitess.util.CommonUtils;
+import io.vitess.util.Constants;
+import io.vitess.util.MysqlDefs;
+
+
 /**
  * Created by harshit.gangal on 23/01/16.
  */
@@ -67,11 +70,12 @@ public class VitessConnection extends ConnectionProperties implements Connection
     private Set<Statement> openStatements = new HashSet<>();
     private VitessVTGateManager.VTGateConnections vTGateConnections;
     private VTGateTx vtGateTx;
+    private Vtgate.Session session = Vtgate.Session.newBuilder().setAutocommit(true).build();
     private boolean closed = true;
-    private boolean autoCommit = true;
     private boolean readOnly = false;
     private DBProperties dbProperties;
     private final VitessJDBCUrl vitessJDBCUrl;
+
 
     /**
      * Constructor to Create Connection Object
@@ -95,6 +99,24 @@ public class VitessConnection extends ConnectionProperties implements Connection
 
     public void connect() {
         this.vTGateConnections = new VitessVTGateManager.VTGateConnections(this);
+    }
+
+    /**
+     * A vitess {@link com.youtube.vitess.proto.Vtgate.Session} is typically scoped to a vtgate connection.
+     * In the JDBC driver, we have a pool of {@link com.youtube.vitess.client.VTGateConn} instances,
+     * which are shared by any number of {@link VitessConnection} instances. Each
+     * {@link VitessConnection} <-> {@link com.youtube.vitess.client.VTGateConn} should ideally have
+     * it's own maintained Session to hold any connection-specific information. But this synchronization
+     * is unnecessary as Session fields currently fall into two categories:
+     * - values that inform vtgate how to process your query (i.e. autocommit)
+     * - values that hold transaction state and must by synchronized.
+     * This function holds the values of the first type of session parameters, and is not synchronized from
+     * the return value of each VTGateConn call. The second type is handled separately in
+     * {@link com.youtube.vitess.client.VTGateTx} which is properly scoped to the Connection and
+     * synchronized between each call.
+     */
+    public Vtgate.Session getSession() {
+        return session;
     }
 
     /**
@@ -141,7 +163,7 @@ public class VitessConnection extends ConnectionProperties implements Connection
      */
     public boolean getAutoCommit() throws SQLException {
         checkOpen();
-        return this.autoCommit;
+        return getSession().getAutocommit();
     }
 
     /**
@@ -152,12 +174,12 @@ public class VitessConnection extends ConnectionProperties implements Connection
      */
     public void setAutoCommit(boolean autoCommit) throws SQLException {
         checkOpen();
-        if (this.autoCommit != autoCommit) { //If same then no-op
+        if (getSession().getAutocommit() != autoCommit) { //If same then no-op
             //Old Transaction Needs to be committed as per JDBC 4.1 Spec.
             if (isInTransaction()) {
                 this.commit();
             }
-            this.autoCommit = autoCommit;
+            session = session.toBuilder().setAutocommit(autoCommit).build();
         }
     }
 
@@ -281,7 +303,7 @@ public class VitessConnection extends ConnectionProperties implements Connection
      */
     public String getCatalog() throws SQLException {
         checkOpen();
-        return this.vitessJDBCUrl.getCatalog();
+        return getDbName();
     }
 
     /**
@@ -292,7 +314,7 @@ public class VitessConnection extends ConnectionProperties implements Connection
      */
     public void setCatalog(String catalog) throws SQLException {
         checkOpen();
-        this.vitessJDBCUrl.setCatalog(catalog); //Ignoring any affect
+        setDbName(catalog); //Ignoring any affect
     }
 
     /**
@@ -583,7 +605,7 @@ public class VitessConnection extends ConnectionProperties implements Connection
     }
 
     private void checkAutoCommit(String exception) throws SQLException {
-        if (this.autoCommit) {
+        if (this.getSession().getAutocommit()) {
             throw new SQLException(exception);
         }
     }
@@ -651,13 +673,6 @@ public class VitessConnection extends ConnectionProperties implements Connection
             throw postponedException;
         }
 
-    }
-
-    /**
-     * @return keyspace name
-     */
-    public String getKeyspace() {
-        return this.vitessJDBCUrl.getKeyspace();
     }
 
     // UnSupported Feature List
@@ -857,10 +872,7 @@ public class VitessConnection extends ConnectionProperties implements Connection
     }
 
     public Context createContext(long deadlineAfter) {
-        return CommonUtils.createContext(this.vitessJDBCUrl.getUsername(), deadlineAfter);
+        return CommonUtils.createContext(getUsername(), deadlineAfter);
     }
 
-    public String getUsername() {
-        return this.vitessJDBCUrl.getUsername();
-    }
 }

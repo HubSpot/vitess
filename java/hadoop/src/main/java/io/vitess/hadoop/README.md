@@ -45,10 +45,10 @@ public static void main(String[] args) {
 	job.setJarByClass(VitessInputFormat.class);
 	job.setMapperClass(TableCsvMapper.class);
 	String vtgateAddresses = "localhost:15011,localhost:15012,localhost:15013";
-	String keyspace = "SAMPLE_KEYSPACE";
+	String keyspaceShard = "SAMPLE_KEYSPACE";
 	String query = "select id, name from sample_table";
 	int splitCount = 100;
-	VitessInputFormat.setInput(job, vtgateAddresses, keyspace, query, splitCount);
+	VitessInputFormat.setInput(job, vtgateAddresses, keyspaceShard, query, splitCount);
 	job.setMapOutputKeyClass(NullWritable.class);
 	job.setMapOutputValueClass(Text.class);
 	...// set reducer and outputpath and launch the job

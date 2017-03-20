@@ -20,10 +20,21 @@ import static com.google.common.base.Preconditions.checkNotNull;
 import static com.google.common.util.concurrent.Futures.transformAsync;
 import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
+import java.io.Closeable;
+import java.io.IOException;
+import java.sql.SQLDataException;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+
+import javax.annotation.Nullable;
+
 import com.google.common.collect.Iterables;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+
 import io.vitess.client.cursor.Cursor;
 import io.vitess.client.cursor.CursorWithError;
 import io.vitess.client.cursor.SimpleCursor;
@@ -60,14 +71,6 @@ import io.vitess.proto.Vtgate.StreamExecuteKeyRangesRequest;
 import io.vitess.proto.Vtgate.StreamExecuteKeyspaceIdsRequest;
 import io.vitess.proto.Vtgate.StreamExecuteRequest;
 import io.vitess.proto.Vtgate.StreamExecuteShardsRequest;
-import java.io.Closeable;
-import java.io.IOException;
-import java.sql.SQLDataException;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import javax.annotation.Nullable;
 
 /**
  * An asynchronous VTGate connection.
@@ -83,41 +86,42 @@ import javax.annotation.Nullable;
  */
 public final class VTGateConn implements Closeable {
   private final RpcClient client;
-  private final String keyspace;
+  private final String keyspaceShard;
 
   /**
-   * Creates a VTGateConn with no default keyspace.
-   *
+   * Creates a VTGateConn with no default keyspaceShard.
+   * 
    * <p>
    * In this mode, methods like {@code execute()} and {@code streamExecute()} that don't have a
-   * per-call {@code keyspace} parameter will use VSchema to resolve the keyspace for any unprefixed
+   * per-call {@code keyspaceShard} parameter will use VSchema to resolve the keyspaceShard for any unprefixed
    * table names. Note that this only works if the table name is unique across all keyspaces.
    */
   public VTGateConn(RpcClient client) {
     this.client = checkNotNull(client);
-    this.keyspace = "";
+    this.keyspaceShard = "";
   }
 
   /**
-   * Creates a VTGateConn with a default keyspace.
-   *
+   * Creates a VTGateConn with a default keyspaceShard.
+   * 
    * <p>
-   * The given {@code keyspace} will be used as the connection-wide default for {@code execute()}
-   * and {@code streamExecute()} calls, since those do not specify the keyspace for each call. Like
+   * The given {@code keyspaceShard} will be used as the connection-wide default for {@code execute()}
+   * and {@code streamExecute()} calls, since those do not specify the keyspaceShard for each call. Like
    * the connection-wide default database of a MySQL connection, individual queries can still refer
    * to other keyspaces by prefixing table names. For example:
-   * {@code "SELECT ... FROM keyspace.table ..."}
+   * {@code "SELECT ... FROM keyspaceShard.table ..."}
    */
-  public VTGateConn(RpcClient client, String keyspace) {
+  public VTGateConn(RpcClient client, String keyspaceShard) {
     this.client = checkNotNull(client);
-    this.keyspace = checkNotNull(keyspace);
+    this.keyspaceShard = checkNotNull(keyspaceShard);
   }
 
   public SQLFuture<Cursor> execute(Context ctx, String query, @Nullable Map<String, ?> bindVars,
-    TabletType tabletType, Query.ExecuteOptions.IncludedFields includedFields) throws SQLException {
+    TabletType tabletType, Query.ExecuteOptions.IncludedFields includedFields, Vtgate.Session session) throws SQLException {
     ExecuteRequest.Builder requestBuilder = ExecuteRequest.newBuilder()
             .setQuery(Proto.bindQuery(checkNotNull(query), bindVars))
-            .setKeyspaceShard(keyspace)
+            .setSession(session)
+            .setKeyspaceShard(keyspaceShard)
             .setTabletType(checkNotNull(tabletType))
             .setOptions(Query.ExecuteOptions.newBuilder()
                 .setIncludedFields(includedFields));
@@ -141,11 +145,12 @@ public final class VTGateConn implements Closeable {
 
   public SQLFuture<Cursor> executeShards(Context ctx, String query, String keyspace,
       Iterable<String> shards, @Nullable Map<String, ?> bindVars, TabletType tabletType,
-      Query.ExecuteOptions.IncludedFields includedFields)
+      Query.ExecuteOptions.IncludedFields includedFields, Vtgate.Session session)
       throws SQLException {
     ExecuteShardsRequest.Builder requestBuilder =
         ExecuteShardsRequest.newBuilder()
             .setQuery(Proto.bindQuery(checkNotNull(query), bindVars))
+            .setSession(session)
             .setKeyspace(checkNotNull(keyspace))
             .addAllShards(checkNotNull(shards))
             .setTabletType(checkNotNull(tabletType))
@@ -172,9 +177,10 @@ public final class VTGateConn implements Closeable {
 
   public SQLFuture<Cursor> executeKeyspaceIds(Context ctx, String query, String keyspace,
       Iterable<byte[]> keyspaceIds, @Nullable Map<String, ?> bindVars, TabletType tabletType,
-      Query.ExecuteOptions.IncludedFields includedFields)
+      Query.ExecuteOptions.IncludedFields includedFields, Vtgate.Session session)
       throws SQLException {
     ExecuteKeyspaceIdsRequest.Builder requestBuilder = ExecuteKeyspaceIdsRequest.newBuilder()
+        .setSession(session)
         .setQuery(Proto.bindQuery(checkNotNull(query), bindVars))
         .setKeyspace(checkNotNull(keyspace))
         .addAllKeyspaceIds(
@@ -203,9 +209,10 @@ public final class VTGateConn implements Closeable {
 
   public SQLFuture<Cursor> executeKeyRanges(Context ctx, String query, String keyspace,
       Iterable<? extends KeyRange> keyRanges, @Nullable Map<String, ?> bindVars,
-      TabletType tabletType, Query.ExecuteOptions.IncludedFields includedFields) throws SQLException {
+      TabletType tabletType, Query.ExecuteOptions.IncludedFields includedFields, Vtgate.Session session) throws SQLException {
     ExecuteKeyRangesRequest.Builder requestBuilder = ExecuteKeyRangesRequest.newBuilder()
         .setQuery(Proto.bindQuery(checkNotNull(query), bindVars))
+        .setSession(session)
         .setKeyspace(checkNotNull(keyspace))
         .addAllKeyRanges(checkNotNull(keyRanges))
         .setTabletType(checkNotNull(tabletType))
@@ -232,9 +239,10 @@ public final class VTGateConn implements Closeable {
 
   public SQLFuture<Cursor> executeEntityIds(Context ctx, String query, String keyspace,
       String entityColumnName, Map<byte[], ?> entityKeyspaceIds, @Nullable Map<String, ?> bindVars,
-      TabletType tabletType, Query.ExecuteOptions.IncludedFields includedFields) throws SQLException {
+      TabletType tabletType, Query.ExecuteOptions.IncludedFields includedFields, Vtgate.Session session) throws SQLException {
     ExecuteEntityIdsRequest.Builder requestBuilder = ExecuteEntityIdsRequest.newBuilder()
         .setQuery(Proto.bindQuery(checkNotNull(query), bindVars))
+        .setSession(session)
         .setKeyspace(checkNotNull(keyspace))
         .setEntityColumnName(checkNotNull(entityColumnName))
         .addAllEntityKeyspaceIds(Iterables
@@ -263,13 +271,13 @@ public final class VTGateConn implements Closeable {
 
     public SQLFuture<List<CursorWithError>> executeBatch(Context ctx, List<String> queryList,
         @Nullable List<Map<String, ?>> bindVarsList, TabletType tabletType,
-        Query.ExecuteOptions.IncludedFields includedFields) throws SQLException {
-        return executeBatch(ctx, queryList, bindVarsList, tabletType, false, includedFields);
+        Query.ExecuteOptions.IncludedFields includedFields, Vtgate.Session session) throws SQLException {
+        return executeBatch(ctx, queryList, bindVarsList, tabletType, false, includedFields, session);
     }
 
     public SQLFuture<List<CursorWithError>> executeBatch(Context ctx, List<String> queryList,
         @Nullable List<Map<String, ?>> bindVarsList, TabletType tabletType,
-        boolean asTransaction, Query.ExecuteOptions.IncludedFields includedFields) throws SQLException {
+        boolean asTransaction, Query.ExecuteOptions.IncludedFields includedFields, Vtgate.Session session) throws SQLException {
         List<Query.BoundQuery> queries = new ArrayList<>();
 
         if (null != bindVarsList && bindVarsList.size() != queryList.size()) {
@@ -285,7 +293,8 @@ public final class VTGateConn implements Closeable {
         Vtgate.ExecuteBatchRequest.Builder requestBuilder =
             Vtgate.ExecuteBatchRequest.newBuilder()
                 .addAllQueries(checkNotNull(queries))
-                .setKeyspaceShard(keyspace)
+                .setSession(session)
+                .setKeyspaceShard(keyspaceShard)
                 .setTabletType(checkNotNull(tabletType))
                 .setAsTransaction(asTransaction)
                 .setOptions(Query.ExecuteOptions.newBuilder()
@@ -311,18 +320,19 @@ public final class VTGateConn implements Closeable {
     }
 
     /**
-   * Execute multiple keyspace ID queries as a batch.
+   * Execute multiple keyspaceShard ID queries as a batch.
    *
    * @param asTransaction If true, automatically create a transaction (per shard) that encloses all
    *        the batch queries.
    */
   public SQLFuture<List<Cursor>> executeBatchShards(Context ctx,
       Iterable<? extends BoundShardQuery> queries, TabletType tabletType, boolean asTransaction,
-      Query.ExecuteOptions.IncludedFields includedFields)
+      Query.ExecuteOptions.IncludedFields includedFields, Vtgate.Session session)
       throws SQLException {
     ExecuteBatchShardsRequest.Builder requestBuilder =
         ExecuteBatchShardsRequest.newBuilder()
             .addAllQueries(checkNotNull(queries))
+            .setSession(session)
             .setTabletType(checkNotNull(tabletType))
             .setAsTransaction(asTransaction)
             .setOptions(Query.ExecuteOptions.newBuilder()
@@ -348,16 +358,17 @@ public final class VTGateConn implements Closeable {
   }
 
   /**
-   * Execute multiple keyspace ID queries as a batch.
+   * Execute multiple keyspaceShard ID queries as a batch.
    *
    * @param asTransaction If true, automatically create a transaction (per shard) that encloses all
    *        the batch queries.
    */
   public SQLFuture<List<Cursor>> executeBatchKeyspaceIds(Context ctx,
       Iterable<? extends BoundKeyspaceIdQuery> queries, TabletType tabletType,
-      boolean asTransaction, Query.ExecuteOptions.IncludedFields includedFields) throws SQLException {
+      boolean asTransaction, Query.ExecuteOptions.IncludedFields includedFields, Vtgate.Session session) throws SQLException {
     ExecuteBatchKeyspaceIdsRequest.Builder requestBuilder =
         ExecuteBatchKeyspaceIdsRequest.newBuilder()
+            .setSession(session)
             .addAllQueries(checkNotNull(queries))
             .setTabletType(checkNotNull(tabletType))
             .setAsTransaction(asTransaction)
@@ -388,7 +399,7 @@ public final class VTGateConn implements Closeable {
     StreamExecuteRequest.Builder requestBuilder =
         StreamExecuteRequest.newBuilder()
             .setQuery(Proto.bindQuery(checkNotNull(query), bindVars))
-            .setKeyspaceShard(keyspace)
+            .setKeyspaceShard(keyspaceShard)
             .setTabletType(checkNotNull(tabletType))
             .setOptions(Query.ExecuteOptions.newBuilder()
                 .setIncludedFields(includedFields));
@@ -475,7 +486,7 @@ public final class VTGateConn implements Closeable {
               @Override
               public ListenableFuture<VTGateTx> apply(BeginResponse response) throws Exception {
                 return Futures.<VTGateTx>immediateFuture(
-                    new VTGateTx(client, response.getSession(), keyspace));
+                    new VTGateTx(client, response.getSession(), keyspaceShard));
               }
             },
             directExecutor()));

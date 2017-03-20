@@ -16,20 +16,24 @@
 
 package io.vitess.jdbc;
 
-import io.vitess.proto.Query;
-import io.vitess.proto.Topodata;
-import io.vitess.util.Constants;
 import java.sql.DriverPropertyInfo;
 import java.sql.SQLException;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Properties;
+import java.util.Set;
+
 import org.junit.Assert;
 import org.junit.Test;
 import org.mockito.Mockito;
 
+import io.vitess.proto.Query;
+import io.vitess.proto.Topodata;
+import io.vitess.util.Constants;
+
 public class ConnectionPropertiesTest {
 
-    private static final int NUM_PROPS = 24;
+    private static final int NUM_PROPS = 27;
 
     @Test
     public void testReflection() throws Exception {
@@ -124,7 +128,7 @@ public class ConnectionPropertiesTest {
         Assert.assertEquals(NUM_PROPS, infos.length);
 
         // Test the expected fields for just 1
-        int indexForFullTest = 8;
+        int indexForFullTest = 11;
         Assert.assertEquals("executeType", infos[indexForFullTest].name);
         Assert.assertEquals("Query execution type: simple or stream",
             infos[indexForFullTest].description);
@@ -136,17 +140,12 @@ public class ConnectionPropertiesTest {
         }
         Assert.assertArrayEquals(allowed, infos[indexForFullTest].choices);
 
-        // Test that name exists for the others, as a sanity check
-        Assert.assertEquals("functionsNeverReturnBlobs", infos[1].name);
-        Assert.assertEquals("tinyInt1isBit", infos[2].name);
-        Assert.assertEquals("yearIsDateType", infos[3].name);
-        Assert.assertEquals("useBlobToStoreUTF8OutsideBMP", infos[4].name);
-        Assert.assertEquals("utf8OutsideBmpIncludedColumnNamePattern", infos[5].name);
-        Assert.assertEquals("utf8OutsideBmpExcludedColumnNamePattern", infos[6].name);
-        Assert.assertEquals("characterEncoding", infos[7].name);
-        Assert.assertEquals(Constants.Property.TWOPC_ENABLED, infos[9].name);
-        Assert.assertEquals(Constants.Property.INCLUDED_FIELDS, infos[10].name);
-        Assert.assertEquals(Constants.Property.TABLET_TYPE, infos[11].name);
+        // Test that names exist for the others and are unique, as a sanity check
+        Set<String> seenNames = new HashSet<>(infos.length);
+        for (DriverPropertyInfo dpi : infos) {
+            Assert.assertNotEquals("", dpi.name);
+            Assert.assertEquals(true, seenNames.add(dpi.name));
+        }
     }
 
     @Test
@@ -223,5 +222,29 @@ public class ConnectionPropertiesTest {
         // tablet type and twopc
         Assert.assertEquals(Topodata.TabletType.BACKUP, props.getTabletType());
         Assert.assertEquals(true, props.getTwopcEnabled());
+    }
+
+    @Test
+    public void testDbNameDefaultToKeyspace() throws SQLException {
+        ConnectionProperties props = new ConnectionProperties();
+        props.initializeProperties(new Properties());
+        Assert.assertEquals(null, props.getDbName());
+        props.setKeyspaceShard("test");
+        Assert.assertEquals("test", props.getDbName());
+    }
+
+    @Test
+    public void testIsSingleShard() throws SQLException {
+        ConnectionProperties props = new ConnectionProperties();
+        Properties info = new Properties();
+        info.setProperty(Constants.Property.KEYSPACE, "test/0");
+        props.initializeProperties(info);
+        Assert.assertEquals(true, props.getIsSingleShard());
+        props = new ConnectionProperties();
+        info.setProperty(Constants.Property.KEYSPACE, "test");
+        props.initializeProperties(info);
+        Assert.assertEquals(false, props.getIsSingleShard());
+        props.setKeyspaceShard("test/0");
+        Assert.assertEquals(true, props.getIsSingleShard());
     }
 }

@@ -31,6 +31,14 @@ import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ConcurrentHashMap;
 
+import io.vitess.client.Context;
+import io.vitess.client.RpcClient;
+import io.vitess.client.VTGateConn;
+import io.vitess.client.grpc.GrpcClientFactory;
+import io.vitess.client.grpc.tls.TlsOptions;
+import io.vitess.util.CommonUtils;
+import io.vitess.util.Constants;
+
 /**
  * Created by naveen.nahata on 24/02/16.
  */
@@ -106,7 +114,7 @@ public class VitessVTGateManager {
      */
     private static VTGateConn getVtGateConn(VitessJDBCUrl.HostInfo hostInfo, VitessConnection connection) {
         final String username = connection.getUsername();
-        final String keyspace = connection.getKeyspace();
+        final String keyspace = connection.getKeyspaceShard();
         final Context context = CommonUtils.createContext(username, Constants.CONNECTION_TIMEOUT);
         RetryingInterceptorConfig retryingConfig = getRetryingInterceptorConfig(connection);
         RpcClient client;

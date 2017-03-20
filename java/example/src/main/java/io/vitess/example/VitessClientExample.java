@@ -16,8 +16,16 @@
 
 package io.vitess.example;
 
+import java.net.InetSocketAddress;
+import java.util.Map;
+import java.util.Random;
+
+import org.joda.time.Duration;
+import org.joda.time.Instant;
+
 import com.google.common.collect.ImmutableMap;
 import com.google.common.primitives.UnsignedLong;
+
 import io.vitess.client.Context;
 import io.vitess.client.RpcClient;
 import io.vitess.client.VTGateBlockingConn;
@@ -27,11 +35,7 @@ import io.vitess.client.cursor.Row;
 import io.vitess.client.grpc.GrpcClientFactory;
 import io.vitess.proto.Query;
 import io.vitess.proto.Topodata.TabletType;
-import java.net.InetSocketAddress;
-import java.util.Map;
-import java.util.Random;
-import org.joda.time.Duration;
-import org.joda.time.Instant;
+import io.vitess.proto.Vtgate;
 
 /**
  * VitessClientExample.java is a sample for using the Vitess low-level Java Client.
@@ -79,7 +83,7 @@ public class VitessClientExample {
               "SELECT page, time_created_ns, message FROM messages",
               null /* bindVars */,
               TabletType.MASTER,
-              Query.ExecuteOptions.IncludedFields.ALL)) {
+              Query.ExecuteOptions.IncludedFields.ALL, Vtgate.Session.getDefaultInstance())) {
         Row row;
         while ((row = cursor.next()) != null) {
           UnsignedLong page = row.getULong("page");

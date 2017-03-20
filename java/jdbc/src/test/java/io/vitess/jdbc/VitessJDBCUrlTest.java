@@ -35,7 +35,9 @@ public class VitessJDBCUrlTest {
         Assert.assertEquals(1, vitessJDBCUrl.getHostInfos().size());
         Assert.assertEquals("hostname", vitessJDBCUrl.getHostInfos().get(0).getHostname());
         Assert.assertEquals(15991, vitessJDBCUrl.getHostInfos().get(0).getPort());
-        Assert.assertEquals("user", vitessJDBCUrl.getUsername());
+        ConnectionProperties properties = new ConnectionProperties();
+        properties.initializeProperties(vitessJDBCUrl.getProperties());
+        Assert.assertEquals("user", properties.getUsername());
     }
 
 
@@ -46,7 +48,9 @@ public class VitessJDBCUrlTest {
         Assert.assertEquals(1, vitessJDBCUrl.getHostInfos().size());
         Assert.assertEquals(vitessJDBCUrl.getHostInfos().get(0).getHostname(), "hostname");
         Assert.assertEquals(15991, vitessJDBCUrl.getHostInfos().get(0).getPort());
-        Assert.assertEquals(null, vitessJDBCUrl.getUsername());
+        ConnectionProperties properties = new ConnectionProperties();
+        properties.initializeProperties(vitessJDBCUrl.getProperties());
+        Assert.assertEquals(null, properties.getUsername());
     }
 
     @Test public void testURLwithUserNamePwdinParams() throws Exception {
@@ -56,7 +60,9 @@ public class VitessJDBCUrlTest {
         Assert.assertEquals(1, vitessJDBCUrl.getHostInfos().size());
         Assert.assertEquals("hostname", vitessJDBCUrl.getHostInfos().get(0).getHostname());
         Assert.assertEquals(15991, vitessJDBCUrl.getHostInfos().get(0).getPort());
-        Assert.assertEquals("user", vitessJDBCUrl.getUsername());
+        ConnectionProperties properties = new ConnectionProperties();
+        properties.initializeProperties(vitessJDBCUrl.getProperties());
+        Assert.assertEquals("user", properties.getUsername());
     }
 
     @Test public void testURLwithUserNamePwdinProperties() throws Exception {
@@ -68,7 +74,9 @@ public class VitessJDBCUrlTest {
         Assert.assertEquals(1, vitessJDBCUrl.getHostInfos().size());
         Assert.assertEquals("hostname", vitessJDBCUrl.getHostInfos().get(0).getHostname());
         Assert.assertEquals(15991, vitessJDBCUrl.getHostInfos().get(0).getPort());
-        Assert.assertEquals("user", vitessJDBCUrl.getUsername());
+        ConnectionProperties properties = new ConnectionProperties();
+        properties.initializeProperties(vitessJDBCUrl.getProperties());
+        Assert.assertEquals("user", properties.getUsername());
     }
 
     @Test public void testURLwithUserNamePwdMultipleHost() throws Exception {
@@ -86,7 +94,9 @@ public class VitessJDBCUrlTest {
         Assert.assertEquals("hostname3", vitessJDBCUrl.getHostInfos().get(2).getHostname());
         Assert.assertEquals(15991, vitessJDBCUrl.getHostInfos().get(2).getPort());
         Assert.assertEquals(Topodata.TabletType.MASTER.name(), vitessJDBCUrl.getProperties().getProperty(Constants.Property.TABLET_TYPE).toUpperCase());
-        Assert.assertEquals("user", vitessJDBCUrl.getUsername());
+        ConnectionProperties properties = new ConnectionProperties();
+        properties.initializeProperties(vitessJDBCUrl.getProperties());
+        Assert.assertEquals("user", properties.getUsername());
     }
 
     @Test public void testMulitpleJDBCURlURLwithUserNamePwdMultipleHost() throws Exception {
@@ -114,7 +124,9 @@ public class VitessJDBCUrlTest {
         Assert.assertEquals("hostname3", vitessJDBCUrl1.getHostInfos().get(2).getHostname());
         Assert.assertEquals(15001, vitessJDBCUrl1.getHostInfos().get(2).getPort());
         Assert.assertEquals(Topodata.TabletType.MASTER.name(), vitessJDBCUrl.getProperties().getProperty(Constants.Property.TABLET_TYPE).toUpperCase());
-        Assert.assertEquals("user", vitessJDBCUrl.getUsername());
+        ConnectionProperties properties = new ConnectionProperties();
+        properties.initializeProperties(vitessJDBCUrl.getProperties());
+        Assert.assertEquals("user", properties.getUsername());
     }
 
     @Test public void testWithKeyspaceandCatalog() throws Exception {
@@ -122,17 +134,42 @@ public class VitessJDBCUrlTest {
         VitessJDBCUrl vitessJDBCUrl =
             new VitessJDBCUrl("jdbc:vitess://user:password@hostname:port/keyspace/catalog", info);
         Assert.assertEquals(1, vitessJDBCUrl.getHostInfos().size());
-        Assert.assertEquals("keyspace", vitessJDBCUrl.getKeyspace());
-        Assert.assertEquals("catalog", vitessJDBCUrl.getCatalog());
+        ConnectionProperties properties = new ConnectionProperties();
+        properties.initializeProperties(vitessJDBCUrl.getProperties());
+        Assert.assertEquals("keyspace", properties.getKeyspaceShard());
+        Assert.assertEquals("catalog", properties.getDbName());
     }
 
     @Test public void testWithKeyspace() throws Exception {
         Properties info = new Properties();
-        VitessJDBCUrl vitessJDBCUrl =
-            new VitessJDBCUrl("jdbc:vitess://user:password@hostname:15991/keyspace", info);
-        Assert.assertEquals(1, vitessJDBCUrl.getHostInfos().size());
-        Assert.assertEquals("keyspace", vitessJDBCUrl.getKeyspace());
-        Assert.assertEquals("keyspace", vitessJDBCUrl.getCatalog());
+        VitessConnection conn = new VitessConnection("jdbc:vitess://user:password@hostname:15991/keyspace", info);
+        Assert.assertEquals(1, conn.getUrl().getHostInfos().size());
+        Assert.assertEquals("keyspace", conn.getKeyspaceShard());
+        Assert.assertEquals("keyspace", conn.getCatalog());
+    }
+
+    @Test public void testKeyspaceTargetedShard() throws Exception {
+        Properties info = new Properties();
+        VitessConnection conn = new VitessConnection("jdbc:vitess://user:password@hostname:15991/keyspace/0", info);
+        Assert.assertEquals(1, conn.getUrl().getHostInfos().size());
+        Assert.assertEquals("keyspace", conn.getKeyspaceShard());
+        Assert.assertEquals("0", conn.getCatalog());
+        conn = new VitessConnection("jdbc:vitess://user:password@hostname:15991/'keyspace/0'", info);
+        Assert.assertEquals(1, conn.getUrl().getHostInfos().size());
+        Assert.assertEquals("keyspace/0", conn.getKeyspaceShard());
+        Assert.assertEquals("keyspace", conn.getCatalog());
+        conn = new VitessConnection("jdbc:vitess://user:password@hostname:15991/`keyspace/0`", info);
+        Assert.assertEquals(1, conn.getUrl().getHostInfos().size());
+        Assert.assertEquals("keyspace/0", conn.getKeyspaceShard());
+        Assert.assertEquals("keyspace", conn.getCatalog());
+        conn = new VitessConnection("jdbc:vitess://user:password@hostname:15991/\"keyspace/0\"", info);
+        Assert.assertEquals(1, conn.getUrl().getHostInfos().size());
+        Assert.assertEquals("keyspace/0", conn.getKeyspaceShard());
+        Assert.assertEquals("keyspace", conn.getCatalog());
+        conn = new VitessConnection("jdbc:vitess://user:password@hostname:15991/'keyspace/0'/catalog", info);
+        Assert.assertEquals(1, conn.getUrl().getHostInfos().size());
+        Assert.assertEquals("keyspace/0", conn.getKeyspaceShard());
+        Assert.assertEquals("catalog", conn.getCatalog());
     }
 
     @Test public void testWithoutKeyspace() throws Exception {
@@ -140,13 +177,17 @@ public class VitessJDBCUrlTest {
         VitessJDBCUrl vitessJDBCUrl =
             new VitessJDBCUrl("jdbc:vitess://user:password@hostname:15991", info);
         Assert.assertEquals(1, vitessJDBCUrl.getHostInfos().size());
-        Assert.assertEquals(null, vitessJDBCUrl.getKeyspace());
-        Assert.assertEquals(null, vitessJDBCUrl.getCatalog());
+        ConnectionProperties properties = new ConnectionProperties();
+        properties.initializeProperties(vitessJDBCUrl.getProperties());
+        Assert.assertEquals(null, properties.getKeyspaceShard());
+        Assert.assertEquals(null, properties.getDbName());
 
         vitessJDBCUrl = new VitessJDBCUrl("jdbc:vitess://user:password@hostname:15991/", info);
         Assert.assertEquals(1, vitessJDBCUrl.getHostInfos().size());
-        Assert.assertEquals(null, vitessJDBCUrl.getKeyspace());
-        Assert.assertEquals(null, vitessJDBCUrl.getCatalog());
+        properties = new ConnectionProperties();
+        properties.initializeProperties(vitessJDBCUrl.getProperties());
+        Assert.assertEquals(null, properties.getKeyspaceShard());
+        Assert.assertEquals(null, properties.getDbName());
     }
 
     @Test public void testCompleteURL() throws Exception {
@@ -154,15 +195,17 @@ public class VitessJDBCUrlTest {
         VitessJDBCUrl vitessJDBCUrl = new VitessJDBCUrl(
             "jdbc:vitess://user:pass@hostname1:15991,hostname2:15991/keyspace/catalog?prop1=val1&prop2=val2",
             info);
-        Assert.assertEquals("user", vitessJDBCUrl.getUsername());
         Assert.assertEquals("hostname1", vitessJDBCUrl.getHostInfos().get(0).getHostname());
         Assert.assertEquals(15991, vitessJDBCUrl.getHostInfos().get(0).getPort());
         Assert.assertEquals("hostname2", vitessJDBCUrl.getHostInfos().get(1).getHostname());
         Assert.assertEquals(15991, vitessJDBCUrl.getHostInfos().get(1).getPort());
-        Assert.assertEquals("keyspace", vitessJDBCUrl.getKeyspace());
-        Assert.assertEquals("catalog", vitessJDBCUrl.getCatalog());
         Assert.assertEquals("val1", vitessJDBCUrl.getProperties().getProperty("prop1"));
         Assert.assertEquals("val2", vitessJDBCUrl.getProperties().getProperty("prop2"));
+        ConnectionProperties properties = new ConnectionProperties();
+        properties.initializeProperties(vitessJDBCUrl.getProperties());
+        Assert.assertEquals("user", properties.getUsername());
+        Assert.assertEquals("keyspace", properties.getKeyspaceShard());
+        Assert.assertEquals("catalog", properties.getDbName());
     }
 
     @Test public void testLeaveOriginalPropertiesAlone() throws Exception {
