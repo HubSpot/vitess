@@ -33,7 +33,7 @@ import io.vitess.util.Constants;
 
 public class ConnectionPropertiesTest {
 
-    private static final int NUM_PROPS = 27;
+    private static final int NUM_PROPS = 28;
 
     @Test
     public void testReflection() throws Exception {

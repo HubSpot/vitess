@@ -84,7 +84,7 @@ import io.vitess.proto.Vtgate.StreamExecuteShardsRequest;
  * All non-streaming calls on {@code VTGateConn} are asynchronous. Use {@link VTGateBlockingConn} if
  * you want synchronous calls.
  */
-public final class VTGateConn implements Closeable {
+public class VTGateConn implements Closeable {
   private final RpcClient client;
   private final String keyspaceShard;
 
