@@ -127,14 +127,14 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
 
         showSql = StringUtils.startsWithIgnoreCaseAndWs(this.sql, Constants.SQL_SHOW);
         try {
-            if (showSql && (!vitessConnection.getIsSingleShard() || !vitessConnection.isSimpleExecute())) {
+            if (showSql && !vitessConnection.getIsSingleShard()) {
                 cursor = this.executeShow(this.sql);
             } else {
                 if (tabletType != Topodata.TabletType.MASTER || this.vitessConnection
                     .getAutoCommit()) {
                     Context context =
                         this.vitessConnection.createContext(this.queryTimeoutInMillis);
-                    if (vitessConnection.isSimpleExecute()) {
+                    if (vitessConnection.isSimpleExecute() || showSql) {
                         cursor =
                             vtGateConn.execute(context, this.sql, this.bindVariables, tabletType, vitessConnection.getIncludedFields(), vitessConnection.getSession())
                                 .checkedGet();
@@ -236,7 +236,6 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
     }
 
     public boolean execute() throws SQLException {
-        Cursor cursor;
         boolean selectSql;
         boolean showSql;
 
@@ -246,18 +245,7 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
         selectSql = StringUtils.startsWithIgnoreCaseAndWs(this.sql, Constants.SQL_SELECT);
         showSql = StringUtils.startsWithIgnoreCaseAndWs(this.sql, Constants.SQL_SHOW);
 
-        if (showSql) {
-            if (vitessConnection.getIsSingleShard() && vitessConnection.isSimpleExecute()) {
-                this.executeQuery();
-                return true;
-            }
-            cursor = this.executeShow(this.sql);
-            if (!(null == cursor || null == cursor.getFields() || cursor.getFields().isEmpty())) {
-                this.vitessResultSet = new VitessResultSet(cursor, this);
-                return true;
-            }
-            throw new SQLException(Constants.SQLExceptionMessages.METHOD_CALL_FAILED);
-        } else if (selectSql) {
+       if (showSql || selectSql) {
             this.executeQuery();
             return true;
         } else {

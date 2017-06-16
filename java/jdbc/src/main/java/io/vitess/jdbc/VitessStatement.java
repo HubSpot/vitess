@@ -120,14 +120,14 @@ public class VitessStatement implements Statement {
 
         showSql = StringUtils.startsWithIgnoreCaseAndWs(sql, Constants.SQL_SHOW);
         try {
-            if (showSql && (!vitessConnection.getIsSingleShard() || !vitessConnection.isSimpleExecute())) {
+            if (showSql && !vitessConnection.getIsSingleShard()) {
                 cursor = this.executeShow(sql);
             } else {
                 if (tabletType != Topodata.TabletType.MASTER || this.vitessConnection
                     .getAutoCommit()) {
                     Context context =
                         this.vitessConnection.createContext(this.queryTimeoutInMillis);
-                    if (vitessConnection.isSimpleExecute()) {
+                    if (vitessConnection.isSimpleExecute() || showSql) {
                         cursor = vtGateConn.execute(context, sql, null, tabletType, vitessConnection.getIncludedFields(), vitessConnection.getSession()).checkedGet();
                     } else {
                         cursor = vtGateConn.streamExecute(context, sql, null, tabletType, vitessConnection.getIncludedFields());
@@ -510,18 +510,7 @@ public class VitessStatement implements Statement {
         selectSql = StringUtils.startsWithIgnoreCaseAndWs(sql, Constants.SQL_SELECT);
         showSql = StringUtils.startsWithIgnoreCaseAndWs(sql, Constants.SQL_SHOW);
 
-        if (showSql) {
-            if (vitessConnection.getIsSingleShard() && vitessConnection.isSimpleExecute()) {
-                this.executeQuery(sql);
-                return true;
-            }
-            cursor = this.executeShow(sql);
-            if (!(null == cursor || null == cursor.getFields() || cursor.getFields().isEmpty())) {
-                this.vitessResultSet = new VitessResultSet(cursor, this);
-                return true;
-            }
-            throw new SQLException(Constants.SQLExceptionMessages.METHOD_CALL_FAILED);
-        } else if (selectSql) {
+        if (showSql || selectSql) {
             this.executeQuery(sql);
             return true;
         } else {
