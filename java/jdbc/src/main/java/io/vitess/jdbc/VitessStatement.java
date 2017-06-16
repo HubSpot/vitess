@@ -16,17 +16,6 @@
 
 package io.vitess.jdbc;
 
-import io.vitess.client.Context;
-import io.vitess.client.Proto;
-import io.vitess.client.VTGateConn;
-import io.vitess.client.VTGateTx;
-import io.vitess.client.cursor.Cursor;
-import io.vitess.client.cursor.CursorWithError;
-import io.vitess.proto.Query;
-import io.vitess.proto.Topodata;
-import io.vitess.proto.Vtrpc;
-import io.vitess.util.Constants;
-import io.vitess.util.StringUtils;
 import java.sql.BatchUpdateException;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -39,6 +28,18 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.logging.Logger;
+
+import io.vitess.client.Context;
+import io.vitess.client.Proto;
+import io.vitess.client.VTGateConn;
+import io.vitess.client.VTGateTx;
+import io.vitess.client.cursor.Cursor;
+import io.vitess.client.cursor.CursorWithError;
+import io.vitess.proto.Query;
+import io.vitess.proto.Topodata;
+import io.vitess.proto.Vtrpc;
+import io.vitess.util.Constants;
+import io.vitess.util.StringUtils;
 
 
 /**
@@ -119,7 +120,7 @@ public class VitessStatement implements Statement {
 
         showSql = StringUtils.startsWithIgnoreCaseAndWs(sql, Constants.SQL_SHOW);
         try {
-            if (showSql && !vitessConnection.getIsSingleShard()) {
+            if (showSql && (!vitessConnection.getIsSingleShard() || !vitessConnection.isSimpleExecute())) {
                 cursor = this.executeShow(sql);
             } else {
                 if (tabletType != Topodata.TabletType.MASTER || this.vitessConnection
@@ -510,7 +511,7 @@ public class VitessStatement implements Statement {
         showSql = StringUtils.startsWithIgnoreCaseAndWs(sql, Constants.SQL_SHOW);
 
         if (showSql) {
-            if (vitessConnection.getIsSingleShard()) {
+            if (vitessConnection.getIsSingleShard() && vitessConnection.isSimpleExecute()) {
                 this.executeQuery(sql);
                 return true;
             }

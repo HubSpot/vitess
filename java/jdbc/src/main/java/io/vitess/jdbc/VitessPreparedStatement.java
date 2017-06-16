@@ -16,15 +16,6 @@
 
 package io.vitess.jdbc;
 
-import io.vitess.client.Context;
-import io.vitess.client.VTGateConn;
-import io.vitess.client.VTGateTx;
-import io.vitess.client.cursor.Cursor;
-import io.vitess.client.cursor.CursorWithError;
-import io.vitess.mysql.DateTime;
-import io.vitess.proto.Topodata;
-import io.vitess.util.Constants;
-import io.vitess.util.StringUtils;
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -58,6 +49,16 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Logger;
+
+import io.vitess.client.Context;
+import io.vitess.client.VTGateConn;
+import io.vitess.client.VTGateTx;
+import io.vitess.client.cursor.Cursor;
+import io.vitess.client.cursor.CursorWithError;
+import io.vitess.mysql.DateTime;
+import io.vitess.proto.Topodata;
+import io.vitess.util.Constants;
+import io.vitess.util.StringUtils;
 
 
 /**
@@ -126,7 +127,7 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
 
         showSql = StringUtils.startsWithIgnoreCaseAndWs(this.sql, Constants.SQL_SHOW);
         try {
-            if (showSql && !vitessConnection.getIsSingleShard()) {
+            if (showSql && (!vitessConnection.getIsSingleShard() || !vitessConnection.isSimpleExecute())) {
                 cursor = this.executeShow(this.sql);
             } else {
                 if (tabletType != Topodata.TabletType.MASTER || this.vitessConnection
@@ -246,7 +247,7 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
         showSql = StringUtils.startsWithIgnoreCaseAndWs(this.sql, Constants.SQL_SHOW);
 
         if (showSql) {
-            if (vitessConnection.getIsSingleShard()) {
+            if (vitessConnection.getIsSingleShard() && vitessConnection.isSimpleExecute()) {
                 this.executeQuery();
                 return true;
             }
