@@ -41,7 +41,6 @@ import io.vitess.proto.Vtrpc;
 import io.vitess.util.Constants;
 import io.vitess.util.StringUtils;
 
-
 /**
  * Created by harshit.gangal on 19/01/16.
  * <p>
@@ -127,7 +126,7 @@ public class VitessStatement implements Statement {
                     .getAutoCommit()) {
                     Context context =
                         this.vitessConnection.createContext(this.queryTimeoutInMillis);
-                    if (vitessConnection.isSimpleExecute() || showSql) {
+                    if (vitessConnection.isSimpleExecute() && this.fetchSize == 0 || showSql) {
                         cursor = vtGateConn.execute(context, sql, null, tabletType, vitessConnection.getIncludedFields(), vitessConnection.getSession()).checkedGet();
                     } else {
                         cursor = vtGateConn.streamExecute(context, sql, null, tabletType, vitessConnection.getIncludedFields());

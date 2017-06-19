@@ -223,7 +223,6 @@ import io.vitess.util.Constants;
         }
     }
 
-
     @Test public void testExecuteUpdate() throws SQLException {
         VitessConnection mockConn = PowerMockito.mock(VitessConnection.class);
         VTGateConn mockVtGateConn = PowerMockito.mock(VTGateConn.class);

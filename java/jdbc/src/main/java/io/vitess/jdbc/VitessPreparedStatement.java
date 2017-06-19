@@ -60,7 +60,6 @@ import io.vitess.proto.Topodata;
 import io.vitess.util.Constants;
 import io.vitess.util.StringUtils;
 
-
 /**
  * Created by harshit.gangal on 25/01/16.
  * <p>
@@ -134,7 +133,7 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
                     .getAutoCommit()) {
                     Context context =
                         this.vitessConnection.createContext(this.queryTimeoutInMillis);
-                    if (vitessConnection.isSimpleExecute() || showSql) {
+                    if (vitessConnection.isSimpleExecute() && this.fetchSize == 0 || showSql) {
                         cursor =
                             vtGateConn.execute(context, this.sql, this.bindVariables, tabletType, vitessConnection.getIncludedFields(), vitessConnection.getSession())
                                 .checkedGet();
