@@ -199,6 +199,11 @@ public class ConnectionProperties {
         null,
         null);
 
+    private BooleanConnectionProperty treatUtilDateAsTimestamp = new BooleanConnectionProperty(
+        "treatUtilDateAsTimestamp",
+        "Should the driver treat java.util.Date as a TIMESTAMP for the purposes of PreparedStatement.setObject()",
+        true);
+
     // Caching of some hot properties to avoid casting over and over
     private String usernameCache;
     private String keyspaceCache;
@@ -495,6 +500,14 @@ public class ConnectionProperties {
 
     public String getTrustAlias() {
         return trustAlias.getValueAsString();
+    }
+
+    public boolean getTreatUtilDateAsTimestamp() {
+        return treatUtilDateAsTimestamp.getValueAsBoolean();
+    }
+
+    public void setTreatUtilDateAsTimestamp(boolean treatUtilDateAsTimestamp) {
+        this.treatUtilDateAsTimestamp.setValue(treatUtilDateAsTimestamp);
     }
 
     abstract static class ConnectionProperty {
