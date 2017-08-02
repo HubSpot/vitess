@@ -204,6 +204,11 @@ public class ConnectionProperties {
         "Should the driver treat java.util.Date as a TIMESTAMP for the purposes of PreparedStatement.setObject()",
         true);
 
+    private BooleanConnectionProperty useAffectedRows = new BooleanConnectionProperty(
+        "useAffectedRows",
+        "Don't set the CLIENT_FOUND_ROWS flag when connecting to the server",
+        false);
+
     // Caching of some hot properties to avoid casting over and over
     private String usernameCache;
     private String keyspaceCache;
@@ -508,6 +513,14 @@ public class ConnectionProperties {
 
     public void setTreatUtilDateAsTimestamp(boolean treatUtilDateAsTimestamp) {
         this.treatUtilDateAsTimestamp.setValue(treatUtilDateAsTimestamp);
+    }
+
+    public boolean getUseAffectedRows() {
+        return useAffectedRows.getValueAsBoolean();
+    }
+
+    public void setUseAffectedRows(boolean useAffectedRows) {
+        this.useAffectedRows.setValue(useAffectedRows);
     }
 
     abstract static class ConnectionProperty {

@@ -46,6 +46,7 @@ import java.util.logging.Logger;
 import io.vitess.client.Context;
 import io.vitess.client.VTGateConn;
 import io.vitess.client.VTGateTx;
+import io.vitess.proto.Query;
 import io.vitess.proto.Vtgate;
 import io.vitess.util.CommonUtils;
 import io.vitess.util.Constants;
@@ -70,7 +71,7 @@ public class VitessConnection extends ConnectionProperties implements Connection
     private Set<Statement> openStatements = new HashSet<>();
     private VitessVTGateManager.VTGateConnections vTGateConnections;
     private VTGateTx vtGateTx;
-    private Vtgate.Session session = Vtgate.Session.newBuilder().setAutocommit(true).build();
+    private Vtgate.Session session;
     private boolean closed = true;
     private boolean readOnly = false;
     private DBProperties dbProperties;
@@ -93,8 +94,8 @@ public class VitessConnection extends ConnectionProperties implements Connection
             throw new SQLException(
                 Constants.SQLExceptionMessages.CONN_INIT_ERROR + " - " + e.getMessage(), e);
         }
-
         initializeProperties(vitessJDBCUrl.getProperties());
+        this.session = Vtgate.Session.newBuilder().setAutocommit(true).setOptions(Query.ExecuteOptions.newBuilder().setClientFoundRows(!getUseAffectedRows()).build()).build();
     }
 
     public void connect() {
