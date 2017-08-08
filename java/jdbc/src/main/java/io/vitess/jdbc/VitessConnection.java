@@ -95,7 +95,15 @@ public class VitessConnection extends ConnectionProperties implements Connection
                 Constants.SQLExceptionMessages.CONN_INIT_ERROR + " - " + e.getMessage(), e);
         }
         initializeProperties(vitessJDBCUrl.getProperties());
-        this.session = Vtgate.Session.newBuilder().setAutocommit(true).setOptions(Query.ExecuteOptions.newBuilder().setClientFoundRows(!getUseAffectedRows()).build()).build();
+        this.session = Vtgate.Session
+            .newBuilder()
+            .setAutocommit(true)
+            .setOptions(
+                Query.ExecuteOptions
+                    .newBuilder()
+                    .setClientFoundRows(!getUseAffectedRows())
+                    .setIncludedFields(getIncludedFields()))
+            .build();
     }
 
     public void connect() {
