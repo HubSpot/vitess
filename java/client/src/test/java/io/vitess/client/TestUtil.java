@@ -34,6 +34,7 @@ import com.google.gson.reflect.TypeToken;
 
 import io.vitess.proto.Query;
 import io.vitess.proto.Topodata.TabletType;
+import io.vitess.proto.Vtgate;
 import vttest.Vttest.VTTestTopology;
 
 public class TestUtil {
@@ -125,7 +126,7 @@ public class TestUtil {
       // Deadline for the overall insert loop
       Context ctx = Context.getDefault().withDeadlineAfter(Duration.millis(5000));
 
-      VTGateBlockingTx tx = conn.begin(ctx);
+      VTGateBlockingTx tx = conn.begin(ctx, Vtgate.Session.getDefaultInstance());
       String insertSql = "insert into vtgate_test "
           + "(id, name, age, percent) values (:id, :name, :age, :percent)";
       Map<String, Object> bindVars = new HashMap<>();

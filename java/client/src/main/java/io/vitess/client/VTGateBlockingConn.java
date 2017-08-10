@@ -166,12 +166,12 @@ public class VTGateBlockingConn implements Closeable {
     return conn.streamExecuteKeyRanges(ctx, query, keyspace, keyRanges, bindVars, tabletType, includedFields);
   }
 
-  public VTGateBlockingTx begin(Context ctx) throws SQLException {
-    return begin(ctx, false);
+  public VTGateBlockingTx begin(Context ctx, Vtgate.Session session) throws SQLException {
+    return begin(ctx, session,false);
   }
 
-  public VTGateBlockingTx begin(Context ctx, boolean singleDB) throws SQLException {
-    return new VTGateBlockingTx(conn.begin(ctx, singleDB).checkedGet());
+  public VTGateBlockingTx begin(Context ctx, Vtgate.Session session, boolean singleDB) throws SQLException {
+    return new VTGateBlockingTx(conn.begin(ctx, session, singleDB).checkedGet());
   }
 
   public List<SplitQueryResponse.Part> splitQuery(

@@ -353,7 +353,7 @@ public abstract class RpcClientTest {
   public void testEchoTransactionExecute() throws Exception {
     Map<String, String> echo;
 
-    VTGateBlockingTx tx = conn.begin(ctx);
+    VTGateBlockingTx tx = conn.begin(ctx, Vtgate.Session.getDefaultInstance());
 
     echo = getEcho(tx.execute(ctx, ECHO_PREFIX + QUERY, BIND_VARS, TABLET_TYPE, ALL_FIELDS));
     Assert.assertEquals(CALLER_ID_ECHO, echo.get("callerId"));
@@ -365,7 +365,7 @@ public abstract class RpcClientTest {
     // doesn't care about. So, start with a new session
     // before testing V2 functionality.
     tx.rollback(ctx);
-    tx = conn.begin(ctx);
+    tx = conn.begin(ctx, Vtgate.Session.getDefaultInstance());
 
     echo = getEcho(
         tx.executeShards(ctx, ECHO_PREFIX + QUERY, KEYSPACE, SHARDS, BIND_VARS, TABLET_TYPE, ALL_FIELDS));
@@ -417,7 +417,7 @@ public abstract class RpcClientTest {
     Assert.assertEquals(OPTIONS_ALL_FIELDS_ECHO, echo.get("options"));
 
     tx.rollback(ctx);
-    tx = conn.begin(ctx);
+    tx = conn.begin(ctx, Vtgate.Session.getDefaultInstance());
 
     echo = getEcho(tx.executeBatchShards(ctx,
         Arrays.asList(Proto.bindShardQuery(KEYSPACE, SHARDS, ECHO_PREFIX + QUERY, BIND_VARS)),
@@ -534,7 +534,7 @@ public abstract class RpcClientTest {
       Class<?> cls = EXECUTE_ERRORS.get(error);
 
       try {
-        VTGateBlockingTx tx = conn.begin(ctx);
+        VTGateBlockingTx tx = conn.begin(ctx, Vtgate.Session.getDefaultInstance());
         String query = ERROR_PREFIX + error;
         exe.execute(tx, query);
         Assert.fail("no exception thrown for " + query);
@@ -551,7 +551,7 @@ public abstract class RpcClientTest {
       }
 
       // Don't close the transaction on partial error.
-      VTGateBlockingTx tx = conn.begin(ctx);
+      VTGateBlockingTx tx = conn.begin(ctx, Vtgate.Session.getDefaultInstance());
       try {
         String query = PARTIAL_ERROR_PREFIX + error;
         exe.execute(tx, query);
@@ -571,7 +571,7 @@ public abstract class RpcClientTest {
       tx.rollback(ctx);
 
       // Close the transaction on partial error.
-      tx = conn.begin(ctx);
+      tx = conn.begin(ctx, Vtgate.Session.getDefaultInstance());
       try {
         String query = PARTIAL_ERROR_PREFIX + error + "/close transaction";
         exe.execute(tx, query);

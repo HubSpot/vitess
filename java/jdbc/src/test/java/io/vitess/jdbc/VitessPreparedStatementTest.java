@@ -124,7 +124,7 @@ import io.vitess.util.Constants;
         PowerMockito.when(mockConn.getIsSingleShard())
             .thenReturn(false);
         PowerMockito.when(mockConn.isSimpleExecute()).thenReturn(true);
-        PowerMockito.when(mockVtGateConn.begin(Matchers.any(Context.class), Matchers.eq(false)))
+        PowerMockito.when(mockVtGateConn.begin(Matchers.any(Context.class), Matchers.any(Vtgate.Session.class), Matchers.eq(false)))
             .thenReturn(mockSqlFutureVtGateTx);
         PowerMockito.when(mockVtGateTx
             .execute(Matchers.any(Context.class), Matchers.anyString(), Matchers.anyMap(),
@@ -204,7 +204,7 @@ import io.vitess.util.Constants;
             .execute(Matchers.any(Context.class), Matchers.anyString(), Matchers.anyMap(),
                 Matchers.any(Topodata.TabletType.class), Matchers.any(Query.ExecuteOptions.IncludedFields.class), Matchers.any(Vtgate.Session.class))).thenReturn(mockSqlFutureCursor);
         PowerMockito.when(mockConn.getVtGateTx()).thenReturn(null);
-        PowerMockito.when(mockVtGateConn.begin(Matchers.any(Context.class), Matchers.eq(false)))
+        PowerMockito.when(mockVtGateConn.begin(Matchers.any(Context.class), Matchers.any(Vtgate.Session.class), Matchers.eq(false)))
             .thenReturn(mockSqlFutureVtGateTx);
         PowerMockito.when(mockVtGateTx
             .execute(Matchers.any(Context.class), Matchers.anyString(), Matchers.anyMap(),
@@ -317,7 +317,7 @@ import io.vitess.util.Constants;
 
             //tx is null & autoCommit is true
             PowerMockito.when(mockConn.getVtGateTx()).thenReturn(null);
-            PowerMockito.when(mockVtGateConn.begin(Matchers.any(Context.class)))
+            PowerMockito.when(mockVtGateConn.begin(Matchers.any(Context.class), Matchers.any(Vtgate.Session.class)))
                 .thenReturn(mockSqlFutureVtGateTx);
             PowerMockito.when(mockConn.getAutoCommit()).thenReturn(true);
             PowerMockito.when(mockVtGateTx.commit(Matchers.any(Context.class)))
@@ -392,7 +392,7 @@ import io.vitess.util.Constants;
                 Matchers.anyString(), Matchers.anyCollection(), Matchers.anyMap(),
                 Matchers.any(Topodata.TabletType.class), Matchers.any(Query.ExecuteOptions.IncludedFields.class), Matchers.any(Vtgate.Session.class))).thenReturn(mockSqlFutureCursor);
         PowerMockito.when(mockConn.getVtGateTx()).thenReturn(null);
-        PowerMockito.when(mockVtGateConn.begin(Matchers.any(Context.class), Matchers.eq(false)))
+        PowerMockito.when(mockVtGateConn.begin(Matchers.any(Context.class), Matchers.any(Vtgate.Session.class), Matchers.eq(false)))
             .thenReturn(mockSqlFutureVtGateTx);
 
         PowerMockito.when(mockVtGateTx

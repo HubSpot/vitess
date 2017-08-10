@@ -16,7 +16,6 @@
 
 package io.vitess.example;
 
-import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.Random;
 
@@ -65,7 +64,7 @@ public class VitessClientExample {
                 .put("message", "V is for speed")
                 .build();
 
-        VTGateBlockingTx tx = conn.begin(ctx);
+        VTGateBlockingTx tx = conn.begin(ctx, Vtgate.Session.getDefaultInstance());
         tx.execute(
             ctx,
             "INSERT INTO messages (page,time_created_ns,message) VALUES (:page,:time_created_ns,:message)",
