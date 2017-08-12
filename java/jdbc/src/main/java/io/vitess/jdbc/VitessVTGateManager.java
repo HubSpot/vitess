@@ -31,6 +31,8 @@ import java.util.logging.Logger;
 
 import com.google.common.base.Strings;
 import com.google.common.io.Closeables;
+import java.util.Random;
+import java.util.concurrent.ConcurrentHashMap;
 
 import io.vitess.client.Context;
 import io.vitess.client.RpcClient;
@@ -209,7 +211,7 @@ public class VitessVTGateManager {
     private static VTGateConn getVtGateConn(VitessJDBCUrl.HostInfo hostInfo, VitessConnection connection) {
         final String username = connection.getUsername();
         final String keyspace = connection.getKeyspaceShard();
-        final Context context = CommonUtils.createContext(username, Constants.CONNECTION_TIMEOUT);
+        final Context context = CommonUtils.createContext(username,connection.getConnectionTimeoutMillis());
         RetryingInterceptorConfig retryingConfig = getRetryingInterceptorConfig(connection);
         RpcClient client;
         if (connection.getUseSSL()) {

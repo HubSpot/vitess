@@ -209,6 +209,24 @@ public class ConnectionProperties {
         "Don't set the CLIENT_FOUND_ROWS flag when connecting to the server",
         false);
 
+    private LongConnectionProperty queryTimeoutMillis = new LongConnectionProperty(
+        "queryTimeoutMillis",
+        "The default query timeout, in millis, to use for queries which do not explicitly setQueryTimeout",
+        Constants.DEFAULT_TIMEOUT
+    );
+
+    private LongConnectionProperty connectionTimeoutMillis = new LongConnectionProperty(
+        "connectionTimeoutMillis",
+        "The timeout, in millis, to use when creating new gRPC connections",
+        Constants.CONNECTION_TIMEOUT
+    );
+
+    private LongConnectionProperty transactionTimeoutMillis = new LongConnectionProperty(
+        "transactionTimeoutMillis",
+        "The timeout, in millis, to use when committing or rolling back transactions",
+        Constants.DEFAULT_TIMEOUT
+    );
+
     // Caching of some hot properties to avoid casting over and over
     private String usernameCache;
     private String keyspaceCache;
@@ -521,6 +539,30 @@ public class ConnectionProperties {
 
     public void setUseAffectedRows(boolean useAffectedRows) {
         this.useAffectedRows.setValue(useAffectedRows);
+    }
+
+    public long getQueryTimeoutMillis() {
+        return queryTimeoutMillis.getValueAsLong();
+    }
+
+    public void setQueryTimeoutMillis(long queryTimeoutMillis) {
+        this.queryTimeoutMillis.setValue(queryTimeoutMillis);
+    }
+
+    public long getConnectionTimeoutMillis() {
+        return connectionTimeoutMillis.getValueAsLong();
+    }
+
+    public void setConnectionTimeoutMillis(long connectionTimeoutMillis) {
+        this.connectionTimeoutMillis.setValue(connectionTimeoutMillis);
+    }
+
+    public long getTransactionTimeoutMillis() {
+        return transactionTimeoutMillis.getValueAsLong();
+    }
+
+    public void setTransactionTimeoutMillis(long transactionTimeoutMillis) {
+        this.transactionTimeoutMillis.setValue(transactionTimeoutMillis);
     }
 
     abstract static class ConnectionProperty {

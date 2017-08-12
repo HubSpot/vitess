@@ -31,9 +31,17 @@ import io.vitess.proto.Query;
 import io.vitess.proto.Topodata;
 import io.vitess.util.Constants;
 
+import org.junit.Assert;
+import org.junit.Test;
+import org.mockito.Mockito;
+
+import io.vitess.proto.Query;
+import io.vitess.proto.Topodata;
+import io.vitess.util.Constants;
+
 public class ConnectionPropertiesTest {
 
-    private static final int NUM_PROPS = 30;
+    private static final int NUM_PROPS = 34;
 
     @Test
     public void testReflection() throws Exception {

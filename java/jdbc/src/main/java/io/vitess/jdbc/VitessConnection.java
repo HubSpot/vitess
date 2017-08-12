@@ -52,7 +52,6 @@ import io.vitess.util.CommonUtils;
 import io.vitess.util.Constants;
 import io.vitess.util.MysqlDefs;
 
-
 /**
  * Created by harshit.gangal on 23/01/16.
  */
@@ -202,7 +201,7 @@ public class VitessConnection extends ConnectionProperties implements Connection
         checkAutoCommit(Constants.SQLExceptionMessages.COMMIT_WHEN_AUTO_COMMIT_TRUE);
         try {
             if (isInTransaction()) {
-                Context context = createContext(Constants.CONNECTION_TIMEOUT);
+                Context context = createContext(getTransactionTimeoutMillis());
                 this.vtGateTx.commit(context, getTwopcEnabled()).checkedGet();
             }
         } finally {
@@ -221,7 +220,7 @@ public class VitessConnection extends ConnectionProperties implements Connection
         checkAutoCommit(Constants.SQLExceptionMessages.ROLLBACK_WHEN_AUTO_COMMIT_TRUE);
         try {
             if (isInTransaction()) {
-                Context context = createContext(Constants.CONNECTION_TIMEOUT);
+                Context context = createContext(getTransactionTimeoutMillis());
                 this.vtGateTx.rollback(context).checkedGet();
             }
         } finally {
