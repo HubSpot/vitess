@@ -1,0 +1,8 @@
+enabled: true
+
+stepActivation:
+  notify:
+    branches: [hubspot-client]
+
+env:
+  MAVEN_PHASE: verify org.apache.maven.plugins:maven-deploy-plugin:2.8.2:deploy
