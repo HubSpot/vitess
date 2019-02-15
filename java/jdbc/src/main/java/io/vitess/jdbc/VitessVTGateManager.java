@@ -189,7 +189,6 @@ public class VitessVTGateManager {
   private static VTGateConnection getVtGateConn(VitessJDBCUrl.HostInfo hostInfo,
       VitessConnection connection) {
     final Context context = connection.createContext(connection.getTimeout());
-    RetryingInterceptorConfig retryingConfig = getRetryingInterceptorConfig(connection);
     if (connection.getUseSSL()) {
       final String keyStorePath = connection.getKeyStore() != null ? connection.getKeyStore()
           : System.getProperty(Constants.Property.KEYSTORE_FULL);
@@ -214,11 +213,11 @@ public class VitessVTGateManager {
           .trustAlias(trustAlias);
 
       return new RefreshableVTGateConnection(
-          new GrpcClientFactory(retryingConfig, getChannelProviderFromProperties(connection))
+          new GrpcClientFactory(getChannelProviderFromProperties(connection))
               .createTls(context, hostInfo.toString(), tlsOptions), keyStorePath, trustStorePath);
     } else {
       return new VTGateConnection(
-          new GrpcClientFactory(retryingConfig, getChannelProviderFromProperties(connection))
+          new GrpcClientFactory(getChannelProviderFromProperties(connection))
               .create(context, hostInfo.toString()));
     }
   }
@@ -236,7 +235,7 @@ public class VitessVTGateManager {
       VitessConnection connection) {
     // Skip reflection in default case
     if (Strings.isNullOrEmpty(connection.getGrpcChannelProvider())) {
-      return new DefaultChannelProvider();
+      return new DefaultChannelProvider(getRetryingInterceptorConfig(connection));
     }
 
     try {

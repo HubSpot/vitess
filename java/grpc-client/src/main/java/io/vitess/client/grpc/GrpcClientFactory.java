@@ -52,23 +52,20 @@ import javax.net.ssl.SSLException;
  */
 public class GrpcClientFactory implements RpcClientFactory {
 
-  private RetryingInterceptorConfig config;
   private NettyChannelProvider nettyChannelProvider;
   private CallCredentials callCredentials;
   private LoadBalancer.Factory loadBalancerFactory;
   private NameResolver.Factory nameResolverFactory;
 
   public GrpcClientFactory() {
-    this(RetryingInterceptorConfig.noOpConfig(), new DefaultChannelProvider());
+    this(new DefaultChannelProvider(RetryingInterceptorConfig.noOpConfig()));
   }
 
   public GrpcClientFactory(RetryingInterceptorConfig config) {
-    this(config, new DefaultChannelProvider());
+    this(new DefaultChannelProvider(config));
   }
 
-  public GrpcClientFactory(RetryingInterceptorConfig config,
-      NettyChannelProvider nettyChannelProvider) {
-    this.config = config;
+  public GrpcClientFactory(NettyChannelProvider nettyChannelProvider) {
     this.nettyChannelProvider = nettyChannelProvider;
   }
 
@@ -97,8 +94,7 @@ public class GrpcClientFactory implements RpcClientFactory {
    */
   @Override
   public RpcClient create(Context ctx, String target) {
-    NettyChannelBuilder channel = channelBuilder(target).negotiationType(NegotiationType.PLAINTEXT)
-        .intercept(new RetryingInterceptor(config));
+    NettyChannelBuilder channel = channelBuilder(target).negotiationType(NegotiationType.PLAINTEXT);
     if (loadBalancerFactory != null) {
       channel.loadBalancerFactory(loadBalancerFactory);
     }
@@ -182,8 +178,9 @@ public class GrpcClientFactory implements RpcClientFactory {
     }
 
     return new GrpcClient(
-        channelBuilder(target).negotiationType(NegotiationType.TLS).sslContext(sslContext)
-            .intercept(new RetryingInterceptor(config)).build(), ctx);
+        channelBuilder(target).negotiationType(NegotiationType.TLS).sslContext(sslContext).build(),
+        ctx
+    );
   }
 
   /**
