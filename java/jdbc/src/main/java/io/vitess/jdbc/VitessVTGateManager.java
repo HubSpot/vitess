@@ -18,18 +18,24 @@ package io.vitess.jdbc;
 
 import static java.lang.System.getProperty;
 
+import com.google.common.base.Strings;
+
 import io.vitess.client.Context;
 import io.vitess.client.RefreshableVTGateConnection;
 import io.vitess.client.RpcClient;
 import io.vitess.client.VTGateConnection;
 import io.vitess.client.grpc.GrpcClientFactory;
 import io.vitess.client.grpc.RetryingInterceptorConfig;
+import io.vitess.client.grpc.netty.DefaultChannelProvider;
+import io.vitess.client.grpc.netty.NettyChannelProvider;
 import io.vitess.client.grpc.tls.TlsOptions;
 import io.vitess.util.Constants.Property;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
 import java.io.IOException;
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -82,12 +88,15 @@ public class VitessVTGateManager {
                 "ssl vtgate connection detected -- installing connection refresh based on ssl "
                     + "keystore modification");
             vtgateConnRefreshTimer = new Timer("ssl-refresh-vtgate-conn", true);
-            vtgateConnRefreshTimer.scheduleAtFixedRate(new TimerTask() {
+            vtgateConnRefreshTimer.scheduleAtFixedRate(
+                new TimerTask() {
                   @Override
                   public void run() {
-                    refreshUpdatedSSLConnections(hostInfo, connection);
+                    refreshUpdatedSSLConnections(hostInfo,
+                        connection);
                   }
-                }, TimeUnit.SECONDS.toMillis(connection.getRefreshSeconds()),
+                },
+                TimeUnit.SECONDS.toMillis(connection.getRefreshSeconds()),
                 TimeUnit.SECONDS.toMillis(connection.getRefreshSeconds()));
           }
         }
@@ -192,7 +201,7 @@ public class VitessVTGateManager {
     final Context context = connection.createContext(connection.getTimeout());
     RetryingInterceptorConfig retryingConfig = getRetryingInterceptorConfig(connection);
     GrpcClientFactory grpcClientFactory =
-        new GrpcClientFactory(retryingConfig, connection.getUseTracing());
+        new GrpcClientFactory(retryingConfig, connection.getUseTracing(), getChannelProviderFromProperties(connection));
     if (connection.getUseSSL()) {
       TlsOptions tlsOptions = getTlsOptions(connection);
       RpcClient rpcClient = grpcClientFactory
@@ -235,6 +244,35 @@ public class VitessVTGateManager {
 
     return RetryingInterceptorConfig.exponentialConfig(conn.getGrpcRetryInitialBackoffMillis(),
         conn.getGrpcRetryMaxBackoffMillis(), conn.getGrpcRetryBackoffMultiplier());
+  }
+
+  private static NettyChannelProvider getChannelProviderFromProperties(
+      VitessConnection connection) {
+    // Skip reflection in default case
+    if (Strings.isNullOrEmpty(connection.getGrpcChannelProvider())) {
+      return new DefaultChannelProvider();
+    }
+
+    try {
+      Class<?> providerClass = Class.forName(connection.getGrpcChannelProvider());
+
+      Constructor<?> constructor = providerClass.getConstructor();
+
+      Object provider = constructor.newInstance();
+      return ((NettyChannelProvider) provider);
+    } catch (ClassNotFoundException cnf) {
+      throw new RuntimeException(String
+          .format("Could not get netty channel provider: %s", connection.getGrpcChannelProvider()),
+          cnf);
+    } catch (NoSuchMethodException nsm) {
+      throw new RuntimeException(String
+          .format("Channel provider %s does not have a default constructor!",
+              connection.getGrpcChannelProvider()), nsm);
+    } catch (IllegalAccessException | InstantiationException | InvocationTargetException exc) {
+      throw new RuntimeException(String
+          .format("Failed to construct channel provider %s", connection.getGrpcChannelProvider()),
+          exc);
+    }
   }
 
   public static void close() throws SQLException {
