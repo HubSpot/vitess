@@ -17,7 +17,6 @@
 package io.vitess.client.grpc;
 
 import io.grpc.CallCredentials;
-import io.grpc.ClientInterceptor;
 import io.grpc.LoadBalancer;
 import io.grpc.LoadBalancerProvider;
 import io.grpc.LoadBalancerRegistry;
@@ -27,7 +26,6 @@ import io.grpc.netty.NegotiationType;
 import io.grpc.netty.NettyChannelBuilder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.opentracing.contrib.grpc.ClientTracingInterceptor;
 import io.vitess.client.Context;
 import io.vitess.client.RpcClient;
 import io.vitess.client.RpcClientFactory;
@@ -55,8 +53,6 @@ import javax.net.ssl.SSLException;
  * GrpcClientFactory creates RpcClients with the gRPC implementation.
  */
 public class GrpcClientFactory implements RpcClientFactory {
-
-  private RetryingInterceptorConfig config;
   private final boolean useTracing;
   private NettyChannelProvider nettyChannelProvider;
   private CallCredentials callCredentials;
@@ -64,28 +60,20 @@ public class GrpcClientFactory implements RpcClientFactory {
   private NameResolver.Factory nameResolverFactory;
 
   public GrpcClientFactory() {
-    this(RetryingInterceptorConfig.noOpConfig(), true, new DefaultChannelProvider());
+    this(new DefaultChannelProvider(RetryingInterceptorConfig.noOpConfig()), true);
   }
 
   public GrpcClientFactory(RetryingInterceptorConfig config) {
-    this(config, true, new DefaultChannelProvider());
+    this(new DefaultChannelProvider(config), true);
   }
 
   public GrpcClientFactory(RetryingInterceptorConfig config, boolean useTracing) {
-    this(config, useTracing, new DefaultChannelProvider());
+    this(new DefaultChannelProvider(config), useTracing);
   }
 
-  public GrpcClientFactory(RetryingInterceptorConfig config,
-                           NettyChannelProvider nettyChannelProvider) {
-    this(config, true, nettyChannelProvider);
-  }
-
-  public GrpcClientFactory(RetryingInterceptorConfig config,
-                           boolean useTracing,
-                           NettyChannelProvider nettyChannelProvider) {
-    this.config = config;
-    this.useTracing = useTracing;
+  public GrpcClientFactory(NettyChannelProvider nettyChannelProvider, boolean useTracing) {
     this.nettyChannelProvider = nettyChannelProvider;
+    this.useTracing = useTracing;
   }
 
   public GrpcClientFactory setCallCredentials(CallCredentials value) {
@@ -117,10 +105,7 @@ public class GrpcClientFactory implements RpcClientFactory {
    */
   @Override
   public RpcClient create(Context ctx, String target) {
-    ClientInterceptor[] interceptors = getClientInterceptors();
-    NettyChannelBuilder channel = channelBuilder(target)
-        .negotiationType(NegotiationType.PLAINTEXT)
-        .intercept(interceptors);
+    NettyChannelBuilder channel = channelBuilder(target).negotiationType(NegotiationType.PLAINTEXT);
     if (loadBalancerPolicy != null) {
       channel.defaultLoadBalancingPolicy(loadBalancerPolicy);
     }
@@ -129,18 +114,6 @@ public class GrpcClientFactory implements RpcClientFactory {
     }
     return callCredentials != null ? new GrpcClient(channel.build(), callCredentials, ctx)
         : new GrpcClient(channel.build(), ctx);
-  }
-
-  private ClientInterceptor[] getClientInterceptors() {
-    RetryingInterceptor retryingInterceptor = new RetryingInterceptor(config);
-    ClientInterceptor[] interceptors;
-    if (useTracing) {
-      ClientTracingInterceptor tracingInterceptor = new ClientTracingInterceptor();
-      interceptors = new ClientInterceptor[]{retryingInterceptor, tracingInterceptor};
-    } else {
-      interceptors = new ClientInterceptor[]{retryingInterceptor};
-    }
-    return interceptors;
   }
 
   /**
@@ -215,11 +188,10 @@ public class GrpcClientFactory implements RpcClientFactory {
       throw new RuntimeException(exc);
     }
 
-    ClientInterceptor[] interceptors = getClientInterceptors();
-
     return new GrpcClient(
-        channelBuilder(target).negotiationType(NegotiationType.TLS).sslContext(sslContext)
-            .intercept(interceptors).build(), ctx);
+        channelBuilder(target).negotiationType(NegotiationType.TLS).sslContext(sslContext).build(),
+        ctx
+    );
   }
 
   /**
