@@ -171,9 +171,9 @@ public class ConnectionProperties {
       "If grpcRetriesEnabled is set, what multiplier should be used to increase exponential "
           + "backoff on each retry.", 1.6);
   private StringConnectionProperty grpcChannelProvider = new StringConnectionProperty(
-      "grpcChannelProvider",
-      "Classname of an implementation of NettyChannelProvider. If set this class will be used to "
-          + "create channels for the GRPC client.", "", null);
+      "grpcChannelBuilderProvider",
+      "Classname of an implementation of NettyChannelBuilderProvider. If set this class will be "
+          + "used to create channels for the GRPC client.", "", null);
 
   // TLS-related configs
   private BooleanConnectionProperty useSSL = new BooleanConnectionProperty(

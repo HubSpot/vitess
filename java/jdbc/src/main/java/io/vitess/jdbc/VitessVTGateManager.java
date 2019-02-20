@@ -26,8 +26,8 @@ import io.vitess.client.RpcClient;
 import io.vitess.client.VTGateConnection;
 import io.vitess.client.grpc.GrpcClientFactory;
 import io.vitess.client.grpc.RetryingInterceptorConfig;
-import io.vitess.client.grpc.netty.DefaultChannelProvider;
-import io.vitess.client.grpc.netty.NettyChannelProvider;
+import io.vitess.client.grpc.netty.DefaultChannelBuilderProvider;
+import io.vitess.client.grpc.netty.NettyChannelBuilderProvider;
 import io.vitess.client.grpc.tls.TlsOptions;
 import io.vitess.util.Constants.Property;
 import org.apache.logging.log4j.LogManager;
@@ -200,7 +200,7 @@ public class VitessVTGateManager {
                                                 VitessConnection connection) {
     final Context context = connection.createContext(connection.getTimeout());
     GrpcClientFactory grpcClientFactory =
-        new GrpcClientFactory(getChannelProviderFromProperties(connection), connection.getUseTracing());
+        new GrpcClientFactory(getChannelProviderFromProperties(connection));
     if (connection.getUseSSL()) {
       TlsOptions tlsOptions = getTlsOptions(connection);
       RpcClient rpcClient = grpcClientFactory
@@ -245,11 +245,12 @@ public class VitessVTGateManager {
         conn.getGrpcRetryMaxBackoffMillis(), conn.getGrpcRetryBackoffMultiplier());
   }
 
-  private static NettyChannelProvider getChannelProviderFromProperties(
+  private static NettyChannelBuilderProvider getChannelProviderFromProperties(
       VitessConnection connection) {
     // Skip reflection in default case
     if (Strings.isNullOrEmpty(connection.getGrpcChannelProvider())) {
-      return new DefaultChannelProvider(getRetryingInterceptorConfig(connection));
+      return new DefaultChannelBuilderProvider(getRetryingInterceptorConfig(connection),
+          connection.getUseTracing());
     }
 
     try {
@@ -258,7 +259,7 @@ public class VitessVTGateManager {
       Constructor<?> constructor = providerClass.getConstructor();
 
       Object provider = constructor.newInstance();
-      return ((NettyChannelProvider) provider);
+      return ((NettyChannelBuilderProvider) provider);
     } catch (ClassNotFoundException cnf) {
       throw new RuntimeException(String
           .format("Could not get netty channel provider: %s", connection.getGrpcChannelProvider()),
