@@ -7,7 +7,7 @@ import io.netty.util.concurrent.DefaultThreadFactory;
 import io.vitess.client.grpc.RetryingInterceptor;
 import io.vitess.client.grpc.RetryingInterceptorConfig;
 
-public class DefaultChannelProvider implements NettyChannelProvider {
+public class DefaultChannelBuilderProvider implements NettyChannelBuilderProvider {
   private static final EventLoopGroup ELG = new NioEventLoopGroup(
       6,
       new DefaultThreadFactory("vitess-netty", true)
@@ -15,7 +15,7 @@ public class DefaultChannelProvider implements NettyChannelProvider {
 
   private final RetryingInterceptorConfig config;
 
-  public DefaultChannelProvider(RetryingInterceptorConfig config) {
+  public DefaultChannelBuilderProvider(RetryingInterceptorConfig config) {
     this.config = config;
   }
 

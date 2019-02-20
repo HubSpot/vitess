@@ -27,8 +27,8 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.vitess.client.Context;
 import io.vitess.client.RpcClient;
 import io.vitess.client.RpcClientFactory;
-import io.vitess.client.grpc.netty.DefaultChannelProvider;
-import io.vitess.client.grpc.netty.NettyChannelProvider;
+import io.vitess.client.grpc.netty.DefaultChannelBuilderProvider;
+import io.vitess.client.grpc.netty.NettyChannelBuilderProvider;
 import io.vitess.client.grpc.tls.TlsOptions;
 
 import java.io.File;
@@ -52,21 +52,21 @@ import javax.net.ssl.SSLException;
  */
 public class GrpcClientFactory implements RpcClientFactory {
 
-  private NettyChannelProvider nettyChannelProvider;
+  private NettyChannelBuilderProvider nettyChannelBuilderProvider;
   private CallCredentials callCredentials;
   private LoadBalancer.Factory loadBalancerFactory;
   private NameResolver.Factory nameResolverFactory;
 
   public GrpcClientFactory() {
-    this(new DefaultChannelProvider(RetryingInterceptorConfig.noOpConfig()));
+    this(new DefaultChannelBuilderProvider(RetryingInterceptorConfig.noOpConfig()));
   }
 
   public GrpcClientFactory(RetryingInterceptorConfig config) {
-    this(new DefaultChannelProvider(config));
+    this(new DefaultChannelBuilderProvider(config));
   }
 
-  public GrpcClientFactory(NettyChannelProvider nettyChannelProvider) {
-    this.nettyChannelProvider = nettyChannelProvider;
+  public GrpcClientFactory(NettyChannelBuilderProvider nettyChannelBuilderProvider) {
+    this.nettyChannelBuilderProvider = nettyChannelBuilderProvider;
   }
 
   public GrpcClientFactory setCallCredentials(CallCredentials value) {
@@ -121,7 +121,7 @@ public class GrpcClientFactory implements RpcClientFactory {
    *     by default dns.
    */
   protected NettyChannelBuilder channelBuilder(String target) {
-    return nettyChannelProvider.getChannelBuilder(target);
+    return nettyChannelBuilderProvider.getChannelBuilder(target);
   }
 
   /**
