@@ -23,8 +23,8 @@ import io.vitess.client.RefreshableVTGateConnection;
 import io.vitess.client.VTGateConnection;
 import io.vitess.client.grpc.GrpcClientFactory;
 import io.vitess.client.grpc.RetryingInterceptorConfig;
-import io.vitess.client.grpc.netty.DefaultChannelProvider;
-import io.vitess.client.grpc.netty.NettyChannelProvider;
+import io.vitess.client.grpc.netty.DefaultChannelBuilderProvider;
+import io.vitess.client.grpc.netty.NettyChannelBuilderProvider;
 import io.vitess.client.grpc.tls.TlsOptions;
 import io.vitess.util.Constants;
 
@@ -231,11 +231,11 @@ public class VitessVTGateManager {
         conn.getGrpcRetryMaxBackoffMillis(), conn.getGrpcRetryBackoffMultiplier());
   }
 
-  private static NettyChannelProvider getChannelProviderFromProperties(
+  private static NettyChannelBuilderProvider getChannelProviderFromProperties(
       VitessConnection connection) {
     // Skip reflection in default case
     if (Strings.isNullOrEmpty(connection.getGrpcChannelProvider())) {
-      return new DefaultChannelProvider(getRetryingInterceptorConfig(connection));
+      return new DefaultChannelBuilderProvider(getRetryingInterceptorConfig(connection));
     }
 
     try {
@@ -244,7 +244,7 @@ public class VitessVTGateManager {
       Constructor<?> constructor = providerClass.getConstructor();
 
       Object provider = constructor.newInstance();
-      return ((NettyChannelProvider) provider);
+      return ((NettyChannelBuilderProvider) provider);
     } catch (ClassNotFoundException cnf) {
       throw new RuntimeException(String
           .format("Could not get netty channel provider: %s", connection.getGrpcChannelProvider()),
