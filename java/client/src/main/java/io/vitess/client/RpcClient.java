@@ -48,6 +48,7 @@ import io.vitess.proto.Vtgate.StreamExecuteKeyRangesRequest;
 import io.vitess.proto.Vtgate.StreamExecuteKeyspaceIdsRequest;
 import io.vitess.proto.Vtgate.StreamExecuteRequest;
 import io.vitess.proto.Vtgate.StreamExecuteShardsRequest;
+import io.vitess.proto.Vtrpc.RPCError;
 
 import java.io.Closeable;
 import java.sql.SQLException;
@@ -245,4 +246,15 @@ public interface RpcClient extends Closeable {
    */
   ListenableFuture<GetSrvKeyspaceResponse> getSrvKeyspace(
       Context ctx, GetSrvKeyspaceRequest request) throws SQLException;
+
+  /**
+   * <p>Checks if a specific RPCError should be converted to an exception and returns the
+   * appropriate exception corresponding to that error.
+   * </p>
+   *
+   * <p>See the
+   * <a href="https://github.com/vitessio/vitess/blob/master/proto/vtrpc.proto">proto</a>
+   * definition for canonical documentation on this VTGate API.
+   */
+  SQLException checkError(RPCError error);
 }

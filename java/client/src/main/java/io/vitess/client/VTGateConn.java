@@ -61,6 +61,7 @@ import io.vitess.proto.Vtgate.StreamExecuteKeyRangesRequest;
 import io.vitess.proto.Vtgate.StreamExecuteKeyspaceIdsRequest;
 import io.vitess.proto.Vtgate.StreamExecuteRequest;
 import io.vitess.proto.Vtgate.StreamExecuteShardsRequest;
+import io.vitess.proto.Vtrpc.RPCError;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -137,7 +138,7 @@ public final class VTGateConn implements Closeable {
             new AsyncFunction<ExecuteResponse, Cursor>() {
               @Override
               public ListenableFuture<Cursor> apply(ExecuteResponse response) throws Exception {
-                Proto.checkError(response.getError());
+                checkAndThrowError(response.getError());
                 return Futures.<Cursor>immediateFuture(new SimpleCursor(response.getResult()));
               }
             },
@@ -168,7 +169,7 @@ public final class VTGateConn implements Closeable {
               @Override
               public ListenableFuture<Cursor> apply(ExecuteShardsResponse response)
                   throws Exception {
-                Proto.checkError(response.getError());
+                checkAndThrowError(response.getError());
                 return Futures.<Cursor>immediateFuture(new SimpleCursor(response.getResult()));
               }
             },
@@ -199,7 +200,7 @@ public final class VTGateConn implements Closeable {
               @Override
               public ListenableFuture<Cursor> apply(ExecuteKeyspaceIdsResponse response)
                   throws Exception {
-                Proto.checkError(response.getError());
+                checkAndThrowError(response.getError());
                 return Futures.<Cursor>immediateFuture(new SimpleCursor(response.getResult()));
               }
             },
@@ -229,7 +230,7 @@ public final class VTGateConn implements Closeable {
               @Override
               public ListenableFuture<Cursor> apply(ExecuteKeyRangesResponse response)
                   throws Exception {
-                Proto.checkError(response.getError());
+                checkAndThrowError(response.getError());
                 return Futures.<Cursor>immediateFuture(new SimpleCursor(response.getResult()));
               }
             },
@@ -261,7 +262,7 @@ public final class VTGateConn implements Closeable {
               @Override
               public ListenableFuture<Cursor> apply(ExecuteEntityIdsResponse response)
                   throws Exception {
-                Proto.checkError(response.getError());
+                checkAndThrowError(response.getError());
                 return Futures.<Cursor>immediateFuture(new SimpleCursor(response.getResult()));
               }
             },
@@ -310,7 +311,7 @@ public final class VTGateConn implements Closeable {
               @Override
               public ListenableFuture<List<CursorWithError>> apply(
                   Vtgate.ExecuteBatchResponse response) throws Exception {
-                Proto.checkError(response.getError());
+                checkAndThrowError(response.getError());
                 return Futures.immediateFuture(
                     Proto.fromQueryResponsesToCursorList(response.getResultsList()));
               }
@@ -347,7 +348,7 @@ public final class VTGateConn implements Closeable {
               @Override
               public ListenableFuture<List<Cursor>> apply(ExecuteBatchShardsResponse response)
                   throws Exception {
-                Proto.checkError(response.getError());
+                checkAndThrowError(response.getError());
                 return Futures.<List<Cursor>>immediateFuture(
                     Proto.toCursorList(response.getResultsList()));
               }
@@ -384,7 +385,7 @@ public final class VTGateConn implements Closeable {
               @Override
               public ListenableFuture<List<Cursor>> apply(ExecuteBatchKeyspaceIdsResponse response)
                   throws Exception {
-                Proto.checkError(response.getError());
+                checkAndThrowError(response.getError());
                 return Futures.<List<Cursor>>immediateFuture(
                     Proto.toCursorList(response.getResultsList()));
               }
@@ -539,5 +540,12 @@ public final class VTGateConn implements Closeable {
   @Override
   public void close() throws IOException {
     client.close();
+  }
+
+  private void checkAndThrowError(RPCError error) throws SQLException {
+    SQLException exception = client.checkError(error);
+    if (exception != null) {
+      throw exception;
+    }
   }
 }

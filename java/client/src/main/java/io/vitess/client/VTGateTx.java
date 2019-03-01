@@ -53,6 +53,7 @@ import io.vitess.proto.Vtgate.ExecuteShardsResponse;
 import io.vitess.proto.Vtgate.RollbackRequest;
 import io.vitess.proto.Vtgate.RollbackResponse;
 import io.vitess.proto.Vtgate.Session;
+import io.vitess.proto.Vtrpc.RPCError;
 
 import java.sql.SQLDataException;
 import java.sql.SQLException;
@@ -121,7 +122,7 @@ public class VTGateTx {
                   @Override
                   public ListenableFuture<Cursor> apply(ExecuteResponse response) throws Exception {
                     setSession(response.getSession());
-                    Proto.checkError(response.getError());
+                    checkAndThrowError(response.getError());
                     return Futures.<Cursor>immediateFuture(new SimpleCursor(response.getResult()));
                   }
                 },
@@ -156,7 +157,7 @@ public class VTGateTx {
                   public ListenableFuture<Cursor> apply(ExecuteShardsResponse response)
                       throws Exception {
                     setSession(response.getSession());
-                    Proto.checkError(response.getError());
+                    checkAndThrowError(response.getError());
                     return Futures.<Cursor>immediateFuture(new SimpleCursor(response.getResult()));
                   }
                 },
@@ -192,7 +193,7 @@ public class VTGateTx {
                   public ListenableFuture<Cursor> apply(ExecuteKeyspaceIdsResponse response)
                       throws Exception {
                     setSession(response.getSession());
-                    Proto.checkError(response.getError());
+                    checkAndThrowError(response.getError());
                     return Futures.<Cursor>immediateFuture(new SimpleCursor(response.getResult()));
                   }
                 },
@@ -228,7 +229,7 @@ public class VTGateTx {
                   public ListenableFuture<Cursor> apply(ExecuteKeyRangesResponse response)
                       throws Exception {
                     setSession(response.getSession());
-                    Proto.checkError(response.getError());
+                    checkAndThrowError(response.getError());
                     return Futures.<Cursor>immediateFuture(new SimpleCursor(response.getResult()));
                   }
                 },
@@ -266,7 +267,7 @@ public class VTGateTx {
                   public ListenableFuture<Cursor> apply(ExecuteEntityIdsResponse response)
                       throws Exception {
                     setSession(response.getSession());
-                    Proto.checkError(response.getError());
+                    checkAndThrowError(response.getError());
                     return Futures.<Cursor>immediateFuture(new SimpleCursor(response.getResult()));
                   }
                 },
@@ -312,7 +313,7 @@ public class VTGateTx {
               public ListenableFuture<List<CursorWithError>> apply(
                   Vtgate.ExecuteBatchResponse response) throws Exception {
                 setSession(response.getSession());
-                Proto.checkError(response.getError());
+                checkAndThrowError(response.getError());
                 return Futures.immediateFuture(
                     Proto.fromQueryResponsesToCursorList(response.getResultsList()));
               }
@@ -344,7 +345,7 @@ public class VTGateTx {
                   public ListenableFuture<List<Cursor>> apply(ExecuteBatchShardsResponse response)
                       throws Exception {
                     setSession(response.getSession());
-                    Proto.checkError(response.getError());
+                    checkAndThrowError(response.getError());
                     return Futures.<List<Cursor>>immediateFuture(
                         Proto.toCursorList(response.getResultsList()));
                   }
@@ -379,7 +380,7 @@ public class VTGateTx {
                   public ListenableFuture<List<Cursor>> apply(
                       ExecuteBatchKeyspaceIdsResponse response) throws Exception {
                     setSession(response.getSession());
-                    Proto.checkError(response.getError());
+                    checkAndThrowError(response.getError());
                     return Futures.<List<Cursor>>immediateFuture(
                         Proto.toCursorList(response.getResultsList()));
                   }
@@ -452,5 +453,12 @@ public class VTGateTx {
 
   protected synchronized void setSession(Session session) {
     this.session = session;
+  }
+
+  private synchronized void checkAndThrowError(RPCError error) throws SQLException {
+    SQLException exception = client.checkError(error);
+    if (exception != null) {
+      throw exception;
+    }
   }
 }
