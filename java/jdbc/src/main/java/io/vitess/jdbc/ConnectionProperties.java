@@ -175,6 +175,11 @@ public class ConnectionProperties {
       "Classname of an implementation of NettyChannelBuilderProvider. If set this class will be "
           + "used to create channels for the GRPC client.", "", null);
 
+  private StringConnectionProperty errorHandlerClass = new StringConnectionProperty(
+      "errorHandlerClass",
+      "Classname of an implementation of ErrorHandler. If set this class will be "
+          + "used to map errors into the appropriate SqlException.", "", null);
+
   // TLS-related configs
   private BooleanConnectionProperty useSSL = new BooleanConnectionProperty(
       Constants.Property.USE_SSL, "Whether this connection should use transport-layer security",
@@ -493,6 +498,14 @@ public class ConnectionProperties {
 
   public void setGrpcChannelProvider(String grpcChannelProviderClassName) {
     this.grpcChannelProvider.setValue(grpcChannelProviderClassName);
+  }
+
+  public String getErrorHandlerClass() {
+    return errorHandlerClass.getValueAsString();
+  }
+
+  public void setErrorHandlerClass(String errorHandlerClass) {
+    this.errorHandlerClass.setValue(errorHandlerClass);
   }
 
   public boolean getUseSSL() {
