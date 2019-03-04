@@ -23,6 +23,8 @@ import io.vitess.client.RefreshableVTGateConnection;
 import io.vitess.client.VTGateConnection;
 import io.vitess.client.grpc.GrpcClientFactory;
 import io.vitess.client.grpc.RetryingInterceptorConfig;
+import io.vitess.client.grpc.error.DefaultErrorHandler;
+import io.vitess.client.grpc.error.ErrorHandler;
 import io.vitess.client.grpc.netty.DefaultChannelBuilderProvider;
 import io.vitess.client.grpc.netty.NettyChannelBuilderProvider;
 import io.vitess.client.grpc.tls.TlsOptions;
@@ -89,8 +91,7 @@ public class VitessVTGateManager {
                 new TimerTask() {
                   @Override
                   public void run() {
-                    refreshUpdatedSSLConnections(hostInfo,
-                        connection);
+                    refreshUpdatedSSLConnections(hostInfo, connection);
                   }
                 },
                 TimeUnit.SECONDS.toMillis(connection.getRefreshSeconds()),
@@ -188,6 +189,9 @@ public class VitessVTGateManager {
    */
   private static VTGateConnection getVtGateConn(VitessJDBCUrl.HostInfo hostInfo,
       VitessConnection connection) {
+    NettyChannelBuilderProvider channelProvider = getChannelProviderFromProperties(connection);
+    ErrorHandler errorHandler = getErrorHandlerFromProperties(connection);
+
     final Context context = connection.createContext(connection.getTimeout());
     if (connection.getUseSSL()) {
       final String keyStorePath = connection.getKeyStore() != null ? connection.getKeyStore()
@@ -213,11 +217,11 @@ public class VitessVTGateManager {
           .trustAlias(trustAlias);
 
       return new RefreshableVTGateConnection(
-          new GrpcClientFactory(getChannelProviderFromProperties(connection))
+          new GrpcClientFactory(channelProvider, errorHandler)
               .createTls(context, hostInfo.toString(), tlsOptions), keyStorePath, trustStorePath);
     } else {
       return new VTGateConnection(
-          new GrpcClientFactory(getChannelProviderFromProperties(connection))
+          new GrpcClientFactory(channelProvider, errorHandler)
               .create(context, hostInfo.toString()));
     }
   }
@@ -231,6 +235,17 @@ public class VitessVTGateManager {
         conn.getGrpcRetryMaxBackoffMillis(), conn.getGrpcRetryBackoffMultiplier());
   }
 
+  private static ErrorHandler getErrorHandlerFromProperties(
+      VitessConnection connection) {
+    // Skip reflection in default case
+    if (Strings.isNullOrEmpty(connection.getGrpcChannelProvider())) {
+      return new DefaultErrorHandler();
+    }
+
+    Object provider = constructDefault(connection.getErrorHandlerClass());
+    return ((ErrorHandler) provider);
+  }
+
   private static NettyChannelBuilderProvider getChannelProviderFromProperties(
       VitessConnection connection) {
     // Skip reflection in default case
@@ -238,25 +253,26 @@ public class VitessVTGateManager {
       return new DefaultChannelBuilderProvider(getRetryingInterceptorConfig(connection));
     }
 
+    Object provider = constructDefault(connection.getGrpcChannelProvider());
+    return ((NettyChannelBuilderProvider) provider);
+  }
+
+  private static Object constructDefault(String className) {
     try {
-      Class<?> providerClass = Class.forName(connection.getGrpcChannelProvider());
+      Class<?> providerClass = Class.forName(className);
 
       Constructor<?> constructor = providerClass.getConstructor();
 
-      Object provider = constructor.newInstance();
-      return ((NettyChannelBuilderProvider) provider);
+      Object object = constructor.newInstance();
+      return object;
     } catch (ClassNotFoundException cnf) {
-      throw new RuntimeException(String
-          .format("Could not get netty channel provider: %s", connection.getGrpcChannelProvider()),
-          cnf);
+      throw new RuntimeException(String.format("Could not get find class: %s", className), cnf);
     } catch (NoSuchMethodException nsm) {
-      throw new RuntimeException(String
-          .format("Channel provider %s does not have a default constructor!",
-              connection.getGrpcChannelProvider()), nsm);
+      throw new RuntimeException(
+          String.format("%s does not have a default constructor!", className), nsm);
     } catch (IllegalAccessException | InstantiationException | InvocationTargetException exc) {
-      throw new RuntimeException(String
-          .format("Failed to construct channel provider %s", connection.getGrpcChannelProvider()),
-          exc);
+      throw new RuntimeException(
+          String.format("Failed to construct channel provider %s", className), exc);
     }
   }
 

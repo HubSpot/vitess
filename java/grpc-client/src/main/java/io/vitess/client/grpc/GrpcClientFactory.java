@@ -18,6 +18,7 @@ package io.vitess.client.grpc;
 
 import io.grpc.CallCredentials;
 import io.grpc.LoadBalancer;
+import io.grpc.ManagedChannel;
 import io.grpc.NameResolver;
 import io.grpc.netty.GrpcSslContexts;
 import io.grpc.netty.NegotiationType;
@@ -27,6 +28,8 @@ import io.netty.handler.ssl.SslContextBuilder;
 import io.vitess.client.Context;
 import io.vitess.client.RpcClient;
 import io.vitess.client.RpcClientFactory;
+import io.vitess.client.grpc.error.DefaultErrorHandler;
+import io.vitess.client.grpc.error.ErrorHandler;
 import io.vitess.client.grpc.netty.DefaultChannelBuilderProvider;
 import io.vitess.client.grpc.netty.NettyChannelBuilderProvider;
 import io.vitess.client.grpc.tls.TlsOptions;
@@ -53,20 +56,24 @@ import javax.net.ssl.SSLException;
 public class GrpcClientFactory implements RpcClientFactory {
 
   private NettyChannelBuilderProvider nettyChannelBuilderProvider;
+  private ErrorHandler errorHandler;
   private CallCredentials callCredentials;
   private LoadBalancer.Factory loadBalancerFactory;
   private NameResolver.Factory nameResolverFactory;
 
   public GrpcClientFactory() {
-    this(new DefaultChannelBuilderProvider(RetryingInterceptorConfig.noOpConfig()));
+    this(new DefaultChannelBuilderProvider(RetryingInterceptorConfig.noOpConfig()),
+        new DefaultErrorHandler());
   }
 
   public GrpcClientFactory(RetryingInterceptorConfig config) {
-    this(new DefaultChannelBuilderProvider(config));
+    this(new DefaultChannelBuilderProvider(config), new DefaultErrorHandler());
   }
 
-  public GrpcClientFactory(NettyChannelBuilderProvider nettyChannelBuilderProvider) {
+  public GrpcClientFactory(NettyChannelBuilderProvider nettyChannelBuilderProvider,
+      ErrorHandler errorHandler) {
     this.nettyChannelBuilderProvider = nettyChannelBuilderProvider;
+    this.errorHandler = errorHandler;
   }
 
   public GrpcClientFactory setCallCredentials(CallCredentials value) {
@@ -101,8 +108,9 @@ public class GrpcClientFactory implements RpcClientFactory {
     if (nameResolverFactory != null) {
       channel.nameResolverFactory(nameResolverFactory);
     }
-    return callCredentials != null ? new GrpcClient(channel.build(), callCredentials, ctx)
-        : new GrpcClient(channel.build(), ctx);
+    return callCredentials != null
+        ? new GrpcClient(channel.build(), callCredentials, ctx, errorHandler)
+        : new GrpcClient(channel.build(), ctx, errorHandler);
   }
 
   /**
@@ -177,10 +185,12 @@ public class GrpcClientFactory implements RpcClientFactory {
       throw new RuntimeException(exc);
     }
 
-    return new GrpcClient(
-        channelBuilder(target).negotiationType(NegotiationType.TLS).sslContext(sslContext).build(),
-        ctx
-    );
+    ManagedChannel channel = channelBuilder(target)
+        .negotiationType(NegotiationType.TLS)
+        .sslContext(sslContext)
+        .build();
+
+    return new GrpcClient(channel, ctx, errorHandler);
   }
 
   /**

@@ -78,6 +78,7 @@ import java.util.concurrent.TimeUnit;
  * GrpcClient is a gRPC-based implementation of Vitess RpcClient.
  */
 public class GrpcClient implements RpcClient {
+
   private static final Duration DEFAULT_TIMEOUT = Duration.standardSeconds(30);
 
   private final ManagedChannel channel;
@@ -96,27 +97,28 @@ public class GrpcClient implements RpcClient {
     errorHandler = new DefaultErrorHandler();
   }
 
-  public GrpcClient(ManagedChannel channel, Context context) {
+  public GrpcClient(ManagedChannel channel, Context context, ErrorHandler errorHandler) {
     this.channel = channel;
     channelId = toChannelId(channel);
     asyncStub = VitessGrpc.newStub(channel);
     futureStub = VitessGrpc.newFutureStub(channel);
     timeout = getContextTimeoutOrDefault(context);
-    errorHandler = new DefaultErrorHandler();
+    this.errorHandler = errorHandler;
   }
 
-  public GrpcClient(ManagedChannel channel, CallCredentials credentials, Context context) {
+  public GrpcClient(ManagedChannel channel, CallCredentials credentials, Context context,
+      ErrorHandler errorHandler) {
     this.channel = channel;
     channelId = toChannelId(channel);
     asyncStub = VitessGrpc.newStub(channel).withCallCredentials(credentials);
     futureStub = VitessGrpc.newFutureStub(channel).withCallCredentials(credentials);
     timeout = getContextTimeoutOrDefault(context);
-    errorHandler = new DefaultErrorHandler();
+    this.errorHandler = errorHandler;
   }
 
   private String toChannelId(ManagedChannel channel) {
-    return channel instanceof InternalWithLogId
-        ? ((InternalWithLogId) channel).getLogId().toString() : channel.toString();
+    return channel instanceof InternalWithLogId ? ((InternalWithLogId) channel).getLogId()
+        .toString() : channel.toString();
   }
 
   @Override
@@ -185,9 +187,10 @@ public class GrpcClient implements RpcClient {
   @Override
   public ListenableFuture<ExecuteBatchKeyspaceIdsResponse> executeBatchKeyspaceIds(Context ctx,
       ExecuteBatchKeyspaceIdsRequest request) throws SQLException {
-    return Futures.catchingAsync(getFutureStub(ctx).executeBatchKeyspaceIds(request),
-        Exception.class, new ExceptionConverter<ExecuteBatchKeyspaceIdsResponse>(),
-        MoreExecutors.directExecutor());
+    return Futures
+        .catchingAsync(getFutureStub(ctx).executeBatchKeyspaceIds(request), Exception.class,
+            new ExceptionConverter<ExecuteBatchKeyspaceIdsResponse>(),
+            MoreExecutors.directExecutor());
   }
 
   @Override
@@ -195,11 +198,11 @@ public class GrpcClient implements RpcClient {
       throws SQLException {
     ClientStreamAdapter<StreamExecuteResponse, QueryResult> adapter =
         new ClientStreamAdapter<StreamExecuteResponse, QueryResult>() {
-          @Override
-          QueryResult getResult(StreamExecuteResponse response) throws SQLException {
-            return response.getResult();
-          }
-        };
+      @Override
+      QueryResult getResult(StreamExecuteResponse response) throws SQLException {
+        return response.getResult();
+      }
+    };
     getAsyncStub(ctx).streamExecute(request, adapter);
     return adapter;
   }
@@ -209,11 +212,11 @@ public class GrpcClient implements RpcClient {
       StreamExecuteShardsRequest request) throws SQLException {
     ClientStreamAdapter<StreamExecuteShardsResponse, QueryResult> adapter =
         new ClientStreamAdapter<StreamExecuteShardsResponse, QueryResult>() {
-          @Override
-          QueryResult getResult(StreamExecuteShardsResponse response) throws SQLException {
-            return response.getResult();
-          }
-        };
+      @Override
+      QueryResult getResult(StreamExecuteShardsResponse response) throws SQLException {
+        return response.getResult();
+      }
+    };
     getAsyncStub(ctx).streamExecuteShards(request, adapter);
     return adapter;
   }
@@ -223,11 +226,11 @@ public class GrpcClient implements RpcClient {
       StreamExecuteKeyspaceIdsRequest request) throws SQLException {
     ClientStreamAdapter<StreamExecuteKeyspaceIdsResponse, QueryResult> adapter =
         new ClientStreamAdapter<StreamExecuteKeyspaceIdsResponse, QueryResult>() {
-          @Override
-          QueryResult getResult(StreamExecuteKeyspaceIdsResponse response) throws SQLException {
-            return response.getResult();
-          }
-        };
+      @Override
+      QueryResult getResult(StreamExecuteKeyspaceIdsResponse response) throws SQLException {
+        return response.getResult();
+      }
+    };
     getAsyncStub(ctx).streamExecuteKeyspaceIds(request, adapter);
     return adapter;
   }
@@ -237,11 +240,11 @@ public class GrpcClient implements RpcClient {
       StreamExecuteKeyRangesRequest request) throws SQLException {
     ClientStreamAdapter<StreamExecuteKeyRangesResponse, QueryResult> adapter =
         new ClientStreamAdapter<StreamExecuteKeyRangesResponse, QueryResult>() {
-          @Override
-          QueryResult getResult(StreamExecuteKeyRangesResponse response) throws SQLException {
-            return response.getResult();
-          }
-        };
+      @Override
+      QueryResult getResult(StreamExecuteKeyRangesResponse response) throws SQLException {
+        return response.getResult();
+      }
+    };
     getAsyncStub(ctx).streamExecuteKeyRanges(request, adapter);
     return adapter;
   }
@@ -315,10 +318,8 @@ public class GrpcClient implements RpcClient {
 
   @Override
   public String toString() {
-    return String.format("[GrpcClient-%s channel=%s]",
-        Integer.toHexString(this.hashCode()),
-        channelId
-    );
+    return String
+        .format("[GrpcClient-%s channel=%s]", Integer.toHexString(this.hashCode()), channelId);
   }
 
   private static Duration getContextTimeoutOrDefault(Context context) {
@@ -330,6 +331,7 @@ public class GrpcClient implements RpcClient {
   }
 
   private abstract class ClientStreamAdapter<V, E> extends GrpcStreamAdapter<V, E> {
+
     @Override
     ErrorHandler getErrorHandler() {
       return errorHandler;
