@@ -26,7 +26,7 @@ public class DefaultErrorHandler implements ErrorHandler {
 
     switch (error.getCode()) {
       case OK:
-        break;
+        return null;
       case INVALID_ARGUMENT:
         return new SQLSyntaxErrorException(error.toString(), sqlState, errno);
       case DEADLINE_EXCEEDED:
@@ -40,13 +40,12 @@ public class DefaultErrorHandler implements ErrorHandler {
       case ABORTED:
         return new SQLRecoverableException(error.toString(), sqlState, errno);
       default:
-        return new SQLNonTransientException("Vitess RPC error: " + error.toString(), sqlState,
-            errno);
+        break;
     }
 
     switch (error.getLegacyCode()) {
       case SUCCESS_LEGACY:
-        break;
+        return null;
       case BAD_INPUT_LEGACY:
         return new SQLSyntaxErrorException(error.toString(), sqlState, errno);
       case DEADLINE_EXCEEDED_LEGACY:
@@ -60,8 +59,7 @@ public class DefaultErrorHandler implements ErrorHandler {
       case NOT_IN_TX_LEGACY:
         return new SQLRecoverableException(error.toString(), sqlState, errno);
       default:
-        return new SQLNonTransientException("Vitess RPC error: " + error.toString(), sqlState,
-            errno);
+        break;
     }
 
     return new SQLNonTransientException("Vitess vtgate error: " + error.toString(), sqlState,
