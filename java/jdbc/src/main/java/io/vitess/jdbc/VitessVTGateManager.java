@@ -238,7 +238,7 @@ public class VitessVTGateManager {
   private static ErrorHandler getErrorHandlerFromProperties(
       VitessConnection connection) {
     // Skip reflection in default case
-    if (Strings.isNullOrEmpty(connection.getGrpcChannelProvider())) {
+    if (Strings.isNullOrEmpty(connection.getErrorHandlerClass())) {
       return new DefaultErrorHandler();
     }
 
