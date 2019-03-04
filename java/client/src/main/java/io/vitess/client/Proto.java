@@ -32,18 +32,9 @@ import io.vitess.proto.Query.QueryResult;
 import io.vitess.proto.Vtgate.BoundKeyspaceIdQuery;
 import io.vitess.proto.Vtgate.BoundShardQuery;
 import io.vitess.proto.Vtgate.ExecuteEntityIdsRequest.EntityId;
-import io.vitess.proto.Vtrpc.RPCError;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.sql.SQLException;
-import java.sql.SQLIntegrityConstraintViolationException;
-import java.sql.SQLInvalidAuthorizationSpecException;
-import java.sql.SQLNonTransientException;
-import java.sql.SQLRecoverableException;
-import java.sql.SQLSyntaxErrorException;
-import java.sql.SQLTimeoutException;
-import java.sql.SQLTransientException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -57,73 +48,19 @@ public class Proto {
 
   public static final Function<byte[], ByteString> BYTE_ARRAY_TO_BYTE_STRING =
       new Function<byte[], ByteString>() {
-        @Override
-        public ByteString apply(byte[] from) {
-          return ByteString.copyFrom(from);
-        }
-      };
+    @Override
+    public ByteString apply(byte[] from) {
+      return ByteString.copyFrom(from);
+    }
+  };
   public static final Function<Map.Entry<byte[], ?>, EntityId> MAP_ENTRY_TO_ENTITY_KEYSPACE_ID =
       new Function<Map.Entry<byte[], ?>, EntityId>() {
-        @Override
-        public EntityId apply(Map.Entry<byte[], ?> entry) {
-          return buildEntityId(entry.getKey(), entry.getValue());
-        }
-      };
-  private static final int MAX_DECIMAL_UNIT = 30;
-
-  /**
-   * Throws the proper SQLException for an error returned by VTGate.
-   *
-   * <p>
-   * Errors returned by Vitess are documented in the
-   * <a href="https://github.com/vitessio/vitess/blob/master/proto/vtrpc.proto">vtrpc proto</a>.
-   */
-  public static void checkError(RPCError error) throws SQLException {
-    if (error != null) {
-      int errno = getErrno(error.getMessage());
-      String sqlState = getSQLState(error.getMessage());
-
-      switch (error.getCode()) {
-        case OK:
-          break;
-        case INVALID_ARGUMENT:
-          throw new SQLSyntaxErrorException(error.toString(), sqlState, errno);
-        case DEADLINE_EXCEEDED:
-          throw new SQLTimeoutException(error.toString(), sqlState, errno);
-        case ALREADY_EXISTS:
-          throw new SQLIntegrityConstraintViolationException(error.toString(), sqlState, errno);
-        case UNAVAILABLE:
-          throw new SQLTransientException(error.toString(), sqlState, errno);
-        case UNAUTHENTICATED:
-          throw new SQLInvalidAuthorizationSpecException(error.toString(), sqlState, errno);
-        case ABORTED:
-          throw new SQLRecoverableException(error.toString(), sqlState, errno);
-        default:
-          throw new SQLNonTransientException("Vitess RPC error: " + error.toString(), sqlState,
-              errno);
-      }
-
-      switch (error.getLegacyCode()) {
-        case SUCCESS_LEGACY:
-          break;
-        case BAD_INPUT_LEGACY:
-          throw new SQLSyntaxErrorException(error.toString(), sqlState, errno);
-        case DEADLINE_EXCEEDED_LEGACY:
-          throw new SQLTimeoutException(error.toString(), sqlState, errno);
-        case INTEGRITY_ERROR_LEGACY:
-          throw new SQLIntegrityConstraintViolationException(error.toString(), sqlState, errno);
-        case TRANSIENT_ERROR_LEGACY:
-          throw new SQLTransientException(error.toString(), sqlState, errno);
-        case UNAUTHENTICATED_LEGACY:
-          throw new SQLInvalidAuthorizationSpecException(error.toString(), sqlState, errno);
-        case NOT_IN_TX_LEGACY:
-          throw new SQLRecoverableException(error.toString(), sqlState, errno);
-        default:
-          throw new SQLNonTransientException("Vitess RPC error: " + error.toString(), sqlState,
-              errno);
-      }
+    @Override
+    public EntityId apply(Map.Entry<byte[], ?> entry) {
+      return buildEntityId(entry.getKey(), entry.getValue());
     }
-  }
+  };
+  private static final int MAX_DECIMAL_UNIT = 30;
 
   /**
    * Extracts the MySQL errno from a Vitess error message, if any.
