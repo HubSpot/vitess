@@ -24,11 +24,11 @@ import com.google.common.util.concurrent.MoreExecutors;
 import io.grpc.CallCredentials;
 import io.grpc.InternalWithLogId;
 import io.grpc.ManagedChannel;
-import io.grpc.StatusRuntimeException;
 import io.vitess.client.Context;
-import io.vitess.client.Proto;
 import io.vitess.client.RpcClient;
 import io.vitess.client.StreamIterator;
+import io.vitess.client.grpc.error.DefaultErrorHandler;
+import io.vitess.client.grpc.error.ErrorHandler;
 import io.vitess.proto.Query.QueryResult;
 import io.vitess.proto.Vtgate;
 import io.vitess.proto.Vtgate.ExecuteRequest;
@@ -36,6 +36,7 @@ import io.vitess.proto.Vtgate.ExecuteResponse;
 import io.vitess.proto.Vtgate.StreamExecuteRequest;
 import io.vitess.proto.Vtgate.StreamExecuteResponse;
 import io.vitess.proto.Vtgate.VStreamResponse;
+import io.vitess.proto.Vtrpc.RPCError;
 import io.vitess.proto.grpc.VitessGrpc;
 import io.vitess.proto.grpc.VitessGrpc.VitessFutureStub;
 import io.vitess.proto.grpc.VitessGrpc.VitessStub;
@@ -44,19 +45,13 @@ import org.joda.time.Duration;
 
 import java.io.IOException;
 import java.sql.SQLException;
-import java.sql.SQLIntegrityConstraintViolationException;
-import java.sql.SQLInvalidAuthorizationSpecException;
-import java.sql.SQLNonTransientException;
-import java.sql.SQLRecoverableException;
-import java.sql.SQLSyntaxErrorException;
-import java.sql.SQLTimeoutException;
-import java.sql.SQLTransientException;
 import java.util.concurrent.TimeUnit;
 
 /**
  * GrpcClient is a gRPC-based implementation of Vitess RpcClient.
  */
 public class GrpcClient implements RpcClient {
+
   private static final Duration DEFAULT_TIMEOUT = Duration.standardSeconds(30);
 
   private final ManagedChannel channel;
@@ -64,6 +59,7 @@ public class GrpcClient implements RpcClient {
   private final VitessStub asyncStub;
   private final VitessFutureStub futureStub;
   private final Duration timeout;
+  private final ErrorHandler errorHandler;
 
   public GrpcClient(ManagedChannel channel) {
     this.channel = channel;
@@ -71,27 +67,31 @@ public class GrpcClient implements RpcClient {
     asyncStub = VitessGrpc.newStub(channel);
     futureStub = VitessGrpc.newFutureStub(channel);
     timeout = DEFAULT_TIMEOUT;
+    errorHandler = new DefaultErrorHandler();
   }
 
-  public GrpcClient(ManagedChannel channel, Context context) {
+  public GrpcClient(ManagedChannel channel, Context context, ErrorHandler errorHandler) {
     this.channel = channel;
     channelId = toChannelId(channel);
     asyncStub = VitessGrpc.newStub(channel);
     futureStub = VitessGrpc.newFutureStub(channel);
     timeout = getContextTimeoutOrDefault(context);
+    this.errorHandler = errorHandler;
   }
 
-  public GrpcClient(ManagedChannel channel, CallCredentials credentials, Context context) {
+  public GrpcClient(ManagedChannel channel, CallCredentials credentials, Context context,
+      ErrorHandler errorHandler) {
     this.channel = channel;
     channelId = toChannelId(channel);
     asyncStub = VitessGrpc.newStub(channel).withCallCredentials(credentials);
     futureStub = VitessGrpc.newFutureStub(channel).withCallCredentials(credentials);
     timeout = getContextTimeoutOrDefault(context);
+    this.errorHandler = errorHandler;
   }
 
   private String toChannelId(ManagedChannel channel) {
-    return channel instanceof InternalWithLogId
-        ? ((InternalWithLogId) channel).getLogId().toString() : channel.toString();
+    return channel instanceof InternalWithLogId ? ((InternalWithLogId) channel).getLogId()
+        .toString() : channel.toString();
   }
 
   @Override
@@ -125,13 +125,13 @@ public class GrpcClient implements RpcClient {
   @Override
   public StreamIterator<QueryResult> streamExecute(Context ctx, StreamExecuteRequest request)
       throws SQLException {
-    GrpcStreamAdapter<StreamExecuteResponse, QueryResult> adapter =
-        new GrpcStreamAdapter<StreamExecuteResponse, QueryResult>() {
-          @Override
-          QueryResult getResult(StreamExecuteResponse response) throws SQLException {
-            return response.getResult();
-          }
-        };
+    ClientStreamAdapter<StreamExecuteResponse, QueryResult> adapter =
+        new ClientStreamAdapter<StreamExecuteResponse, QueryResult>() {
+      @Override
+      QueryResult getResult(StreamExecuteResponse response) throws SQLException {
+        return response.getResult();
+      }
+    };
     getAsyncStub(ctx).streamExecute(request, adapter);
     return adapter;
   }
@@ -139,8 +139,8 @@ public class GrpcClient implements RpcClient {
   @Override
   public StreamIterator<Vtgate.VStreamResponse> getVStream(Context ctx,
       Vtgate.VStreamRequest vstreamRequest) {
-    GrpcStreamAdapter<VStreamResponse, VStreamResponse> adapter =
-        new GrpcStreamAdapter<VStreamResponse, VStreamResponse>() {
+    ClientStreamAdapter<VStreamResponse, VStreamResponse> adapter =
+        new ClientStreamAdapter<VStreamResponse, VStreamResponse>() {
           @Override
           VStreamResponse getResult(VStreamResponse response) {
             return response;
@@ -151,48 +151,19 @@ public class GrpcClient implements RpcClient {
     return adapter;
   }
 
+  @Override
+  public SQLException checkError(RPCError error) {
+    return errorHandler.checkVitessError(error);
+  }
+
   /**
    * Converts an exception from the gRPC framework into the appropriate {@link SQLException}.
    */
-  static SQLException convertGrpcError(Throwable exc) {
-    if (exc instanceof StatusRuntimeException) {
-      StatusRuntimeException sre = (StatusRuntimeException) exc;
-
-      int errno = Proto.getErrno(sre.getMessage());
-      String sqlState = Proto.getSQLState(sre.getMessage());
-
-      switch (sre.getStatus().getCode()) {
-        case INVALID_ARGUMENT:
-          return new SQLSyntaxErrorException(sre.toString(), sqlState, errno, sre);
-        case DEADLINE_EXCEEDED:
-          return new SQLTimeoutException(sre.toString(), sqlState, errno, sre);
-        case ALREADY_EXISTS:
-          return new SQLIntegrityConstraintViolationException(sre.toString(), sqlState, errno, sre);
-        case UNAUTHENTICATED:
-          return new SQLInvalidAuthorizationSpecException(sre.toString(), sqlState, errno, sre);
-        case UNAVAILABLE:
-          return new SQLTransientException(sre.toString(), sqlState, errno, sre);
-        case ABORTED:
-          return new SQLRecoverableException(sre.toString(), sqlState, errno, sre);
-        default: // Covers e.g. UNKNOWN.
-          String advice = "";
-          if (exc.getCause() instanceof java.nio.channels.ClosedChannelException) {
-            advice =
-                "Failed to connect to vtgate. Make sure that vtgate is running and you are using "
-                    + "the correct address. Details: ";
-          }
-          return new SQLNonTransientException(
-              "gRPC StatusRuntimeException: " + advice + exc.toString(), sqlState, errno, exc);
-      }
-    }
-    return new SQLNonTransientException("gRPC error: " + exc.toString(), exc);
-  }
-
-  static class ExceptionConverter<V> implements AsyncFunction<Exception, V> {
+  class ExceptionConverter<V> implements AsyncFunction<Exception, V> {
 
     @Override
     public ListenableFuture<V> apply(Exception exc) throws Exception {
-      throw convertGrpcError(exc);
+      throw errorHandler.convertGrpcError(exc);
     }
   }
 
@@ -214,10 +185,8 @@ public class GrpcClient implements RpcClient {
 
   @Override
   public String toString() {
-    return String.format("[GrpcClient-%s channel=%s]",
-        Integer.toHexString(this.hashCode()),
-        channelId
-    );
+    return String
+        .format("[GrpcClient-%s channel=%s]", Integer.toHexString(this.hashCode()), channelId);
   }
 
   private static Duration getContextTimeoutOrDefault(Context context) {
@@ -226,5 +195,13 @@ public class GrpcClient implements RpcClient {
     }
 
     return context.getTimeout();
+  }
+
+  private abstract class ClientStreamAdapter<V, E> extends GrpcStreamAdapter<V, E> {
+
+    @Override
+    ErrorHandler getErrorHandler() {
+      return errorHandler;
+    }
   }
 }

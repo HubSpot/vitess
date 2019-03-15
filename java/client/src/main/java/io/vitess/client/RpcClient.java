@@ -25,6 +25,7 @@ import io.vitess.proto.Vtgate.ExecuteResponse;
 import io.vitess.proto.Vtgate.StreamExecuteRequest;
 import io.vitess.proto.Vtgate.VStreamRequest;
 import io.vitess.proto.Vtgate.VStreamResponse;
+import io.vitess.proto.Vtrpc.RPCError;
 
 import java.io.Closeable;
 import java.sql.SQLException;
@@ -81,4 +82,15 @@ public interface RpcClient extends Closeable {
    */
   StreamIterator<VStreamResponse> getVStream(
       Context ctx, VStreamRequest vstreamRequest) throws SQLException;
+
+  /**
+   * <p>Checks if a specific RPCError should be converted to an exception and returns the
+   * appropriate exception corresponding to that error.
+   * </p>
+   *
+   * <p>See the
+   * <a href="https://github.com/vitessio/vitess/blob/master/proto/vtrpc.proto">proto</a>
+   * definition for canonical documentation on this VTGate API.
+   */
+  SQLException checkError(RPCError error);
 }

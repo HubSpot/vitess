@@ -18,6 +18,7 @@ package io.vitess.client.grpc;
 
 import io.grpc.stub.StreamObserver;
 import io.vitess.client.StreamIterator;
+import io.vitess.client.grpc.error.ErrorHandler;
 
 import java.sql.SQLDataException;
 import java.sql.SQLException;
@@ -41,8 +42,8 @@ import java.util.NoSuchElementException;
  * @param <V> The type of value sent through the {@link StreamObserver} interface.
  * @param <E> The type of value to return through the {@link StreamIterator} interface.
  */
-abstract class GrpcStreamAdapter<V, E>
-    implements StreamObserver<V>, StreamIterator<E>, AutoCloseable {
+abstract class GrpcStreamAdapter<V, E> implements StreamObserver<V>, StreamIterator<E>,
+    AutoCloseable {
 
   /**
    * getResult must be implemented to tell the adapter how to convert from the StreamObserver value
@@ -54,6 +55,8 @@ abstract class GrpcStreamAdapter<V, E>
    * @throws SQLException For errors originating within the Vitess server.
    */
   abstract E getResult(V value) throws SQLException;
+
+  abstract ErrorHandler getErrorHandler();
 
   private E nextValue;
   private Throwable error;
@@ -112,7 +115,7 @@ abstract class GrpcStreamAdapter<V, E>
           }
           if (error != null) {
             // We got an error from the gRPC layer.
-            throw GrpcClient.convertGrpcError(error);
+            throw getErrorHandler().convertGrpcError(error);
           }
 
           wait();

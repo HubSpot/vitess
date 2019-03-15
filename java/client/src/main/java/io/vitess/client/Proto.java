@@ -18,29 +18,16 @@ package io.vitess.client;
 
 import com.google.common.base.Function;
 import com.google.common.collect.ImmutableList;
-import com.google.common.collect.Iterables;
 import com.google.common.primitives.UnsignedLong;
 import com.google.protobuf.ByteString;
 
-import io.vitess.client.cursor.Cursor;
 import io.vitess.client.cursor.CursorWithError;
-import io.vitess.client.cursor.SimpleCursor;
 import io.vitess.proto.Query;
 import io.vitess.proto.Query.BindVariable;
 import io.vitess.proto.Query.BoundQuery;
-import io.vitess.proto.Query.QueryResult;
-import io.vitess.proto.Vtrpc.RPCError;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.sql.SQLException;
-import java.sql.SQLIntegrityConstraintViolationException;
-import java.sql.SQLInvalidAuthorizationSpecException;
-import java.sql.SQLNonTransientException;
-import java.sql.SQLRecoverableException;
-import java.sql.SQLSyntaxErrorException;
-import java.sql.SQLTimeoutException;
-import java.sql.SQLTransientException;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -54,46 +41,12 @@ public class Proto {
 
   public static final Function<byte[], ByteString> BYTE_ARRAY_TO_BYTE_STRING =
       new Function<byte[], ByteString>() {
-        @Override
-        public ByteString apply(byte[] from) {
-          return ByteString.copyFrom(from);
-        }
-      };
-  private static final int MAX_DECIMAL_UNIT = 30;
-
-  /**
-   * Throws the proper SQLException for an error returned by VTGate.
-   *
-   * <p>
-   * Errors returned by Vitess are documented in the
-   * <a href="https://github.com/vitessio/vitess/blob/main/proto/vtrpc.proto">vtrpc proto</a>.
-   */
-  public static void checkError(RPCError error) throws SQLException {
-    if (error != null) {
-      int errno = getErrno(error.getMessage());
-      String sqlState = getSQLState(error.getMessage());
-
-      switch (error.getCode()) {
-        case OK:
-          break;
-        case INVALID_ARGUMENT:
-          throw new SQLSyntaxErrorException(error.toString(), sqlState, errno);
-        case DEADLINE_EXCEEDED:
-          throw new SQLTimeoutException(error.toString(), sqlState, errno);
-        case ALREADY_EXISTS:
-          throw new SQLIntegrityConstraintViolationException(error.toString(), sqlState, errno);
-        case UNAVAILABLE:
-          throw new SQLTransientException(error.toString(), sqlState, errno);
-        case UNAUTHENTICATED:
-          throw new SQLInvalidAuthorizationSpecException(error.toString(), sqlState, errno);
-        case ABORTED:
-          throw new SQLRecoverableException(error.toString(), sqlState, errno);
-        default:
-          throw new SQLNonTransientException("Vitess RPC error: " + error.toString(), sqlState,
-              errno);
-      }
+    @Override
+    public ByteString apply(byte[] from) {
+      return ByteString.copyFrom(from);
     }
-  }
+  };
+  private static final int MAX_DECIMAL_UNIT = 30;
 
   /**
    * Extracts the MySQL errno from a Vitess error message, if any.

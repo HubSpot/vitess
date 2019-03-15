@@ -35,6 +35,7 @@ import io.vitess.proto.Vtgate.ExecuteResponse;
 import io.vitess.proto.Vtgate.StreamExecuteRequest;
 import io.vitess.proto.Vtgate.VStreamRequest;
 import io.vitess.proto.Vtgate.VStreamResponse;
+import io.vitess.proto.Vtrpc.RPCError;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -104,7 +105,7 @@ public class VTGateConnection implements Closeable {
               @Override
               public ListenableFuture<Cursor> apply(ExecuteResponse response) throws Exception {
                 vtSession.setSession(response.getSession());
-                Proto.checkError(response.getError());
+                checkAndThrowError(response.getError());
                 return Futures.<Cursor>immediateFuture(new SimpleCursor(response.getResult()));
               }
             }, directExecutor()));
@@ -156,7 +157,7 @@ public class VTGateConnection implements Closeable {
               public ListenableFuture<List<CursorWithError>> apply(
                   Vtgate.ExecuteBatchResponse response) throws Exception {
                 vtSession.setSession(response.getSession());
-                Proto.checkError(response.getError());
+                checkAndThrowError(response.getError());
                 return Futures.immediateFuture(
                     Proto.fromQueryResponsesToCursorList(response.getResultsList()));
               }
@@ -203,6 +204,13 @@ public class VTGateConnection implements Closeable {
     }
 
     return client.getVStream(ctx, request);
+  }
+
+  private void checkAndThrowError(RPCError error) throws SQLException {
+    SQLException exception = client.checkError(error);
+    if (exception != null) {
+      throw exception;
+    }
   }
 
   /**
