@@ -35,9 +35,11 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
@@ -91,7 +93,8 @@ public class VitessVTGateManager {
                 new TimerTask() {
                   @Override
                   public void run() {
-                    refreshUpdatedSSLConnections(hostInfo, connection);
+                    refreshUpdatedSSLConnections(hostInfo,
+                        connection);
                   }
                 },
                 TimeUnit.SECONDS.toMillis(connection.getRefreshSeconds()),
@@ -141,21 +144,25 @@ public class VitessVTGateManager {
 
   private static void refreshUpdatedSSLConnections(VitessJDBCUrl.HostInfo hostInfo,
       VitessConnection connection) {
+    Set<VTGateConnection> closedConnections = new HashSet<>();
     synchronized (VitessVTGateManager.class) {
-      int updatedCount = 0;
       for (Map.Entry<String, VTGateConnection> entry : vtGateConnHashMap.entrySet()) {
         if (entry.getValue() instanceof RefreshableVTGateConnection) {
           RefreshableVTGateConnection existing = (RefreshableVTGateConnection) entry.getValue();
           if (existing.checkKeystoreUpdates()) {
-            updatedCount++;
             VTGateConnection old = vtGateConnHashMap
                 .replace(entry.getKey(), getVtGateConn(hostInfo, connection));
-            closeRefreshedConnection(old);
+            closedConnections.add(old);
           }
         }
       }
-      if (updatedCount > 0) {
-        logger.info("refreshed " + updatedCount + " vtgate connections due to keystore update");
+    }
+
+    if (closedConnections.size() > 0) {
+      logger.info(
+          "refreshed " + closedConnections.size() + " vtgate connections due to keystore update");
+      for (VTGateConnection closedConnection : closedConnections) {
+        closeRefreshedConnection(closedConnection);
       }
     }
   }
@@ -216,13 +223,11 @@ public class VitessVTGateManager {
           .trustStorePath(trustStorePath).trustStorePassword(trustStorePassword)
           .trustAlias(trustAlias);
 
-      return new RefreshableVTGateConnection(
-          new GrpcClientFactory(channelProvider, errorHandler)
-              .createTls(context, hostInfo.toString(), tlsOptions), keyStorePath, trustStorePath);
+      return new RefreshableVTGateConnection(new GrpcClientFactory(channelProvider, errorHandler)
+          .createTls(context, hostInfo.toString(), tlsOptions), keyStorePath, trustStorePath);
     } else {
-      return new VTGateConnection(
-          new GrpcClientFactory(channelProvider, errorHandler)
-              .create(context, hostInfo.toString()));
+      return new VTGateConnection(new GrpcClientFactory(channelProvider, errorHandler)
+          .create(context, hostInfo.toString()));
     }
   }
 
@@ -235,8 +240,7 @@ public class VitessVTGateManager {
         conn.getGrpcRetryMaxBackoffMillis(), conn.getGrpcRetryBackoffMultiplier());
   }
 
-  private static ErrorHandler getErrorHandlerFromProperties(
-      VitessConnection connection) {
+  private static ErrorHandler getErrorHandlerFromProperties(VitessConnection connection) {
     // Skip reflection in default case
     if (Strings.isNullOrEmpty(connection.getErrorHandlerClass())) {
       return new DefaultErrorHandler();
