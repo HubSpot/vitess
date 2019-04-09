@@ -24,6 +24,9 @@ import io.vitess.mysql.DateTime;
 import io.vitess.util.Constants;
 import io.vitess.util.StringUtils;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.InputStream;
 import java.io.Reader;
 import java.math.BigDecimal;
@@ -66,7 +69,7 @@ import java.util.Map;
  * calling any of the above method.
  */
 public class VitessPreparedStatement extends VitessStatement implements PreparedStatement {
-
+  private static final Logger LOG = LoggerFactory.getLogger(VitessPreparedStatement.class);
   /* Get actual class name to be printed on */
   private final String sql;
   private final Map<String, Object> bindVariables;
@@ -117,9 +120,14 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
       if (vitessConnection.isSimpleExecute() && this.fetchSize == 0) {
         checkAndBeginTransaction();
         Context context = this.vitessConnection.createContext(this.queryTimeoutInMillis);
+        long start = System.currentTimeMillis();
         cursor = vtGateConn
             .execute(context, this.sql, this.bindVariables, vitessConnection.getVtSession())
             .checkedGet();
+        long duration = System.currentTimeMillis() - start;
+        if (duration > 15) {
+          LOG.info("Query {} took {} ms with bindings {}", this.sql, duration, this.bindVariables);
+        }
       } else {
         Context context = this.vitessConnection.createContext(this.queryTimeoutInMillis);
         cursor = vtGateConn
