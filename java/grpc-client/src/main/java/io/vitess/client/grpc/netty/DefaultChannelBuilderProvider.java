@@ -6,11 +6,10 @@ import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.vitess.client.grpc.RetryingInterceptor;
 import io.vitess.client.grpc.RetryingInterceptorConfig;
-import io.vitess.client.grpc.TimingInterceptor;
 
 public class DefaultChannelBuilderProvider implements NettyChannelBuilderProvider {
   private static final EventLoopGroup ELG = new NioEventLoopGroup(
-      12,
+      6,
       new DefaultThreadFactory("vitess-netty", true)
   );
 
@@ -25,6 +24,6 @@ public class DefaultChannelBuilderProvider implements NettyChannelBuilderProvide
     return NettyChannelBuilder.forTarget(target)
         .eventLoopGroup(ELG)
         .maxInboundMessageSize(16777216)
-        .intercept(new RetryingInterceptor(config), new TimingInterceptor());
+        .intercept(new RetryingInterceptor(config));
   }
 }
