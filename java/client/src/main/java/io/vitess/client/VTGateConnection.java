@@ -38,9 +38,6 @@ import io.vitess.proto.Vtgate.SplitQueryResponse;
 import io.vitess.proto.Vtgate.StreamExecuteRequest;
 import io.vitess.proto.Vtrpc.RPCError;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.Closeable;
 import java.io.IOException;
 import java.sql.SQLDataException;
@@ -48,8 +45,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import javax.annotation.Nullable;
 
@@ -69,8 +64,7 @@ import javax.annotation.Nullable;
  * VTGateBlockingConnection} if you want synchronous calls.</p>
  */
 public class VTGateConnection implements Closeable {
-  private static final Logger LOG = LoggerFactory.getLogger(VTGateConnection.class);
-  private static final ExecutorService es = Executors.newCachedThreadPool();
+
   private final RpcClient client;
 
   /**
@@ -107,7 +101,6 @@ public class VTGateConnection implements Closeable {
         requestBuilder.setCallerId(ctx.getCallerId());
       }
 
-      long start = System.currentTimeMillis();
       SQLFuture<Cursor> call = new SQLFuture<>(
           transformAsync(client.execute(ctx, requestBuilder.build()),
               new AsyncFunction<ExecuteResponse, Cursor>() {
@@ -119,25 +112,7 @@ public class VTGateConnection implements Closeable {
                 }
               }, directExecutor()));
       vtSession.setLastCall(call);
-      call.addListener(new SlowQueryLogger(start, query), es);
       return call;
-    }
-  }
-
-  private static class SlowQueryLogger implements Runnable {
-    private final long startTime;
-    private final String query;
-
-    public SlowQueryLogger(long startTime, String query) {
-      this.startTime = startTime;
-      this.query = query;
-    }
-
-    @Override public void run() {
-      long duration = System.currentTimeMillis() - startTime;
-      if (duration > 15) {
-        LOG.info("Query {} took {} ms", query, duration);
-      }
     }
   }
 
@@ -199,7 +174,6 @@ public class VTGateConnection implements Closeable {
         requestBuilder.setCallerId(ctx.getCallerId());
       }
 
-      long start = System.currentTimeMillis();
       SQLFuture<List<CursorWithError>> call = new SQLFuture<>(
           transformAsync(client.executeBatch(ctx, requestBuilder.build()),
               new AsyncFunction<Vtgate.ExecuteBatchResponse, List<CursorWithError>>() {
@@ -213,9 +187,6 @@ public class VTGateConnection implements Closeable {
                 }
               }, directExecutor()));
       vtSession.setLastCall(call);
-      call.addListener(new SlowQueryLogger(start,
-                                           queryList.stream()
-                                           .findFirst().orElse("empty batch")), es);
       return call;
     }
   }
