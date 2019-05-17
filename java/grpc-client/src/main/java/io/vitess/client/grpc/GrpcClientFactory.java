@@ -47,8 +47,6 @@ import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
 import java.util.Enumeration;
-import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 import javax.net.ssl.SSLException;
 
@@ -103,12 +101,6 @@ public class GrpcClientFactory implements RpcClientFactory {
    */
   @Override
   public RpcClient create(Context ctx, String target) {
-    return new JacobsJankyGrpcClient(
-        IntStream.range(0, 5).boxed().map(i -> createInternal(ctx, target)).collect(Collectors.toList())
-    );
-  }
-
-  private RpcClient createInternal(Context ctx, String target) {
     NettyChannelBuilder channel = channelBuilder(target).negotiationType(NegotiationType.PLAINTEXT);
     if (loadBalancerFactory != null) {
       channel.loadBalancerFactory(loadBalancerFactory);
@@ -153,12 +145,6 @@ public class GrpcClientFactory implements RpcClientFactory {
    */
   @Override
   public RpcClient createTls(Context ctx, String target, TlsOptions tlsOptions) {
-    return new JacobsJankyGrpcClient(
-        IntStream.range(0, 5).boxed().map(i -> createTlsInternal(ctx, target, tlsOptions)).collect(Collectors.toList())
-    );
-  }
-
-  private RpcClient createTlsInternal(Context ctx, String target, TlsOptions tlsOptions) {
     final SslContextBuilder sslContextBuilder = GrpcSslContexts.forClient();
 
     // trustManager should always be set
@@ -181,7 +167,7 @@ public class GrpcClientFactory implements RpcClientFactory {
           tlsOptions.getKeyAlias() == null ? loadPrivateKeyEntry(keyStore,
               tlsOptions.getKeyStorePassword(), tlsOptions.getKeyPassword())
               : loadPrivateKeyEntryForAlias(keyStore, tlsOptions.getKeyAlias(),
-              tlsOptions.getKeyStorePassword(), tlsOptions.getKeyPassword());
+                  tlsOptions.getKeyStorePassword(), tlsOptions.getKeyPassword());
       if (privateKeyWrapper == null) {
         throw new RuntimeException(
             "Could not retrieve private key and certificate chain from keyStore");
