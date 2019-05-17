@@ -16,24 +16,6 @@
 
 package io.vitess.client.grpc;
 
-import io.grpc.CallCredentials;
-import io.grpc.LoadBalancer;
-import io.grpc.ManagedChannel;
-import io.grpc.NameResolver;
-import io.grpc.netty.GrpcSslContexts;
-import io.grpc.netty.NegotiationType;
-import io.grpc.netty.NettyChannelBuilder;
-import io.netty.handler.ssl.SslContext;
-import io.netty.handler.ssl.SslContextBuilder;
-import io.vitess.client.Context;
-import io.vitess.client.RpcClient;
-import io.vitess.client.RpcClientFactory;
-import io.vitess.client.grpc.error.DefaultErrorHandler;
-import io.vitess.client.grpc.error.ErrorHandler;
-import io.vitess.client.grpc.netty.DefaultChannelBuilderProvider;
-import io.vitess.client.grpc.netty.NettyChannelBuilderProvider;
-import io.vitess.client.grpc.tls.TlsOptions;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -51,6 +33,24 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
 import javax.net.ssl.SSLException;
+
+import io.grpc.CallCredentials;
+import io.grpc.LoadBalancer;
+import io.grpc.ManagedChannel;
+import io.grpc.NameResolver;
+import io.grpc.netty.GrpcSslContexts;
+import io.grpc.netty.NegotiationType;
+import io.grpc.netty.NettyChannelBuilder;
+import io.netty.handler.ssl.SslContext;
+import io.netty.handler.ssl.SslContextBuilder;
+import io.vitess.client.Context;
+import io.vitess.client.RpcClient;
+import io.vitess.client.RpcClientFactory;
+import io.vitess.client.grpc.error.DefaultErrorHandler;
+import io.vitess.client.grpc.error.ErrorHandler;
+import io.vitess.client.grpc.netty.DefaultChannelBuilderProvider;
+import io.vitess.client.grpc.netty.NettyChannelBuilderProvider;
+import io.vitess.client.grpc.tls.TlsOptions;
 
 /**
  * GrpcClientFactory creates RpcClients with the gRPC implementation.
@@ -104,7 +104,7 @@ public class GrpcClientFactory implements RpcClientFactory {
   @Override
   public RpcClient create(Context ctx, String target) {
     return new JacobsJankyGrpcClient(
-        IntStream.range(0, 5).boxed().map(i -> createInternal(ctx, target)).collect(Collectors.toList())
+        IntStream.range(0, 40).boxed().map(i -> createInternal(ctx, target)).collect(Collectors.toList())
     );
   }
 
@@ -154,7 +154,7 @@ public class GrpcClientFactory implements RpcClientFactory {
   @Override
   public RpcClient createTls(Context ctx, String target, TlsOptions tlsOptions) {
     return new JacobsJankyGrpcClient(
-        IntStream.range(0, 5).boxed().map(i -> createTlsInternal(ctx, target, tlsOptions)).collect(Collectors.toList())
+        IntStream.range(0, 40).boxed().map(i -> createTlsInternal(ctx, target, tlsOptions)).collect(Collectors.toList())
     );
   }
 
