@@ -21,17 +21,15 @@ import io.vitess.client.RpcClient;
 import io.vitess.client.VTGateConnection;
 import io.vitess.client.grpc.GrpcClientFactory;
 import io.vitess.proto.Vtrpc;
-
 import org.joda.time.Duration;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.sql.SQLException;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.junit.Assert;
-import org.junit.Test;
 
 /**
  * Created by naveen.nahata on 29/02/16.
@@ -73,7 +71,7 @@ public class VitessVTGateManagerTest {
     ConcurrentHashMap<String, VTGateConnection> map = (ConcurrentHashMap<String,
         VTGateConnection>) privateMapField
         .get(VitessVTGateManager.class);
-    Assert.assertEquals(4, map.size());
+    Assert.assertEquals(6, map.size());
     VitessVTGateManager.close();
   }
 
