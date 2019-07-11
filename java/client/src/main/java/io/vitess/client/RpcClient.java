@@ -17,6 +17,7 @@
 package io.vitess.client;
 
 import com.google.common.util.concurrent.ListenableFuture;
+
 import io.vitess.proto.Query.QueryResult;
 import io.vitess.proto.Vtgate;
 import io.vitess.proto.Vtgate.BeginRequest;
@@ -256,6 +257,4 @@ public interface RpcClient extends Closeable {
    * definition for canonical documentation on this VTGate API.
    */
   SQLException checkError(RPCError error);
-
-  String getLocalAddress();
 }
