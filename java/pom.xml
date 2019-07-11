@@ -277,8 +277,8 @@
           <configLocation>google_checks.xml</configLocation>
           <suppressionsLocation>checkstyle-suppression.xml</suppressionsLocation>
           <consoleOutput>true</consoleOutput>
-          <failsOnError>true</failsOnError>
-          <failOnViolation>true</failOnViolation>
+          <failsOnError>false</failsOnError>
+          <failOnViolation>false</failOnViolation>
           <violationSeverity>warning</violationSeverity>
         </configuration>
         <executions>

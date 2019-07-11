@@ -20,10 +20,10 @@ import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.MoreExecutors;
-
 import io.grpc.CallCredentials;
 import io.grpc.InternalWithLogId;
 import io.grpc.ManagedChannel;
+import io.grpc.internal.ManagedChannelUtil;
 import io.vitess.client.Context;
 import io.vitess.client.RpcClient;
 import io.vitess.client.StreamIterator;
@@ -67,7 +67,6 @@ import io.vitess.proto.Vtrpc.RPCError;
 import io.vitess.proto.grpc.VitessGrpc;
 import io.vitess.proto.grpc.VitessGrpc.VitessFutureStub;
 import io.vitess.proto.grpc.VitessGrpc.VitessStub;
-
 import org.joda.time.Duration;
 
 import java.io.IOException;
@@ -282,6 +281,10 @@ public class GrpcClient implements RpcClient {
       GetSrvKeyspaceRequest request) throws SQLException {
     return Futures.catchingAsync(getFutureStub(ctx).getSrvKeyspace(request), Exception.class,
         new ExceptionConverter<GetSrvKeyspaceResponse>(), MoreExecutors.directExecutor());
+  }
+
+  public String getLocalAddress() {
+    return ManagedChannelUtil.getLocalAddress(channel);
   }
 
   @Override

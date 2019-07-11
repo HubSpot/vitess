@@ -16,14 +16,9 @@
 
 package io.vitess.client;
 
-import static com.google.common.base.Preconditions.checkNotNull;
-import static com.google.common.util.concurrent.Futures.transformAsync;
-import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
-
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
-
 import io.vitess.client.cursor.Cursor;
 import io.vitess.client.cursor.CursorWithError;
 import io.vitess.client.cursor.SimpleCursor;
@@ -37,10 +32,10 @@ import io.vitess.proto.Vtgate.SplitQueryRequest;
 import io.vitess.proto.Vtgate.SplitQueryResponse;
 import io.vitess.proto.Vtgate.StreamExecuteRequest;
 import io.vitess.proto.Vtrpc.RPCError;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import javax.annotation.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
 import java.sql.SQLDataException;
@@ -51,7 +46,9 @@ import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import javax.annotation.Nullable;
+import static com.google.common.base.Preconditions.checkNotNull;
+import static com.google.common.util.concurrent.Futures.transformAsync;
+import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 
 /**
  * An asynchronous VTGate connection.
@@ -119,7 +116,7 @@ public class VTGateConnection implements Closeable {
                 }
               }, directExecutor()));
       vtSession.setLastCall(call);
-      call.addListener(new SlowQueryLogger(start, query), es);
+      call.addListener(new SlowQueryLogger(start, client.getLocalAddress(), query), es);
       return call;
     }
   }
@@ -127,16 +124,18 @@ public class VTGateConnection implements Closeable {
   private static class SlowQueryLogger implements Runnable {
     private final long startTime;
     private final String query;
+    private final String localAddress;
 
-    public SlowQueryLogger(long startTime, String query) {
+    public SlowQueryLogger(long startTime, String query, String localAddress) {
       this.startTime = startTime;
       this.query = query;
+      this.localAddress = localAddress;
     }
 
     @Override public void run() {
       long duration = System.currentTimeMillis() - startTime;
       if (duration > 100) {
-        LOG.info("Query {} took {} ms", query, duration);
+        LOG.info("Local Address {} Query {} took {} ms", localAddress, query, duration);
       }
     }
   }
@@ -214,6 +213,7 @@ public class VTGateConnection implements Closeable {
               }, directExecutor()));
       vtSession.setLastCall(call);
       call.addListener(new SlowQueryLogger(start,
+                                           client.getLocalAddress(),
                                            queryList.stream()
                                            .findFirst().orElse("empty batch")), es);
       return call;
