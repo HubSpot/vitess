@@ -63,7 +63,7 @@ public class VitessVTGateManager {
   private static long vtgateClosureDelaySeconds = 0L;
 
   /**
-   * VTGateConnections object consist of a vtGateIdentifier list and return vtGate objects via round
+   * VTGateConnections object consist of vtGateIdentifire list and return vtGate object in round
    * robin.
    */
   public static class VTGateConnections {
@@ -78,29 +78,27 @@ public class VitessVTGateManager {
       maybeStartClosureTimer(connection);
       for (final VitessJDBCUrl.HostInfo hostInfo : connection.getUrl().getHostInfos()) {
         String identifier = getIdentifer(hostInfo.getHostname(), hostInfo.getPort(),
-            connection.getUsername(), connection.getTarget(), connection.hashCode());
-        if (!vtGateConnHashMap.containsKey(identifier)) {
-          updateVtGateConnHashMap(identifier, hostInfo, connection);
-        }
-        if (connection.getUseSSL() && connection.getRefreshConnection()
-            && vtgateConnRefreshTimer == null) {
-          synchronized (VitessVTGateManager.class) {
-            if (vtgateConnRefreshTimer == null) {
-              logger.info(
-                  "ssl vtgate connection detected -- installing connection refresh based on ssl "
-                      + "keystore modification");
-              vtgateConnRefreshTimer = new Timer("ssl-refresh-vtgate-conn", true);
-              vtgateConnRefreshTimer.scheduleAtFixedRate(
-                  new TimerTask() {
-                    @Override
-                    public void run() {
-                      refreshUpdatedSSLConnections(hostInfo,
-                          connection);
-                    }
-                  },
-                  TimeUnit.SECONDS.toMillis(connection.getRefreshSeconds()),
-                  TimeUnit.SECONDS.toMillis(connection.getRefreshSeconds()));
-            }
+            connection.getUsername(), connection.getTarget());
+        synchronized (VitessVTGateManager.class) {
+          if (!vtGateConnHashMap.containsKey(identifier)) {
+            updateVtGateConnHashMap(identifier, hostInfo, connection);
+          }
+          if (connection.getUseSSL() && connection.getRefreshConnection()
+              && vtgateConnRefreshTimer == null) {
+            logger.info(
+                "ssl vtgate connection detected -- installing connection refresh based on ssl "
+                    + "keystore modification");
+            vtgateConnRefreshTimer = new Timer("ssl-refresh-vtgate-conn", true);
+            vtgateConnRefreshTimer.scheduleAtFixedRate(
+                new TimerTask() {
+                  @Override
+                  public void run() {
+                    refreshUpdatedSSLConnections(hostInfo,
+                        connection);
+                  }
+                },
+                TimeUnit.SECONDS.toMillis(connection.getRefreshSeconds()),
+                TimeUnit.SECONDS.toMillis(connection.getRefreshSeconds()));
           }
         }
         vtGateIdentifiers.add(identifier);
@@ -118,16 +116,6 @@ public class VitessVTGateManager {
       return vtGateConnHashMap.get(vtGateIdentifiers.get(counter));
     }
 
-    public void close() {
-      synchronized (vtGateConnHashMap) {
-        for (String identifier : vtGateIdentifiers) {
-          VTGateConnection connection = vtGateConnHashMap.get(identifier);
-          vtGateConnHashMap.remove(identifier);
-          closeConnection(connection, false);
-        }
-      }
-    }
-
   }
 
   private static void maybeStartClosureTimer(VitessConnection connection) {
@@ -142,8 +130,8 @@ public class VitessVTGateManager {
   }
 
   private static String getIdentifer(String hostname, int port, String userIdentifer,
-      String keyspace, int connectionHash) {
-    return (hostname + port + userIdentifer + keyspace + connectionHash);
+      String keyspace) {
+    return (hostname + port + userIdentifer + keyspace);
   }
 
   /**
@@ -157,7 +145,7 @@ public class VitessVTGateManager {
   private static void refreshUpdatedSSLConnections(VitessJDBCUrl.HostInfo hostInfo,
       VitessConnection connection) {
     Set<VTGateConnection> closedConnections = new HashSet<>();
-    synchronized (vtGateConnHashMap) {
+    synchronized (VitessVTGateManager.class) {
       for (Map.Entry<String, VTGateConnection> entry : vtGateConnHashMap.entrySet()) {
         if (entry.getValue() instanceof RefreshableVTGateConnection) {
           RefreshableVTGateConnection existing = (RefreshableVTGateConnection) entry.getValue();
@@ -174,33 +162,29 @@ public class VitessVTGateManager {
       logger.info(
           "refreshed " + closedConnections.size() + " vtgate connections due to keystore update");
       for (VTGateConnection closedConnection : closedConnections) {
-        closeConnection(closedConnection, true);
+        closeRefreshedConnection(closedConnection);
       }
     }
   }
 
-  private static void closeConnection(final VTGateConnection old, boolean isRefreshed) {
+  private static void closeRefreshedConnection(final VTGateConnection old) {
     if (vtgateClosureTimer != null) {
-      if (isRefreshed) {
-        logger.info(String.format("%s Closing connection with a %s second delay",
-                old, vtgateClosureDelaySeconds));
-      }
+      logger.info(String
+          .format("%s Closing connection with a %s second delay", old, vtgateClosureDelaySeconds));
       vtgateClosureTimer.schedule(new TimerTask() {
         @Override
         public void run() {
-          actuallyCloseConnection(old, isRefreshed);
+          actuallyCloseRefreshedConnection(old);
         }
       }, TimeUnit.SECONDS.toMillis(vtgateClosureDelaySeconds));
     } else {
-      actuallyCloseConnection(old, isRefreshed);
+      actuallyCloseRefreshedConnection(old);
     }
   }
 
-  private static void actuallyCloseConnection(final VTGateConnection old, boolean isRefreshed) {
+  private static void actuallyCloseRefreshedConnection(final VTGateConnection old) {
     try {
-      if (isRefreshed) {
-        logger.info(old + " Closing connection because it had been refreshed");
-      }
+      logger.info(old + " Closing connection because it had been refreshed");
       old.close();
     } catch (IOException ioe) {
       logger.log(Level.WARNING, String.format("Error closing VTGateConnection %s", old), ioe);

@@ -199,13 +199,7 @@ public class VitessConnection extends ConnectionProperties implements Connection
         }
         closeAllOpenStatements();
       } finally {
-        try {
-          if (vtGateConnections != null) {
-            vtGateConnections.close();
-          }
-        } finally {
-          this.closed = true;
-        }
+        this.closed = true;
       }
     }
   }
