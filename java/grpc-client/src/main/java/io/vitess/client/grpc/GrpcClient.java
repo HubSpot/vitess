@@ -63,6 +63,8 @@ import io.vitess.proto.Vtgate.StreamExecuteRequest;
 import io.vitess.proto.Vtgate.StreamExecuteResponse;
 import io.vitess.proto.Vtgate.StreamExecuteShardsRequest;
 import io.vitess.proto.Vtgate.StreamExecuteShardsResponse;
+import io.vitess.proto.Vtgate.VStreamRequest;
+import io.vitess.proto.Vtgate.VStreamResponse;
 import io.vitess.proto.Vtrpc.RPCError;
 import io.vitess.proto.grpc.VitessGrpc;
 import io.vitess.proto.grpc.VitessGrpc.VitessFutureStub;
@@ -287,6 +289,21 @@ public class GrpcClient implements RpcClient {
   @Override
   public SQLException checkError(RPCError error) {
     return errorHandler.checkVitessError(error);
+  }
+
+  @Override
+  public StreamIterator<Vtgate.VStreamResponse> getVStream(Context ctx,
+      Vtgate.VStreamRequest vstreamRequest) {
+    GrpcStreamAdapter<VStreamResponse, VStreamResponse> adapter =
+        new GrpcStreamAdapter<VStreamResponse, VStreamResponse>() {
+          @Override
+          VStreamResponse getResult(VStreamResponse response) {
+            return response;
+          }
+        };
+
+    getAsyncStub(ctx).vStream(vstreamRequest, adapter);
+    return adapter;
   }
 
   /**
