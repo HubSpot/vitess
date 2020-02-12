@@ -16,7 +16,10 @@
 
 package io.vitess.client.grpc;
 
+import com.netflix.concurrency.limits.grpc.client.ConcurrencyLimitClientInterceptor;
+import com.netflix.concurrency.limits.grpc.client.GrpcClientLimiterBuilder;
 import io.grpc.CallCredentials;
+import io.grpc.ClientInterceptor;
 import io.grpc.LoadBalancer;
 import io.grpc.ManagedChannel;
 import io.grpc.NameResolver;
@@ -45,8 +48,10 @@ import java.security.UnrecoverableEntryException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.List;
 
 import javax.net.ssl.SSLException;
 
@@ -55,25 +60,29 @@ import javax.net.ssl.SSLException;
  */
 public class GrpcClientFactory implements RpcClientFactory {
 
+
   private NettyChannelBuilderProvider nettyChannelBuilderProvider;
   private ErrorHandler errorHandler;
+  private final boolean applyConcurrencyLimits;
+
   private CallCredentials callCredentials;
   private LoadBalancer.Factory loadBalancerFactory;
   private NameResolver.Factory nameResolverFactory;
 
   public GrpcClientFactory() {
     this(new DefaultChannelBuilderProvider(RetryingInterceptorConfig.noOpConfig()),
-        new DefaultErrorHandler());
+        new DefaultErrorHandler(), true);
   }
 
   public GrpcClientFactory(RetryingInterceptorConfig config) {
-    this(new DefaultChannelBuilderProvider(config), new DefaultErrorHandler());
+    this(new DefaultChannelBuilderProvider(config), new DefaultErrorHandler(), true);
   }
 
   public GrpcClientFactory(NettyChannelBuilderProvider nettyChannelBuilderProvider,
-      ErrorHandler errorHandler) {
+      ErrorHandler errorHandler, boolean applyConcurrencyLimits) {
     this.nettyChannelBuilderProvider = nettyChannelBuilderProvider;
     this.errorHandler = errorHandler;
+    this.applyConcurrencyLimits = applyConcurrencyLimits;
   }
 
   public GrpcClientFactory setCallCredentials(CallCredentials value) {
@@ -108,9 +117,29 @@ public class GrpcClientFactory implements RpcClientFactory {
     if (nameResolverFactory != null) {
       channel.nameResolverFactory(nameResolverFactory);
     }
+
+    channel.intercept(getClientInterceptors());
+
     return callCredentials != null
         ? new GrpcClient(channel.build(), callCredentials, ctx, errorHandler)
         : new GrpcClient(channel.build(), ctx, errorHandler);
+  }
+
+  private List<ClientInterceptor> getClientInterceptors() {
+    List<ClientInterceptor> clientInterceptors = new ArrayList<>();
+
+    if (applyConcurrencyLimits) {
+      ConcurrencyLimitClientInterceptor concurrencyLimitInterceptor =
+          new ConcurrencyLimitClientInterceptor(
+            new GrpcClientLimiterBuilder()
+                .blockOnLimit(false)
+                .partitionResolver(x -> "single-partition")
+                .build()
+      );
+      clientInterceptors.add(concurrencyLimitInterceptor);
+    }
+
+    return clientInterceptors;
   }
 
   /**

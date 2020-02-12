@@ -200,6 +200,7 @@ public class VitessVTGateManager {
     ErrorHandler errorHandler = getErrorHandlerFromProperties(connection);
 
     final Context context = connection.createContext(connection.getTimeout());
+
     if (connection.getUseSSL()) {
       final String keyStorePath = connection.getKeyStore() != null ? connection.getKeyStore()
           : System.getProperty(Constants.Property.KEYSTORE_FULL);
@@ -223,10 +224,10 @@ public class VitessVTGateManager {
           .trustStorePath(trustStorePath).trustStorePassword(trustStorePassword)
           .trustAlias(trustAlias);
 
-      return new RefreshableVTGateConnection(new GrpcClientFactory(channelProvider, errorHandler)
+      return new RefreshableVTGateConnection(new GrpcClientFactory(channelProvider, errorHandler, true)
           .createTls(context, hostInfo.toString(), tlsOptions), keyStorePath, trustStorePath);
     } else {
-      return new VTGateConnection(new GrpcClientFactory(channelProvider, errorHandler)
+      return new VTGateConnection(new GrpcClientFactory(channelProvider, errorHandler, true)
           .create(context, hostInfo.toString()));
     }
   }
