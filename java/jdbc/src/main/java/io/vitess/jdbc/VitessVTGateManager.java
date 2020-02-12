@@ -224,7 +224,8 @@ public class VitessVTGateManager {
           .trustStorePath(trustStorePath).trustStorePassword(trustStorePassword)
           .trustAlias(trustAlias);
 
-      return new RefreshableVTGateConnection(new GrpcClientFactory(channelProvider, errorHandler, true)
+      return new RefreshableVTGateConnection(
+          new GrpcClientFactory(channelProvider, errorHandler, true)
           .createTls(context, hostInfo.toString(), tlsOptions), keyStorePath, trustStorePath);
     } else {
       return new VTGateConnection(new GrpcClientFactory(channelProvider, errorHandler, true)
