@@ -16,6 +16,8 @@
 
 package io.vitess.client.grpc;
 
+import com.netflix.concurrency.limits.grpc.client.ConcurrencyLimitClientInterceptor;
+import com.netflix.concurrency.limits.grpc.client.GrpcClientLimiterBuilder;
 import io.grpc.CallCredentials;
 import io.grpc.ClientInterceptor;
 import io.grpc.LoadBalancer;
@@ -42,6 +44,7 @@ import java.security.UnrecoverableEntryException;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 
@@ -54,17 +57,22 @@ public class GrpcClientFactory implements RpcClientFactory {
 
   private RetryingInterceptorConfig config;
   private final boolean useTracing;
+  private final boolean applyConcurrencyLimits;
   private CallCredentials callCredentials;
   private LoadBalancer.Factory loadBalancerFactory;
   private NameResolver.Factory nameResolverFactory;
 
   public GrpcClientFactory() {
-    this(RetryingInterceptorConfig.noOpConfig(), true);
+    this(RetryingInterceptorConfig.noOpConfig(), true, true);
   }
 
-  public GrpcClientFactory(RetryingInterceptorConfig config, boolean useTracing) {
+  public GrpcClientFactory(
+      RetryingInterceptorConfig config,
+      boolean useTracing,
+      boolean applyConcurrencyLimits) {
     this.config = config;
     this.useTracing = useTracing;
+    this.applyConcurrencyLimits = applyConcurrencyLimits;
   }
 
   public GrpcClientFactory setCallCredentials(CallCredentials value) {
@@ -109,14 +117,26 @@ public class GrpcClientFactory implements RpcClientFactory {
 
   private ClientInterceptor[] getClientInterceptors() {
     RetryingInterceptor retryingInterceptor = new RetryingInterceptor(config);
-    ClientInterceptor[] interceptors;
+    ArrayList<ClientInterceptor> interceptorsBuilder = new ArrayList<>();
+
     if (useTracing) {
       ClientTracingInterceptor tracingInterceptor = new ClientTracingInterceptor();
-      interceptors = new ClientInterceptor[]{retryingInterceptor, tracingInterceptor};
-    } else {
-      interceptors = new ClientInterceptor[]{retryingInterceptor};
+      interceptorsBuilder.add(tracingInterceptor);
     }
-    return interceptors;
+
+    if (applyConcurrencyLimits) {
+      ConcurrencyLimitClientInterceptor concurrencyLimitInterceptor =
+          new ConcurrencyLimitClientInterceptor(
+            new GrpcClientLimiterBuilder()
+                .blockOnLimit(false)
+                .partitionResolver(x -> "single-partition")
+                .build()
+      );
+      interceptorsBuilder.add(concurrencyLimitInterceptor);
+    }
+
+    interceptorsBuilder.add(retryingInterceptor);
+    return interceptorsBuilder.toArray(new ClientInterceptor[0]);
   }
 
   /**

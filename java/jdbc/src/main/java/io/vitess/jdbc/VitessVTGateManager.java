@@ -193,7 +193,7 @@ public class VitessVTGateManager {
     final Context context = connection.createContext(connection.getTimeout());
     RetryingInterceptorConfig retryingConfig = getRetryingInterceptorConfig(connection);
     GrpcClientFactory grpcClientFactory =
-        new GrpcClientFactory(retryingConfig, connection.getUseTracing());
+        new GrpcClientFactory(retryingConfig, connection.getUseTracing(), true);
     if (connection.getUseSSL()) {
       TlsOptions tlsOptions = getTlsOptions(connection);
       RpcClient rpcClient = grpcClientFactory
