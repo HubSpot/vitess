@@ -111,14 +111,7 @@ public class GrpcClientFactory implements RpcClientFactory {
   @Override
   public RpcClient create(Context ctx, String target) {
     NettyChannelBuilder channel = channelBuilder(target).negotiationType(NegotiationType.PLAINTEXT);
-    if (loadBalancerFactory != null) {
-      channel.loadBalancerFactory(loadBalancerFactory);
-    }
-    if (nameResolverFactory != null) {
-      channel.nameResolverFactory(nameResolverFactory);
-    }
-
-    channel.intercept(getClientInterceptors());
+    instrumentNettyChannel(channel);
 
     return callCredentials != null
         ? new GrpcClient(channel.build(), callCredentials, ctx, errorHandler)
@@ -142,6 +135,19 @@ public class GrpcClientFactory implements RpcClientFactory {
     return clientInterceptors;
   }
 
+  private NettyChannelBuilder instrumentNettyChannel(NettyChannelBuilder channel) {
+    if (loadBalancerFactory != null) {
+      channel.loadBalancerFactory(loadBalancerFactory);
+    }
+    if (nameResolverFactory != null) {
+      channel.nameResolverFactory(nameResolverFactory);
+    }
+
+    channel.intercept(getClientInterceptors());
+
+    return channel;
+  }
+
   /**
    * <p>This method constructs NettyChannelBuilder object that will be used to create
    * RpcClient.</p>
@@ -158,7 +164,7 @@ public class GrpcClientFactory implements RpcClientFactory {
    *     by default dns.
    */
   protected NettyChannelBuilder channelBuilder(String target) {
-    return nettyChannelBuilderProvider.getChannelBuilder(target);
+    return instrumentNettyChannel(nettyChannelBuilderProvider.getChannelBuilder(target));
   }
 
   /**
