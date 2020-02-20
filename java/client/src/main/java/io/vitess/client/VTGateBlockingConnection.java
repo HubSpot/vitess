@@ -58,7 +58,7 @@ public final class VTGateBlockingConnection implements Closeable {
    * @param client RPC connection
    */
   public VTGateBlockingConnection(RpcClient client) {
-    vtGateConnection = new VTGateConnection(client);
+    vtGateConnection = new VTGateConnection(client, -1);
   }
 
   /**
