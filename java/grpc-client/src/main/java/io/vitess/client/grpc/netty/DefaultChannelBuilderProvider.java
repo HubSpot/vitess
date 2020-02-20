@@ -23,7 +23,7 @@ public class DefaultChannelBuilderProvider implements NettyChannelBuilderProvide
   public NettyChannelBuilder getChannelBuilder(String target) {
     return NettyChannelBuilder.forTarget(target)
         .eventLoopGroup(ELG)
-        .maxInboundMessageSize(16777216)
-        .intercept(new RetryingInterceptor(config));
+        .maxInboundMessageSize(16777216);
+    //        .intercept(new RetryingInterceptor(config));
   }
 }
