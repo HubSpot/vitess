@@ -18,6 +18,9 @@ package io.vitess.client.grpc;
 
 import com.netflix.concurrency.limits.grpc.client.ConcurrencyLimitClientInterceptor;
 import com.netflix.concurrency.limits.grpc.client.GrpcClientLimiterBuilder;
+import com.netflix.concurrency.limits.limit.Gradient2Limit;
+import com.netflix.concurrency.limits.limit.WindowedLimit;
+
 import io.grpc.CallCredentials;
 import io.grpc.ClientInterceptor;
 import io.grpc.LoadBalancer;
@@ -127,6 +130,9 @@ public class GrpcClientFactory implements RpcClientFactory {
             new GrpcClientLimiterBuilder()
                 .blockOnLimit(false)
                 .partitionResolver(x -> "single-partition")
+                .limit(WindowedLimit.newBuilder()
+                    .build(Gradient2Limit.newBuilder()
+                        .build()))
                 .build()
       );
       clientInterceptors.add(concurrencyLimitInterceptor);

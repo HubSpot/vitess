@@ -88,6 +88,11 @@
 
     <dependency>
       <groupId>com.netflix.concurrency-limits</groupId>
+      <artifactId>concurrency-limits-core</artifactId>
+      <version>0.3.6</version>
+    </dependency>
+    <dependency>
+      <groupId>com.netflix.concurrency-limits</groupId>
       <artifactId>concurrency-limits-grpc</artifactId>
       <version>0.3.6</version>
     </dependency>
