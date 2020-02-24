@@ -34,6 +34,7 @@ import javax.annotation.Nullable;
  */
 public class RetryingInterceptor implements ClientInterceptor {
 
+  private static final String CONCURRENCY_LIMITS_DESCRIPTION = "Client concurrency limit reached";
   private final RetryingInterceptorConfig config;
 
   public RetryingInterceptor(RetryingInterceptorConfig config) {
@@ -145,7 +146,9 @@ public class RetryingInterceptor implements ClientInterceptor {
     private void maybeRetry(AttemptListener attempt) {
       Status status = attempt.responseStatus;
 
-      if (status.isOk() || status.getCode() != Status.Code.UNAVAILABLE) {
+      if (status.isOk()
+          || status.getCode() != Status.Code.UNAVAILABLE
+          || CONCURRENCY_LIMITS_DESCRIPTION.equals(status.getDescription())) {
         useResponse(attempt);
         return;
       }

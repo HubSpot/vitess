@@ -55,6 +55,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 import javax.net.ssl.SSLException;
 
@@ -131,7 +132,11 @@ public class GrpcClientFactory implements RpcClientFactory {
                 .blockOnLimit(false)
                 .partitionResolver(x -> "single-partition")
                 .limit(WindowedLimit.newBuilder()
-                    .build(Gradient2Limit.newBuilder()
+                    // minimum round-trip-time to weigh in
+                    .minRttThreshold(50, TimeUnit.MILLISECONDS)
+                    // how much slower latency can be than the min
+                    // round-trip time before lowering limit
+                    .build(Gradient2Limit.newBuilder().rttTolerance(3.0)
                         .build()))
                 .build()
       );
