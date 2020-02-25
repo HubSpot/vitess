@@ -21,17 +21,16 @@ import io.vitess.client.RpcClient;
 import io.vitess.client.VTGateConnection;
 import io.vitess.client.grpc.GrpcClientFactory;
 import io.vitess.proto.Vtrpc;
-
+import io.vitess.util.Constants;
 import org.joda.time.Duration;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.sql.SQLException;
 import java.util.Properties;
 import java.util.concurrent.ConcurrentHashMap;
-
-import org.junit.Assert;
-import org.junit.Test;
 
 /**
  * Created by naveen.nahata on 29/02/16.
@@ -43,7 +42,7 @@ public class VitessVTGateManagerTest {
     Context ctx = Context.getDefault().withDeadlineAfter(Duration.millis(500))
         .withCallerId(callerId);
     RpcClient client = new GrpcClientFactory().create(ctx, "host:80");
-    return new VTGateConnection(client);
+    return new VTGateConnection(client, Constants.DEFAULT_SLOW_QUERY_LOGGING_THRESHOLD_MILLIS);
   }
 
   @Test
