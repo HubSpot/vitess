@@ -83,7 +83,7 @@ public class VTGateConnection implements Closeable {
           new ThreadPoolExecutor.DiscardPolicy()
   );
   private final RpcClient client;
-  private final long slowQueryThreshold;
+  private final long slowQueryLoggingThresholdMillis;
 
   /**
    * Creates a VTGate connection with no specific parameters.
@@ -93,9 +93,9 @@ public class VTGateConnection implements Closeable {
    *
    * @param client RPC connection
    */
-  public VTGateConnection(RpcClient client, long slowQueryThreshold) {
+  public VTGateConnection(RpcClient client, long slowQueryLoggingThresholdMillis) {
     this.client = checkNotNull(client);
-    this.slowQueryThreshold = slowQueryThreshold;
+    this.slowQueryLoggingThresholdMillis = slowQueryLoggingThresholdMillis;
   }
 
   /**
@@ -133,8 +133,8 @@ public class VTGateConnection implements Closeable {
               }, directExecutor()));
       vtSession.setLastCall(call);
 
-      if (slowQueryThreshold != -1) {
-        call.addListener(new SlowQueryLogger(start, slowQueryThreshold, query),
+      if (slowQueryLoggingThresholdMillis != -1) {
+        call.addListener(new SlowQueryLogger(start, slowQueryLoggingThresholdMillis, query),
                 QUERY_LOGGING_EXECUTOR);
       }
       return call;
@@ -144,18 +144,18 @@ public class VTGateConnection implements Closeable {
   private static class SlowQueryLogger implements Runnable {
     private static final Logger LOG = LoggerFactory.getLogger(VTGateConnection.class);
     private final long startTime;
-    private final long slowQueryCutoff;
+    private final long slowQueryLoggingThresholdMillis;
     private final String query;
 
-    public SlowQueryLogger(long startTime, long slowQueryCutOff, String query) {
+    public SlowQueryLogger(long startTime, long slowQueryLoggingThresholdMillis, String query) {
       this.startTime = startTime;
-      this.slowQueryCutoff = slowQueryCutOff;
+      this.slowQueryLoggingThresholdMillis = slowQueryLoggingThresholdMillis;
       this.query = query;
     }
 
     @Override public void run() {
       long duration = System.currentTimeMillis() - startTime;
-      if (slowQueryCutoff != -1 && duration > slowQueryCutoff) {
+      if (slowQueryLoggingThresholdMillis != -1 && duration > slowQueryLoggingThresholdMillis) {
         LOG.info("Query {} took {} ms", query, duration);
       }
     }
@@ -233,9 +233,9 @@ public class VTGateConnection implements Closeable {
                 }
               }, directExecutor()));
       vtSession.setLastCall(call);
-      if (slowQueryThreshold != -1) {
+      if (slowQueryLoggingThresholdMillis != -1) {
         call.addListener(new SlowQueryLogger(start,
-                        slowQueryThreshold,
+                        slowQueryLoggingThresholdMillis,
                         queryList.stream()
                                 .findFirst().orElse("empty batch")),
                         QUERY_LOGGING_EXECUTOR);
@@ -295,7 +295,6 @@ public class VTGateConnection implements Closeable {
       requestBuilder.setCallerId(ctx.getCallerId());
     }
 
-    // Do I need to log split queries??
     return new SQLFuture<>(
         transformAsync(client.splitQuery(ctx, requestBuilder.build()),
             new AsyncFunction<SplitQueryResponse, List<SplitQueryResponse.Part>>() {

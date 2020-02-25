@@ -225,10 +225,10 @@ public class VitessVTGateManager {
 
       return new RefreshableVTGateConnection(new GrpcClientFactory(channelProvider, errorHandler)
           .createTls(context, hostInfo.toString(), tlsOptions), keyStorePath, trustStorePath,
-              connection.getSlowQueryLoggingThreshold());
+              connection.getSlowQueryLoggingThresholdMillis());
     } else {
       return new VTGateConnection(new GrpcClientFactory(channelProvider, errorHandler)
-          .create(context, hostInfo.toString()), connection.getSlowQueryLoggingThreshold());
+          .create(context, hostInfo.toString()), connection.getSlowQueryLoggingThresholdMillis());
     }
   }
 
