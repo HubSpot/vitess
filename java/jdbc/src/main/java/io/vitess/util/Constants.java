@@ -44,6 +44,8 @@ public class Constants {
   public static final int MAX_BUFFER_SIZE = 65535;
   //Default Timeout in milliseconds
   public static final int DEFAULT_TIMEOUT = 30000;
+  //Default slow query logging threshold in milliseconds
+  public static final long DEFAULT_SLOW_QUERY_LOGGING_THRESHOLD_MILLIS = -1;
   public static final String VITESS_KEYSPACE = "Keyspace name in Vitess Server";
   public static final Constants.QueryExecuteType DEFAULT_EXECUTE_TYPE = QueryExecuteType.SIMPLE;
   public static final String EXECUTE_TYPE_DESC = "Query execution type: simple or stream \n";

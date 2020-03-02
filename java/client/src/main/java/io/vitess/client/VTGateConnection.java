@@ -23,6 +23,7 @@ import static com.google.common.util.concurrent.MoreExecutors.directExecutor;
 import com.google.common.util.concurrent.AsyncFunction;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 import io.vitess.client.cursor.Cursor;
 import io.vitess.client.cursor.CursorWithError;
@@ -44,6 +45,11 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Logger;
 
 import javax.annotation.Nullable;
 
@@ -63,8 +69,18 @@ import javax.annotation.Nullable;
  * VTGateBlockingConnection} if you want synchronous calls.</p>
  */
 public class VTGateConnection implements Closeable {
-
+  private static final ExecutorService QUERY_LOGGING_EXECUTOR = new ThreadPoolExecutor(2, 2,
+          Long.MAX_VALUE,
+          TimeUnit.DAYS,
+          new LinkedBlockingQueue<>(50),
+          new ThreadFactoryBuilder()
+                  .setNameFormat("vitess-slow-query-logger-%d")
+                  .setDaemon(true)
+                  .build(),
+          new ThreadPoolExecutor.DiscardPolicy()
+  );
   private final RpcClient client;
+  private final long slowQueryLoggingThresholdMillis;
 
   /**
    * Creates a VTGate connection with no specific parameters.
@@ -74,8 +90,9 @@ public class VTGateConnection implements Closeable {
    *
    * @param client RPC connection
    */
-  public VTGateConnection(RpcClient client) {
+  public VTGateConnection(RpcClient client, long slowQueryLoggingThresholdMillis) {
     this.client = checkNotNull(client);
+    this.slowQueryLoggingThresholdMillis = slowQueryLoggingThresholdMillis;
   }
 
   /**
@@ -98,6 +115,7 @@ public class VTGateConnection implements Closeable {
     if (ctx.getCallerId() != null) {
       requestBuilder.setCallerId(ctx.getCallerId());
     }
+    long start = System.currentTimeMillis();
 
     SQLFuture<Cursor> call = new SQLFuture<>(
         transformAsync(client.execute(ctx, requestBuilder.build()),
@@ -110,7 +128,34 @@ public class VTGateConnection implements Closeable {
               }
             }, directExecutor()));
     vtSession.setLastCall(call);
+
+    if (slowQueryLoggingThresholdMillis != SlowQueryLogger.DISABLED_VALUE) {
+      call.addListener(new SlowQueryLogger(start, slowQueryLoggingThresholdMillis, query),
+              QUERY_LOGGING_EXECUTOR);
+    }
     return call;
+  }
+
+  static class SlowQueryLogger implements Runnable {
+    private static final Logger LOG = Logger.getLogger(SlowQueryLogger.class.getName());
+    public static final long DISABLED_VALUE = -1;
+    private final long startTime;
+    private final long slowQueryLoggingThresholdMillis;
+    private final String query;
+
+    public SlowQueryLogger(long startTime, long slowQueryLoggingThresholdMillis, String query) {
+      this.startTime = startTime;
+      this.slowQueryLoggingThresholdMillis = slowQueryLoggingThresholdMillis;
+      this.query = query;
+    }
+
+    @Override public void run() {
+      long duration = System.currentTimeMillis() - startTime;
+      if (slowQueryLoggingThresholdMillis != DISABLED_VALUE
+              && duration > slowQueryLoggingThresholdMillis) {
+        LOG.info("Query " + query + " took " + duration + " ms");
+      }
+    }
   }
 
   /**
@@ -149,6 +194,7 @@ public class VTGateConnection implements Closeable {
     if (ctx.getCallerId() != null) {
       requestBuilder.setCallerId(ctx.getCallerId());
     }
+    long start = System.currentTimeMillis();
 
     SQLFuture<List<CursorWithError>> call = new SQLFuture<>(
         transformAsync(client.executeBatch(ctx, requestBuilder.build()),
@@ -163,6 +209,13 @@ public class VTGateConnection implements Closeable {
               }
             }, directExecutor()));
     vtSession.setLastCall(call);
+    if (slowQueryLoggingThresholdMillis != SlowQueryLogger.DISABLED_VALUE) {
+      call.addListener(new SlowQueryLogger(start,
+                      slowQueryLoggingThresholdMillis,
+                      queryList.stream()
+                              .findFirst().orElse("empty batch")),
+                      QUERY_LOGGING_EXECUTOR);
+    }
     return call;
   }
 

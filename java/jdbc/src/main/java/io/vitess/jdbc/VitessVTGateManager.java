@@ -217,10 +217,11 @@ public class VitessVTGateManager {
           .createTls(context, hostInfo.toString(), tlsOptions);
       return new RefreshableVTGateConnection(rpcClient,
           tlsOptions.getKeyStore().getPath(),
-          tlsOptions.getTrustStore().getPath());
+          tlsOptions.getTrustStore().getPath(),
+          connection.getSlowQueryLoggingThresholdMillis());
     } else {
       RpcClient client = grpcClientFactory.create(context, hostInfo.toString());
-      return new VTGateConnection(client);
+      return new VTGateConnection(client, connection.getSlowQueryLoggingThresholdMillis());
     }
   }
 

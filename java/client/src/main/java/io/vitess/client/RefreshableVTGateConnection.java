@@ -27,8 +27,9 @@ public class RefreshableVTGateConnection extends VTGateConnection {
 
   public RefreshableVTGateConnection(RpcClient client,
       String keystorePath,
-      String truststorePath) {
-    super(client);
+      String truststorePath,
+      long slowQueryThresholdMillis) {
+    super(client, slowQueryThresholdMillis);
     this.keystoreFile = new File(keystorePath);
     this.truststoreFile = new File(truststorePath);
     this.keystoreMtime = this.keystoreFile.exists() ? this.keystoreFile.lastModified() : 0;

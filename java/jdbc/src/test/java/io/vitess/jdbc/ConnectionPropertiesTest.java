@@ -43,7 +43,7 @@ import org.mockito.Mockito;
 
 public class ConnectionPropertiesTest {
 
-  private static final int NUM_PROPS = 42;
+  private static final int NUM_PROPS = 43;
 
   @Test
   public void testReflection() throws Exception {
@@ -177,8 +177,8 @@ public class ConnectionPropertiesTest {
     assertEquals("grpcRetriesInitialBackoffMillis", infos[9].name);
     assertEquals("grpcRetriesMaxBackoffMillis", infos[10].name);
     assertEquals(Constants.Property.INCLUDED_FIELDS, infos[11].name);
-    assertEquals(Constants.Property.TABLET_TYPE, infos[23].name);
-    assertEquals(Constants.Property.TWOPC_ENABLED, infos[31].name);
+    assertEquals(Constants.Property.TABLET_TYPE, infos[24].name);
+    assertEquals(Constants.Property.TWOPC_ENABLED, infos[32].name);
   }
 
   @Test
