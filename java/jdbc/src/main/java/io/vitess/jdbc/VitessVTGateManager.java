@@ -224,10 +224,11 @@ public class VitessVTGateManager {
           .trustAlias(trustAlias);
 
       return new RefreshableVTGateConnection(new GrpcClientFactory(channelProvider, errorHandler)
-          .createTls(context, hostInfo.toString(), tlsOptions), keyStorePath, trustStorePath);
+          .createTls(context, hostInfo.toString(), tlsOptions), keyStorePath, trustStorePath,
+              connection.getSlowQueryLoggingThresholdMillis());
     } else {
       return new VTGateConnection(new GrpcClientFactory(channelProvider, errorHandler)
-          .create(context, hostInfo.toString()));
+          .create(context, hostInfo.toString()), connection.getSlowQueryLoggingThresholdMillis());
     }
   }
 

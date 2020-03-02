@@ -235,6 +235,12 @@ public class ConnectionProperties {
           + "commit/rollback. Query timeout can be overridden by explicitly calling "
           + "setQueryTimeout", Constants.DEFAULT_TIMEOUT);
 
+  private LongConnectionProperty slowQueryLoggingThresholdMillis =
+          new LongConnectionProperty("slowQueryLoggingThresholdMillis",
+          "The threshold in millis, to log queries that exceed it."
+                   + " Set to -1 to disable. Defaults to -1.",
+          Constants.DEFAULT_SLOW_QUERY_LOGGING_THRESHOLD_MILLIS);
+
   // Caching of some hot properties to avoid casting over and over
   private Topodata.TabletType tabletTypeCache;
   private Query.ExecuteOptions.IncludedFields includedFieldsCache;
@@ -586,6 +592,14 @@ public class ConnectionProperties {
 
   public void setTimeout(long timeout) {
     this.timeout.setValue(timeout);
+  }
+
+  public long getSlowQueryLoggingThresholdMillis() {
+    return slowQueryLoggingThresholdMillis.getValueAsLong();
+  }
+
+  public void setSlowQueryLoggingThresholdMillis(long slowQueryLoggingThresholdMillis) {
+    this.slowQueryLoggingThresholdMillis.setValue(slowQueryLoggingThresholdMillis);
   }
 
   public String getTarget() {
