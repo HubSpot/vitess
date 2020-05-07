@@ -1,9 +1,7 @@
 package io.vitess.client.grpc;
 
-import io.grpc.Attributes;
 import io.grpc.CallCredentials;
 import io.grpc.Metadata;
-import io.grpc.MethodDescriptor;
 import io.grpc.Status;
 
 import java.util.Objects;
@@ -12,7 +10,7 @@ import java.util.concurrent.Executor;
 /**
  * {@link CallCredentials} that applies plain username and password.
  */
-public class StaticAuthCredentials implements CallCredentials {
+public class StaticAuthCredentials extends CallCredentials {
 
   private static final Metadata.Key<String> USERNAME =
       Metadata.Key.of("username", Metadata.ASCII_STRING_MARSHALLER);
@@ -28,9 +26,9 @@ public class StaticAuthCredentials implements CallCredentials {
   }
 
   @Override
-  public void applyRequestMetadata(MethodDescriptor<?, ?> method, Attributes attrs,
-      Executor executor, MetadataApplier applier) {
-    executor.execute(() -> {
+  public void applyRequestMetadata(
+      RequestInfo requestInfo, Executor appExecutor, MetadataApplier applier) {
+    appExecutor.execute(() -> {
       try {
         Metadata headers = new Metadata();
         headers.put(USERNAME, username);
