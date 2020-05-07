@@ -58,7 +58,7 @@ public class GrpcClientFactory implements RpcClientFactory {
   private NettyChannelBuilderProvider nettyChannelBuilderProvider;
   private ErrorHandler errorHandler;
   private CallCredentials callCredentials;
-  private LoadBalancer.Factory loadBalancerFactory;
+  private String defaultLoadBalancingPolicy;
   private NameResolver.Factory nameResolverFactory;
 
   public GrpcClientFactory() {
@@ -81,8 +81,8 @@ public class GrpcClientFactory implements RpcClientFactory {
     return this;
   }
 
-  public GrpcClientFactory setLoadBalancerFactory(LoadBalancer.Factory value) {
-    loadBalancerFactory = value;
+  public GrpcClientFactory setDefaultLoadBalancingPolicy(String value) {
+    defaultLoadBalancingPolicy = value;
     return this;
   }
 
@@ -102,8 +102,8 @@ public class GrpcClientFactory implements RpcClientFactory {
   @Override
   public RpcClient create(Context ctx, String target) {
     NettyChannelBuilder channel = channelBuilder(target).negotiationType(NegotiationType.PLAINTEXT);
-    if (loadBalancerFactory != null) {
-      channel.loadBalancerFactory(loadBalancerFactory);
+    if (defaultLoadBalancingPolicy != null) {
+      channel.defaultLoadBalancingPolicy(defaultLoadBalancingPolicy);
     }
     if (nameResolverFactory != null) {
       channel.nameResolverFactory(nameResolverFactory);
