@@ -211,10 +211,11 @@ public class VTGateConnection implements Closeable {
     vtSession.setLastCall(call);
     if (slowQueryLoggingThresholdMillis != SlowQueryLogger.DISABLED_VALUE) {
       call.addListener(new SlowQueryLogger(start,
-                      slowQueryLoggingThresholdMillis,
-                      queryList.stream()
-                              .findFirst().orElse("empty batch")),
-                      QUERY_LOGGING_EXECUTOR);
+              slowQueryLoggingThresholdMillis,
+              queryList.stream()
+                  .findFirst()
+                  .orElse("empty batch")),
+          QUERY_LOGGING_EXECUTOR);
     }
     return call;
   }
@@ -282,3 +283,4 @@ public class VTGateConnection implements Closeable {
     );
   }
 }
+
