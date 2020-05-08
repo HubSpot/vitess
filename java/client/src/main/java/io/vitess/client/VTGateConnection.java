@@ -108,35 +108,34 @@ public class VTGateConnection implements Closeable {
    */
   public SQLFuture<Cursor> execute(Context ctx, String query, @Nullable Map<String, ?> bindVars,
       final VTSession vtSession) throws SQLException {
-    synchronized (this) {
-      vtSession.checkCallIsAllowed("execute");
-      ExecuteRequest.Builder requestBuilder = ExecuteRequest.newBuilder()
-          .setQuery(Proto.bindQuery(checkNotNull(query), bindVars))
-          .setSession(vtSession.getSession());
 
-      if (ctx.getCallerId() != null) {
-        requestBuilder.setCallerId(ctx.getCallerId());
-      }
-      long start = System.currentTimeMillis();
+    vtSession.checkCallIsAllowed("execute");
+    ExecuteRequest.Builder requestBuilder = ExecuteRequest.newBuilder()
+        .setQuery(Proto.bindQuery(checkNotNull(query), bindVars))
+        .setSession(vtSession.getSession());
 
-      SQLFuture<Cursor> call = new SQLFuture<>(
-          transformAsync(client.execute(ctx, requestBuilder.build()),
-              new AsyncFunction<ExecuteResponse, Cursor>() {
-                @Override
-                public ListenableFuture<Cursor> apply(ExecuteResponse response) throws Exception {
-                  vtSession.setSession(response.getSession());
-                  checkAndThrowError(response.getError());
-                  return Futures.<Cursor>immediateFuture(new SimpleCursor(response.getResult()));
-                }
-              }, directExecutor()));
-      vtSession.setLastCall(call);
-
-      if (slowQueryLoggingThresholdMillis != SlowQueryLogger.DISABLED_VALUE) {
-        call.addListener(new SlowQueryLogger(start, slowQueryLoggingThresholdMillis, query),
-                QUERY_LOGGING_EXECUTOR);
-      }
-      return call;
+    if (ctx.getCallerId() != null) {
+      requestBuilder.setCallerId(ctx.getCallerId());
     }
+    long start = System.currentTimeMillis();
+
+    SQLFuture<Cursor> call = new SQLFuture<>(
+        transformAsync(client.execute(ctx, requestBuilder.build()),
+            new AsyncFunction<ExecuteResponse, Cursor>() {
+              @Override
+              public ListenableFuture<Cursor> apply(ExecuteResponse response) throws Exception {
+                vtSession.setSession(response.getSession());
+                checkAndThrowError(response.getError());
+                return Futures.<Cursor>immediateFuture(new SimpleCursor(response.getResult()));
+              }
+            }, directExecutor()));
+    vtSession.setLastCall(call);
+
+    if (slowQueryLoggingThresholdMillis != SlowQueryLogger.DISABLED_VALUE) {
+      call.addListener(new SlowQueryLogger(start, slowQueryLoggingThresholdMillis, query),
+              QUERY_LOGGING_EXECUTOR);
+    }
+    return call;
   }
 
   static class SlowQueryLogger implements Runnable {
@@ -195,53 +194,52 @@ public class VTGateConnection implements Closeable {
   public SQLFuture<List<CursorWithError>> executeBatch(Context ctx, List<String> queryList,
       @Nullable List<Map<String, ?>> bindVarsList, boolean asTransaction, final VTSession vtSession)
       throws SQLException {
-    synchronized (this) {
-      vtSession.checkCallIsAllowed("executeBatch");
-      List<Query.BoundQuery> queries = new ArrayList<>();
+    vtSession.checkCallIsAllowed("executeBatch");
+    List<Query.BoundQuery> queries = new ArrayList<>();
 
-      if (null != bindVarsList && bindVarsList.size() != queryList.size()) {
-        throw new SQLDataException(
-            "Size of SQL Query list does not match the bind variables list");
-      }
-
-      for (int i = 0; i < queryList.size(); ++i) {
-        queries.add(i, Proto.bindQuery(checkNotNull(queryList.get(i)),
-            bindVarsList == null ? null : bindVarsList.get(i)));
-      }
-
-      Vtgate.ExecuteBatchRequest.Builder requestBuilder =
-          Vtgate.ExecuteBatchRequest.newBuilder()
-              .addAllQueries(checkNotNull(queries))
-              .setSession(vtSession.getSession())
-              .setAsTransaction(asTransaction);
-
-      if (ctx.getCallerId() != null) {
-        requestBuilder.setCallerId(ctx.getCallerId());
-      }
-      long start = System.currentTimeMillis();
-
-      SQLFuture<List<CursorWithError>> call = new SQLFuture<>(
-          transformAsync(client.executeBatch(ctx, requestBuilder.build()),
-              new AsyncFunction<Vtgate.ExecuteBatchResponse, List<CursorWithError>>() {
-                @Override
-                public ListenableFuture<List<CursorWithError>> apply(
-                    Vtgate.ExecuteBatchResponse response) throws Exception {
-                  vtSession.setSession(response.getSession());
-                  checkAndThrowError(response.getError());
-                  return Futures.immediateFuture(
-                      Proto.fromQueryResponsesToCursorList(response.getResultsList()));
-                }
-              }, directExecutor()));
-      vtSession.setLastCall(call);
-      if (slowQueryLoggingThresholdMillis != SlowQueryLogger.DISABLED_VALUE) {
-        call.addListener(new SlowQueryLogger(start,
-                        slowQueryLoggingThresholdMillis,
-                        queryList.stream()
-                                .findFirst().orElse("empty batch")),
-                        QUERY_LOGGING_EXECUTOR);
-      }
-      return call;
+    if (null != bindVarsList && bindVarsList.size() != queryList.size()) {
+      throw new SQLDataException(
+          "Size of SQL Query list does not match the bind variables list");
     }
+
+    for (int i = 0; i < queryList.size(); ++i) {
+      queries.add(i, Proto.bindQuery(checkNotNull(queryList.get(i)),
+          bindVarsList == null ? null : bindVarsList.get(i)));
+    }
+
+    Vtgate.ExecuteBatchRequest.Builder requestBuilder =
+        Vtgate.ExecuteBatchRequest.newBuilder()
+            .addAllQueries(checkNotNull(queries))
+            .setSession(vtSession.getSession())
+            .setAsTransaction(asTransaction);
+
+    if (ctx.getCallerId() != null) {
+      requestBuilder.setCallerId(ctx.getCallerId());
+    }
+    long start = System.currentTimeMillis();
+
+    SQLFuture<List<CursorWithError>> call = new SQLFuture<>(
+        transformAsync(client.executeBatch(ctx, requestBuilder.build()),
+            new AsyncFunction<Vtgate.ExecuteBatchResponse, List<CursorWithError>>() {
+              @Override
+              public ListenableFuture<List<CursorWithError>> apply(
+                  Vtgate.ExecuteBatchResponse response) throws Exception {
+                vtSession.setSession(response.getSession());
+                checkAndThrowError(response.getError());
+                return Futures.immediateFuture(
+                    Proto.fromQueryResponsesToCursorList(response.getResultsList()));
+              }
+            }, directExecutor()));
+    vtSession.setLastCall(call);
+    if (slowQueryLoggingThresholdMillis != SlowQueryLogger.DISABLED_VALUE) {
+      call.addListener(new SlowQueryLogger(start,
+          slowQueryLoggingThresholdMillis,
+          queryList.stream()
+            .findFirst()
+            .orElse("empty batch")),
+          QUERY_LOGGING_EXECUTOR);
+    }
+    return call;
   }
 
   /**
@@ -329,3 +327,4 @@ public class VTGateConnection implements Closeable {
     );
   }
 }
+
