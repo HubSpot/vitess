@@ -16,10 +16,8 @@
 
 package io.vitess.client.grpc;
 
-import io.grpc.Attributes;
 import io.grpc.CallCredentials;
 import io.grpc.Metadata;
-import io.grpc.MethodDescriptor;
 import io.grpc.Status;
 
 import java.util.Objects;
@@ -44,9 +42,9 @@ public class StaticAuthCredentials extends CallCredentials {
   }
 
   @Override
-  public void applyRequestMetadata(RequestInfo requestInfo,
-                                   Executor executor, MetadataApplier applier) {
-    executor.execute(() -> {
+  public void applyRequestMetadata(
+      RequestInfo requestInfo, Executor appExecutor, MetadataApplier applier) {
+    appExecutor.execute(() -> {
       try {
         Metadata headers = new Metadata();
         headers.put(USERNAME, username);

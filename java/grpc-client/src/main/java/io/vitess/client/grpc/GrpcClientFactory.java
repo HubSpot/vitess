@@ -59,11 +59,12 @@ public class GrpcClientFactory implements RpcClientFactory {
   private NettyChannelBuilderProvider nettyChannelBuilderProvider;
   private ErrorHandler errorHandler;
   private CallCredentials callCredentials;
-  private String loadBalancerPolicy;
+  private String defaultLoadBalancingPolicy;
   private NameResolver.Factory nameResolverFactory;
 
   public GrpcClientFactory() {
-    this(new DefaultChannelBuilderProvider(RetryingInterceptorConfig.noOpConfig(), true), new DefaultErrorHandler());
+    this(new DefaultChannelBuilderProvider(RetryingInterceptorConfig.noOpConfig(), true),
+        new DefaultErrorHandler());
   }
 
   public GrpcClientFactory(RetryingInterceptorConfig config) {
@@ -85,12 +86,8 @@ public class GrpcClientFactory implements RpcClientFactory {
     return this;
   }
 
-  public GrpcClientFactory setLoadBalancerFactory(LoadBalancer.Factory value) {
-    VitessLoadBalancer provider = new VitessLoadBalancer(value);
-    LoadBalancerRegistry registry = LoadBalancerRegistry.getDefaultRegistry();
-    registry.deregister(provider);
-    registry.register(provider);
-    loadBalancerPolicy = "vitess_lb";
+  public GrpcClientFactory setDefaultLoadBalancingPolicy(String value) {
+    defaultLoadBalancingPolicy = value;
     return this;
   }
 
@@ -110,8 +107,8 @@ public class GrpcClientFactory implements RpcClientFactory {
   @Override
   public RpcClient create(Context ctx, String target) {
     NettyChannelBuilder channel = channelBuilder(target).negotiationType(NegotiationType.PLAINTEXT);
-    if (loadBalancerPolicy != null) {
-      channel.defaultLoadBalancingPolicy(loadBalancerPolicy);
+    if (defaultLoadBalancingPolicy != null) {
+      channel.defaultLoadBalancingPolicy(defaultLoadBalancingPolicy);
     }
     if (nameResolverFactory != null) {
       channel.nameResolverFactory(nameResolverFactory);
