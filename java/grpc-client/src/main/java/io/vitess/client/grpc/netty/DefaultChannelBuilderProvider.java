@@ -23,7 +23,7 @@ public class DefaultChannelBuilderProvider implements NettyChannelBuilderProvide
   @Override
   public NettyChannelBuilder getChannelBuilder(String target) {
     return NettyChannelBuilder.forTarget(target)
-        .setChannel(NioSocketChannel.class)
+        .channelType(NioSocketChannel.class)
         .eventLoopGroup(ELG)
         .maxInboundMessageSize(16777216)
         .intercept(new RetryingInterceptor(config));
