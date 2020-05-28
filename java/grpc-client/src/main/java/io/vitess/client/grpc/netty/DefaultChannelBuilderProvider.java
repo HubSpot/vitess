@@ -1,9 +1,9 @@
 package io.vitess.client.grpc.netty;
 
 import io.grpc.netty.NettyChannelBuilder;
-import io.grpc.netty.shaded.io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.channel.EventLoopGroup;
 import io.netty.channel.nio.NioEventLoopGroup;
+import io.netty.channel.socket.nio.NioSocketChannel;
 import io.netty.util.concurrent.DefaultThreadFactory;
 import io.vitess.client.grpc.RetryingInterceptor;
 import io.vitess.client.grpc.RetryingInterceptorConfig;
