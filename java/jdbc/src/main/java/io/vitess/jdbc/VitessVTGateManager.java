@@ -46,23 +46,16 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.ConsoleHandler;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Created by naveen.nahata on 24/02/16.
  */
 public class VitessVTGateManager {
+  private static final Logger LOG = LoggerFactory.getLogger(VitessVTGateManager.class);
 
-  private static Logger logger = Logger.getLogger(VitessVTGateManager.class.getName());
-
-  static {
-    ConsoleHandler ch = new ConsoleHandler();
-    ch.setLevel(Level.FINE);
-    logger.addHandler(ch);
-    logger.setLevel(Level.FINE);
-  }
-      
   /*
   Current implementation have one VTGateConn for ip-port-username combination
   */
@@ -95,7 +88,7 @@ public class VitessVTGateManager {
           }
           if (connection.getUseSSL() && connection.getRefreshConnection()
               && vtgateConnRefreshTimer == null) {
-            logger.warning(
+            LOG.info(
                 "ssl vtgate connection detected -- installing connection refresh based on ssl "
                     + "keystore modification");
             vtgateConnRefreshTimer = new Timer("ssl-refresh-vtgate-conn", true);
@@ -160,7 +153,7 @@ public class VitessVTGateManager {
         if (entry.getValue() instanceof RefreshableVTGateConnection) {
           RefreshableVTGateConnection existing = (RefreshableVTGateConnection) entry.getValue();
           if (existing.checkKeystoreUpdates()) {
-            logger.warning("alex 154: " + entry.getKey());
+            LOG.info("alex 154: " + entry.getKey());
             VTGateConnection old = vtGateConnHashMap
                 .replace(entry.getKey(), getVtGateConn(hostInfo, connection));
             closedConnections.add(old);
@@ -170,7 +163,7 @@ public class VitessVTGateManager {
     }
 
     if (closedConnections.size() > 0) {
-      logger.warning(
+      LOG.info(
           "refreshed " + closedConnections.size() + " vtgate connections due to keystore update");
       for (VTGateConnection closedConnection : closedConnections) {
         closeRefreshedConnection(closedConnection);
@@ -180,7 +173,7 @@ public class VitessVTGateManager {
 
   private static void closeRefreshedConnection(final VTGateConnection old) {
     if (vtgateClosureTimer != null) {
-      logger.warning(String
+      LOG.info(String
           .format("%s Closing connection with a %s second delay", old, vtgateClosureDelaySeconds));
       vtgateClosureTimer.schedule(new TimerTask() {
         @Override
@@ -195,10 +188,10 @@ public class VitessVTGateManager {
 
   private static void actuallyCloseRefreshedConnection(final VTGateConnection old) {
     try {
-      logger.warning(old + " Closing connection because it had been refreshed");
+      LOG.info(old + " Closing connection because it had been refreshed");
       old.close();
     } catch (IOException ioe) {
-      logger.log(Level.WARNING, String.format("Error closing VTGateConnection %s", old), ioe);
+      LOG.warn(String.format("Error closing VTGateConnection %s", old), ioe);
     }
   }
 
