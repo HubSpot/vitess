@@ -17,6 +17,8 @@
 package io.vitess.jdbc;
 
 import com.google.common.base.Strings;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import io.vitess.client.Context;
 import io.vitess.client.RefreshableVTGateConnection;
@@ -46,9 +48,6 @@ import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.ConsoleHandler;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * Created by naveen.nahata on 24/02/16.
