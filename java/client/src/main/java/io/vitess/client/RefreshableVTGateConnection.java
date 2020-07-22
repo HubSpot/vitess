@@ -1,7 +1,7 @@
 package io.vitess.client;
 
 import java.io.File;
-import java.io.System;
+import java.lang.System;
 
 public class RefreshableVTGateConnection extends VTGateConnection {
 
