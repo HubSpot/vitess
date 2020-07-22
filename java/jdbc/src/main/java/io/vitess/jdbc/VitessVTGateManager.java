@@ -59,7 +59,7 @@ public class VitessVTGateManager {
   static {
     ConsoleHandler ch = new ConsoleHandler();
     ch.setLevel(Level.FINE);
-    logger.setHandler(ch);
+    logger.addHandler(ch);
     logger.setLevel(Level.FINE);
   }
       
