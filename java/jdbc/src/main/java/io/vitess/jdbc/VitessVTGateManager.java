@@ -55,6 +55,7 @@ import java.util.logging.Logger;
 public class VitessVTGateManager {
 
   private static Logger logger = Logger.getLogger(VitessVTGateManager.class.getName());
+
   static {
     ConsoleHandler ch = new ConsoleHandler();
     ch.setLevel(Level.FINE);
