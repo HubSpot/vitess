@@ -18,9 +18,6 @@ package io.vitess.jdbc;
 
 import com.google.common.base.Strings;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import io.vitess.client.Context;
 import io.vitess.client.RefreshableVTGateConnection;
 import io.vitess.client.VTGateConnection;
@@ -32,6 +29,9 @@ import io.vitess.client.grpc.netty.DefaultChannelBuilderProvider;
 import io.vitess.client.grpc.netty.NettyChannelBuilderProvider;
 import io.vitess.client.grpc.tls.TlsOptions;
 import io.vitess.util.Constants;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.lang.System;
