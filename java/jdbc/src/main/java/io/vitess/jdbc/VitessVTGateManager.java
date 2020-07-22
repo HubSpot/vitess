@@ -53,7 +53,7 @@ import java.util.logging.Logger;
  */
 public class VitessVTGateManager {
 
-  private static Logger logger = Logger.getLogger(VitessVTGateManager.class.getName());
+  private static Logger logger = Logger.getLogger(VitessVTGateManager.class.getName()).setLevel(Level.FINE);
   /*
   Current implementation have one VTGateConn for ip-port-username combination
   */
@@ -151,7 +151,7 @@ public class VitessVTGateManager {
         if (entry.getValue() instanceof RefreshableVTGateConnection) {
           RefreshableVTGateConnection existing = (RefreshableVTGateConnection) entry.getValue();
           if (existing.checkKeystoreUpdates()) {
-            System.out.println("alex 154: " + entry.getKey());
+            logger.info("alex 154: " + entry.getKey());
             VTGateConnection old = vtGateConnHashMap
                 .replace(entry.getKey(), getVtGateConn(hostInfo, connection));
             closedConnections.add(old);
@@ -161,7 +161,7 @@ public class VitessVTGateManager {
     }
 
     if (closedConnections.size() > 0) {
-      System.out.println(
+      logger.info(
           "refreshed " + closedConnections.size() + " vtgate connections due to keystore update");
       for (VTGateConnection closedConnection : closedConnections) {
         closeRefreshedConnection(closedConnection);
