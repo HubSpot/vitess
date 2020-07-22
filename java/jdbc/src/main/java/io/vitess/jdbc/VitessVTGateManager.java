@@ -53,7 +53,8 @@ import java.util.logging.Logger;
  */
 public class VitessVTGateManager {
 
-  private static Logger logger = Logger.getLogger(VitessVTGateManager.class.getName()).setLevel(Level.FINE);
+  private static Logger logger = Logger.getLogger(VitessVTGateManager.class.getName())
+    .setLevel(Level.FINE);
   /*
   Current implementation have one VTGateConn for ip-port-username combination
   */
