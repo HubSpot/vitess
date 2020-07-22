@@ -31,6 +31,7 @@ import io.vitess.client.grpc.tls.TlsOptions;
 import io.vitess.util.Constants;
 
 import java.io.IOException;
+import java.io.System;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
@@ -150,6 +151,7 @@ public class VitessVTGateManager {
         if (entry.getValue() instanceof RefreshableVTGateConnection) {
           RefreshableVTGateConnection existing = (RefreshableVTGateConnection) entry.getValue();
           if (existing.checkKeystoreUpdates()) {
+            System.out.println("alex 154: " + entry.getKey());
             VTGateConnection old = vtGateConnHashMap
                 .replace(entry.getKey(), getVtGateConn(hostInfo, connection));
             closedConnections.add(old);
@@ -159,7 +161,7 @@ public class VitessVTGateManager {
     }
 
     if (closedConnections.size() > 0) {
-      logger.info(
+      System.out.println(
           "refreshed " + closedConnections.size() + " vtgate connections due to keystore update");
       for (VTGateConnection closedConnection : closedConnections) {
         closeRefreshedConnection(closedConnection);
