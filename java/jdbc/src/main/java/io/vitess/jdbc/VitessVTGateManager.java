@@ -31,9 +31,9 @@ import io.vitess.client.grpc.tls.TlsOptions;
 import io.vitess.util.Constants;
 
 import java.io.IOException;
+import java.lang.System;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.System;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
