@@ -45,6 +45,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
+import java.util.logging.ConsoleHandler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -54,6 +55,12 @@ import java.util.logging.Logger;
 public class VitessVTGateManager {
 
   private static Logger logger = Logger.getLogger(VitessVTGateManager.class.getName());
+  static {
+    ConsoleHandler ch = new ConsoleHandler();
+    ch.setLevel(Level.FINE);
+    logger.setHandler(ch);
+    logger.setLevel(Level.FINE);
+  }
       
   /*
   Current implementation have one VTGateConn for ip-port-username combination
