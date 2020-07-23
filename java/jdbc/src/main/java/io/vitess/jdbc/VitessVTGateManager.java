@@ -152,7 +152,7 @@ public class VitessVTGateManager {
         if (entry.getValue() instanceof RefreshableVTGateConnection) {
           RefreshableVTGateConnection existing = (RefreshableVTGateConnection) entry.getValue();
           if (existing.checkKeystoreUpdates()) {
-            LOG.info("entry.getkey: " + entry.getKey() + "; hostinfo: " + hostInfo.toString())
+            LOG.info("entry.getkey: " + entry.getKey() + "; hostinfo: " + hostInfo.toString());
             VTGateConnection old = vtGateConnHashMap
                 .replace(entry.getKey(), getVtGateConn(hostInfo, connection));
             closedConnections.add(old);
