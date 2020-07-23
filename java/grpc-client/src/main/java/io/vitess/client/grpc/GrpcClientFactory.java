@@ -34,6 +34,9 @@ import io.vitess.client.grpc.netty.DefaultChannelBuilderProvider;
 import io.vitess.client.grpc.netty.NettyChannelBuilderProvider;
 import io.vitess.client.grpc.tls.TlsOptions;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -54,7 +57,7 @@ import javax.net.ssl.SSLException;
  * GrpcClientFactory creates RpcClients with the gRPC implementation.
  */
 public class GrpcClientFactory implements RpcClientFactory {
-
+  private static final Logger LOG = LoggerFactory.getLogger(GrpcClientFactory.class);
   private NettyChannelBuilderProvider nettyChannelBuilderProvider;
   private ErrorHandler errorHandler;
   private CallCredentials callCredentials;
@@ -146,7 +149,7 @@ public class GrpcClientFactory implements RpcClientFactory {
   @Override
   public RpcClient createTls(Context ctx, String target, TlsOptions tlsOptions) {
     final SslContextBuilder sslContextBuilder = GrpcSslContexts.forClient();
-
+    LOG.info(tlsOptions.getKeyStore().getPath());
     // trustManager should always be set
     final KeyStore trustStore = loadKeyStore(tlsOptions.getTrustStore(),
         tlsOptions.getTrustStorePassword());

@@ -34,7 +34,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.lang.System;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.sql.SQLException;
@@ -153,7 +152,6 @@ public class VitessVTGateManager {
         if (entry.getValue() instanceof RefreshableVTGateConnection) {
           RefreshableVTGateConnection existing = (RefreshableVTGateConnection) entry.getValue();
           if (existing.checkKeystoreUpdates()) {
-            LOG.info("alex 154: " + entry.getKey());
             VTGateConnection old = vtGateConnHashMap
                 .replace(entry.getKey(), getVtGateConn(hostInfo, connection));
             closedConnections.add(old);
