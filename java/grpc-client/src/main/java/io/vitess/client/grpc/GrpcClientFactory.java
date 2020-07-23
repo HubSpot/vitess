@@ -149,7 +149,7 @@ public class GrpcClientFactory implements RpcClientFactory {
   @Override
   public RpcClient createTls(Context ctx, String target, TlsOptions tlsOptions) {
     final SslContextBuilder sslContextBuilder = GrpcSslContexts.forClient();
-    LOG.info(target, tlsOptions.getKeyStore().getPath());
+    LOG.info("target: " + target + "; keystore path: " + tlsOptions.getKeyStore().getPath());
     // trustManager should always be set
     final KeyStore trustStore = loadKeyStore(tlsOptions.getTrustStore(),
         tlsOptions.getTrustStorePassword());
