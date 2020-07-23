@@ -88,7 +88,7 @@ public class VitessVTGateManager {
           }
           if (connection.getUseSSL() && connection.getRefreshConnection()
               && vtgateConnRefreshTimer == null) {
-            LOG.info(
+            java.lang.System.out.println(
                 "ssl vtgate connection detected -- installing connection refresh based on ssl "
                     + "keystore modification");
             vtgateConnRefreshTimer = new Timer("ssl-refresh-vtgate-conn", true);
@@ -153,7 +153,7 @@ public class VitessVTGateManager {
         if (entry.getValue() instanceof RefreshableVTGateConnection) {
           RefreshableVTGateConnection existing = (RefreshableVTGateConnection) entry.getValue();
           if (existing.checkKeystoreUpdates()) {
-            LOG.info("alex 154: " + entry.getKey());
+            java.lang.System.out.println("alex 154: " + entry.getKey());
             VTGateConnection old = vtGateConnHashMap
                 .replace(entry.getKey(), getVtGateConn(hostInfo, connection));
             closedConnections.add(old);
@@ -163,7 +163,7 @@ public class VitessVTGateManager {
     }
 
     if (closedConnections.size() > 0) {
-      LOG.info(
+      java.lang.System.out.println(
           "refreshed " + closedConnections.size() + " vtgate connections due to keystore update");
       for (VTGateConnection closedConnection : closedConnections) {
         closeRefreshedConnection(closedConnection);
@@ -173,7 +173,7 @@ public class VitessVTGateManager {
 
   private static void closeRefreshedConnection(final VTGateConnection old) {
     if (vtgateClosureTimer != null) {
-      LOG.info(String
+      java.lang.System.out.println(String
           .format("%s Closing connection with a %s second delay", old, vtgateClosureDelaySeconds));
       vtgateClosureTimer.schedule(new TimerTask() {
         @Override
@@ -188,7 +188,7 @@ public class VitessVTGateManager {
 
   private static void actuallyCloseRefreshedConnection(final VTGateConnection old) {
     try {
-      LOG.info(old + " Closing connection because it had been refreshed");
+      java.lang.System.out.println(old + " Closing connection because it had been refreshed");
       old.close();
     } catch (IOException ioe) {
       LOG.warn(String.format("Error closing VTGateConnection %s", old), ioe);
