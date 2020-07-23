@@ -225,8 +225,8 @@ public class VitessVTGateManager {
           .keyStorePassword(keyStorePassword).keyAlias(keyAlias).keyPassword(keyPassword)
           .trustStorePath(trustStorePath).trustStorePassword(trustStorePassword)
           .trustAlias(trustAlias);
-      LOG.info("hostinfo: " + hostInfo.toString() + "; keystore path: " + keyStorePath + "; " +
-          connection.getUrl().getUrl());
+      LOG.info("hostinfo: " + hostInfo.toString() + "; keystore path: " + keyStorePath + "; "
+          + connection.getUrl().getUrl());
 
       return new RefreshableVTGateConnection(new GrpcClientFactory(channelProvider, errorHandler)
           .createTls(context, hostInfo.toString(), tlsOptions), keyStorePath, trustStorePath,
