@@ -152,6 +152,7 @@ public class VitessVTGateManager {
         if (entry.getValue() instanceof RefreshableVTGateConnection) {
           RefreshableVTGateConnection existing = (RefreshableVTGateConnection) entry.getValue();
           if (existing.checkKeystoreUpdates()) {
+            LOG.info("entry.getkey: " + entry.getKey() + "; hostinfo: " + hostInfo.toString())
             VTGateConnection old = vtGateConnHashMap
                 .replace(entry.getKey(), getVtGateConn(hostInfo, connection));
             closedConnections.add(old);
@@ -224,6 +225,7 @@ public class VitessVTGateManager {
           .keyStorePassword(keyStorePassword).keyAlias(keyAlias).keyPassword(keyPassword)
           .trustStorePath(trustStorePath).trustStorePassword(trustStorePassword)
           .trustAlias(trustAlias);
+      LOG.info("hostinfo: " + hostInfo.toString() + "; keystore path: " + keyStorePath + "; " + connection.getUrl().getUrl());
 
       return new RefreshableVTGateConnection(new GrpcClientFactory(channelProvider, errorHandler)
           .createTls(context, hostInfo.toString(), tlsOptions), keyStorePath, trustStorePath,
