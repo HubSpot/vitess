@@ -119,12 +119,12 @@ public class VitessVTGateManagerTest {
   @Test
   public void testDifferentConnectionsKeepOwnKeyStores() throws Exception {
     VitessVTGateManager.close();
-    String keystoreName1 = "keystore1";
-    String keystoreName2 = "keystore2";
+    String keystoreName1 = "master";
+    String keystoreName2 = "replica";
     String truststoreName1 = "truststore1";
     String truststoreName2 = "truststore2";
-    VitessConnection connection1 = makeConnectionForKeystore(keystoreName1, truststoreName1);
-    VitessConnection connection2 = makeConnectionForKeystore(keystoreName2, truststoreName2);
+    VitessConnection connection1 = makeConnectionForKeystore("master", keystoreName1, truststoreName1);
+    VitessConnection connection2 = makeConnectionForKeystore("replica", keystoreName2, truststoreName2);
 
     GrpcClientFactory mockedGrpcClientFactory = mock(GrpcClientFactory.class);
     RpcClient mockedRpcClient = mock(RpcClient.class);
@@ -147,12 +147,12 @@ public class VitessVTGateManagerTest {
   @Test
   public void testRefreshingDifferentConnectionsKeepOwnKeyStores() throws Exception {
     VitessVTGateManager.close();
-    String keystoreName1 = "keystore1";
-    String keystoreName2 = "keystore2";
+    String keystoreName1 = "master";
+    String keystoreName2 = "replica";
     String truststoreName1 = "truststore1";
     String truststoreName2 = "truststore2";
-    VitessConnection connection1 = makeConnectionForKeystore(keystoreName1, truststoreName1);
-    VitessConnection connection2 = makeConnectionForKeystore(keystoreName2, truststoreName2);
+    VitessConnection connection1 = makeConnectionForKeystore("master", keystoreName1, truststoreName1);
+    VitessConnection connection2 = makeConnectionForKeystore("replica", keystoreName2, truststoreName2);
     makeMockModifiedFile(keystoreName1);
     makeMockModifiedFile(truststoreName1);
     makeMockModifiedFile(keystoreName2);
@@ -183,9 +183,9 @@ public class VitessVTGateManagerTest {
     VitessVTGateManager.close();
   }
 
-  private static VitessConnection makeConnectionForKeystore(String keystoreName, String truststoreName) throws SQLException {
+  private static VitessConnection makeConnectionForKeystore(String tabletType, String keystoreName, String truststoreName) throws SQLException {
     Properties info = new Properties();
-    info.setProperty("username", "user");
+    info.setProperty(Constants.Property.USERNAME, "user");
     info.setProperty(Constants.Property.KEYSTORE, keystoreName);
     info.setProperty(Constants.Property.KEYSTORE_PASSWORD, keystoreName);
     info.setProperty(Constants.Property.TRUSTSTORE, truststoreName);
@@ -195,7 +195,7 @@ public class VitessVTGateManagerTest {
     info.setProperty("refreshConnection", "true");
     return new VitessConnection(
         "jdbc:vitess://10.33.17.231:15991:xyz,10.33.17.232:15991:xyz,10.33.17"
-            + ".233:15991/shipment/shipment", info);
+            + ".233:15991/shipment/shipment?tabletType=" + tabletType, info);
   }
 
   private static String getKeystoreName(VitessVTGateManager.VTGateConnections vtGateConnections) throws IllegalAccessException, NoSuchFieldException {

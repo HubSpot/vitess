@@ -53,7 +53,7 @@ public class VitessVTGateManager {
 
   private static Logger logger = Logger.getLogger(VitessVTGateManager.class.getName());
   /*
-  Current implementation have one VTGateConn for ip-port-username-keystore combination
+  Current implementation have one VTGateConn for ip-port-username-keyspace combination
   */
   private static ConcurrentHashMap<String, VTGateConnection> vtGateConnHashMap =
       new ConcurrentHashMap<>();
@@ -77,7 +77,7 @@ public class VitessVTGateManager {
     public VTGateConnections(final VitessConnection connection) {
       maybeStartClosureTimer(connection);
       for (final VitessJDBCUrl.HostInfo hostInfo : connection.getUrl().getHostInfos()) {
-        String identifier = getIdentifer(hostInfo, connection);
+        String identifier = getIdentifier(hostInfo, connection);
         synchronized (VitessVTGateManager.class) {
           if (!vtGateConnHashMap.containsKey(identifier)) {
             updateVtGateConnHashMap(identifier, hostInfo, connection);
@@ -129,10 +129,10 @@ public class VitessVTGateManager {
     }
   }
 
-  private static String getIdentifer(VitessJDBCUrl.HostInfo hostInfo, VitessConnection connection) {
-    String keystoreMaybe = connection.getUseSSL() ? connection.getKeyStore() : "";
+  private static String getIdentifier(VitessJDBCUrl.HostInfo hostInfo,
+      VitessConnection connection) {
     return hostInfo.getHostname() + hostInfo.getPort()
-        + connection.getUsername() + connection.getTarget() + keystoreMaybe;
+        + connection.getUsername() + connection.getTarget();
   }
 
   /**
