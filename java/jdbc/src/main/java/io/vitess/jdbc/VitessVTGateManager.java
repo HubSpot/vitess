@@ -37,7 +37,6 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.Timer;
@@ -54,16 +53,17 @@ public class VitessVTGateManager {
 
   private static Logger logger = Logger.getLogger(VitessVTGateManager.class.getName());
   /*
-  Current implementation have one VTGateConn for ip-port-username combination
+  Current implementation have one VTGateConn for ip-port-username-keyspace combination
   */
   private static ConcurrentHashMap<String, VTGateConnection> vtGateConnHashMap =
       new ConcurrentHashMap<>();
-  private static Timer vtgateConnRefreshTimer = null;
+  private static ConcurrentHashMap<String, Timer> vtgateConnRefreshTimerMap =
+      new ConcurrentHashMap<>();
   private static Timer vtgateClosureTimer = null;
   private static long vtgateClosureDelaySeconds = 0L;
 
   /**
-   * VTGateConnections object consist of vtGateIdentifire list and return vtGate object in round
+   * VTGateConnections object consist of vtGateIdentifier list and return vtGate object in round
    * robin.
    */
   public static class VTGateConnections {
@@ -77,23 +77,23 @@ public class VitessVTGateManager {
     public VTGateConnections(final VitessConnection connection) {
       maybeStartClosureTimer(connection);
       for (final VitessJDBCUrl.HostInfo hostInfo : connection.getUrl().getHostInfos()) {
-        String identifier = getIdentifer(hostInfo.getHostname(), hostInfo.getPort(),
-            connection.getUsername(), connection.getTarget());
+        String identifier = getIdentifier(hostInfo, connection);
         synchronized (VitessVTGateManager.class) {
           if (!vtGateConnHashMap.containsKey(identifier)) {
             updateVtGateConnHashMap(identifier, hostInfo, connection);
           }
           if (connection.getUseSSL() && connection.getRefreshConnection()
-              && vtgateConnRefreshTimer == null) {
+              && !vtgateConnRefreshTimerMap.containsKey(identifier)) {
             logger.info(
                 "ssl vtgate connection detected -- installing connection refresh based on ssl "
                     + "keystore modification");
-            vtgateConnRefreshTimer = new Timer("ssl-refresh-vtgate-conn", true);
+            Timer vtgateConnRefreshTimer = new Timer("ssl-refresh-vtgate-conn-" + identifier, true);
+            vtgateConnRefreshTimerMap.put(identifier, vtgateConnRefreshTimer);
             vtgateConnRefreshTimer.scheduleAtFixedRate(
                 new TimerTask() {
                   @Override
                   public void run() {
-                    refreshUpdatedSSLConnections(hostInfo,
+                    refreshUpdatedSSLConnections(identifier, hostInfo,
                         connection);
                   }
                 },
@@ -129,9 +129,10 @@ public class VitessVTGateManager {
     }
   }
 
-  private static String getIdentifer(String hostname, int port, String userIdentifer,
-      String keyspace) {
-    return (hostname + port + userIdentifer + keyspace);
+  private static String getIdentifier(VitessJDBCUrl.HostInfo hostInfo,
+      VitessConnection connection) {
+    return hostInfo.getHostname() + hostInfo.getPort()
+        + connection.getUsername() + connection.getTarget();
   }
 
   /**
@@ -142,18 +143,19 @@ public class VitessVTGateManager {
     vtGateConnHashMap.put(identifier, getVtGateConn(hostInfo, connection));
   }
 
-  private static void refreshUpdatedSSLConnections(VitessJDBCUrl.HostInfo hostInfo,
+  private static void refreshUpdatedSSLConnections(String identifier,
+      VitessJDBCUrl.HostInfo hostInfo,
       VitessConnection connection) {
     Set<VTGateConnection> closedConnections = new HashSet<>();
     synchronized (VitessVTGateManager.class) {
-      for (Map.Entry<String, VTGateConnection> entry : vtGateConnHashMap.entrySet()) {
-        if (entry.getValue() instanceof RefreshableVTGateConnection) {
-          RefreshableVTGateConnection existing = (RefreshableVTGateConnection) entry.getValue();
-          if (existing.checkKeystoreUpdates()) {
-            VTGateConnection old = vtGateConnHashMap
-                .replace(entry.getKey(), getVtGateConn(hostInfo, connection));
-            closedConnections.add(old);
-          }
+      VTGateConnection vtGateConnection = vtGateConnHashMap.get(identifier);
+      if (vtGateConnection instanceof RefreshableVTGateConnection) {
+        RefreshableVTGateConnection refreshableVTGateConnection =
+            (RefreshableVTGateConnection) vtGateConnection;
+        if (refreshableVTGateConnection.checkKeystoreUpdates()) {
+          VTGateConnection old = vtGateConnHashMap
+              .replace(identifier, getVtGateConn(hostInfo, connection));
+          closedConnections.add(old);
         }
       }
     }
@@ -292,6 +294,7 @@ public class VitessVTGateManager {
       }
     }
     vtGateConnHashMap.clear();
+    vtgateConnRefreshTimerMap.clear();
     if (null != exception) {
       throw exception;
     }
