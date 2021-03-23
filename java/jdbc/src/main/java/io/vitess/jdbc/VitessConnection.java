@@ -94,6 +94,25 @@ public class VitessConnection extends ConnectionProperties implements Connection
   }
 
   /**
+   * The metadata only refreshes itself when its null or the connection that it was created with is
+   * closed.
+   * The value is cached since it queries the database to build some of the info.
+   * However, this can be problematic if a new pool of connections is opened to a different
+   * instance of vitess (for example a different deploy of VTgates). The connection object itself
+   * should still run fine, but third party code that takes in connections to perform tasks like
+   * Liquibase are depending on the metadata to know how to query and that will be cached to the
+   * wrong JDBC url / VTGate / table columns / etc.
+   *
+   * Providing a way to bust the cache can help programs that need to circumvent this issue
+   */
+  public void resetCachedMetaData() throws SQLException {
+    synchronized (VitessConnection.class) {
+      databaseMetaData = null;
+      getMetaData();
+    }
+  }
+
+  /**
    * Creates statement for the given connection
    *
    * @return Statement Object
