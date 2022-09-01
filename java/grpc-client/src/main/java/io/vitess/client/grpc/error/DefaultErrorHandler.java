@@ -44,8 +44,6 @@ public class DefaultErrorHandler implements ErrorHandler {
     }
 
     switch (error.getLegacyCode()) {
-      case SUCCESS_LEGACY:
-        return null;
       case BAD_INPUT_LEGACY:
         return new SQLSyntaxErrorException(error.toString(), sqlState, errno);
       case DEADLINE_EXCEEDED_LEGACY:
