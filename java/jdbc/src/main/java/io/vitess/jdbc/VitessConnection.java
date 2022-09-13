@@ -306,6 +306,7 @@ public class VitessConnection extends ConnectionProperties implements Connection
     checkOpen();
     switch (this.vtSession.getTransactionIsolation()) {
       case DEFAULT:
+      case AUTOCOMMIT:
         return this.getMetaData().getDefaultTransactionIsolation();
       case READ_COMMITTED:
         return Connection.TRANSACTION_READ_COMMITTED;
