@@ -109,7 +109,7 @@ public class VitessStatement implements Statement {
     Cursor cursor;
     if ((vitessConnection.isSimpleExecute() && this.fetchSize == 0) || vitessConnection
         .isInTransaction()) {
-      checkAndBeginTransaction();
+      checkAndBeginTransaction(sql);
       Context context = this.vitessConnection.createContext(this.queryTimeoutInMillis);
       cursor = vtGateConn.execute(context, sql, null, vitessConnection.getVtSession()).checkedGet();
     } else {
@@ -395,7 +395,7 @@ public class VitessStatement implements Statement {
 
     VTGateConnection vtGateConn = this.vitessConnection.getVtGateConn();
 
-    checkAndBeginTransaction();
+    checkAndBeginTransaction(sql);
     Context context = this.vitessConnection.createContext(this.queryTimeoutInMillis);
     Cursor cursor = vtGateConn.execute(context, sql, null, vitessConnection.getVtSession())
         .checkedGet();
@@ -499,7 +499,7 @@ public class VitessStatement implements Statement {
     try {
       vtGateConn = this.vitessConnection.getVtGateConn();
 
-      checkAndBeginTransaction();
+      checkAndBeginTransaction(batchedArgs.get(0));
       Context context = this.vitessConnection.createContext(this.queryTimeoutInMillis);
       cursorWithErrorList = vtGateConn
           .executeBatch(context, batchedArgs, null, vitessConnection.getVtSession()).checkedGet();
@@ -631,11 +631,17 @@ public class VitessStatement implements Statement {
     return firstNonWsCharOfQuery == 'S';
   }
 
-  protected void checkAndBeginTransaction() throws SQLException {
+
+  protected void checkAndBeginTransaction(String sql) throws SQLException {
     if (!(this.vitessConnection.getAutoCommit() || this.vitessConnection.isInTransaction())) {
       Context context = this.vitessConnection.createContext(this.queryTimeoutInMillis);
       VTGateConnection vtGateConn = this.vitessConnection.getVtGateConn();
-      vtGateConn.execute(context, "begin", null, this.vitessConnection.getVtSession()).checkedGet();
+      String priority = org.apache.commons.lang.StringUtils.substringBetween(sql,"/* priority: ", " */");
+      String beginQuery = "begin";
+      if (priority != null) {
+        beginQuery = beginQuery + " /* priority: "+priority + " */";
+      }
+      vtGateConn.execute(context, beginQuery, null, this.vitessConnection.getVtSession()).checkedGet();
     }
   }
 

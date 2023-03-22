@@ -115,7 +115,7 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
     Cursor cursor;
     try {
       if (vitessConnection.isSimpleExecute() && this.fetchSize == 0) {
-        checkAndBeginTransaction();
+        checkAndBeginTransaction(this.sql);
         Context context = this.vitessConnection.createContext(this.queryTimeoutInMillis);
         cursor = vtGateConn
             .execute(context, this.sql, this.bindVariables, vitessConnection.getVtSession())
@@ -147,7 +147,7 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
     int truncatedUpdateCount;
     Cursor cursor;
     try {
-      checkAndBeginTransaction();
+      checkAndBeginTransaction(this.sql);
       Context context = this.vitessConnection.createContext(this.queryTimeoutInMillis);
       cursor = vtGateConn
           .execute(context, this.sql, this.bindVariables, vitessConnection.getVtSession())
@@ -396,7 +396,7 @@ public class VitessPreparedStatement extends VitessStatement implements Prepared
         batchedQueries.add(this.sql);
       }
 
-      checkAndBeginTransaction();
+      checkAndBeginTransaction(this.sql);
       Context context = this.vitessConnection.createContext(this.queryTimeoutInMillis);
       cursorWithErrorList = vtGateConn
           .executeBatch(context, batchedQueries, batchedArgs, vitessConnection.getVtSession())
