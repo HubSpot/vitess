@@ -636,10 +636,11 @@ public class VitessStatement implements Statement {
     if (!(this.vitessConnection.getAutoCommit() || this.vitessConnection.isInTransaction())) {
       Context context = this.vitessConnection.createContext(this.queryTimeoutInMillis);
       VTGateConnection vtGateConn = this.vitessConnection.getVtGateConn();
-      String priority = org.apache.commons.lang.StringUtils.substringBetween(sql,"/* priority: ", " */");
+      String priority = org.apache.commons.lang.StringUtils.substringBetween(sql,
+          "/* priority: ", " */");
       String beginQuery = "begin";
       if (priority != null) {
-        beginQuery = beginQuery + " /* priority: "+priority + " */";
+        beginQuery = beginQuery + " /* priority: " + priority + " */";
       }
       vtGateConn.execute(context, beginQuery, null, this.vitessConnection.getVtSession()).checkedGet();
     }
