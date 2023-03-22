@@ -642,7 +642,8 @@ public class VitessStatement implements Statement {
       if (priority != null) {
         beginQuery = beginQuery + " /* priority: " + priority + " */";
       }
-      vtGateConn.execute(context, beginQuery, null, this.vitessConnection.getVtSession()).checkedGet();
+      vtGateConn.execute(context,
+          beginQuery, null, this.vitessConnection.getVtSession()).checkedGet();
     }
   }
 
