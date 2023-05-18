@@ -178,6 +178,12 @@ public class VitessJDBCUrl {
       info.setProperty(Constants.Property.TABLET_TYPE, oldTabletType);
     }
 
+    // for backwards compatibility, remove when done with migration to primary
+    if ("master".equals(tabletType) || "master".equals(oldTabletType)) {
+      info.setProperty(Constants.Property.TABLET_TYPE, "primary");
+      info.setProperty(Constants.Property.OLD_TABLET_TYPE, "primary");
+    }
+
     this.info = info;
   }
 
