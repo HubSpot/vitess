@@ -145,6 +145,26 @@ public class VitessVTGateManagerTest {
   }
 
   @Test
+  public void testUsingLegacyNamingIsBackwardsCompatible() throws Exception {
+    VitessVTGateManager.close();
+    String keystoreName1 = "master";
+    String truststoreName1 = "truststore1";
+    VitessConnection connection1 = makeConnectionForKeystore("master", keystoreName1, truststoreName1);
+
+    GrpcClientFactory mockedGrpcClientFactory = mock(GrpcClientFactory.class);
+    RpcClient mockedRpcClient = mock(RpcClient.class);
+    whenNew(GrpcClientFactory.class).withAnyArguments().thenReturn(mockedGrpcClientFactory);
+    when(mockedGrpcClientFactory.createTls(any(Context.class), anyString(), any(TlsOptions.class))).thenReturn(mockedRpcClient);
+
+    VitessVTGateManager.VTGateConnections vtGateConnections1 =
+        new VitessVTGateManager.VTGateConnections(
+            connection1);
+    String connectionKeystoreName1 = getKeystoreName(vtGateConnections1);
+    Assert.assertEquals(keystoreName1, connectionKeystoreName1);
+    VitessVTGateManager.close();
+  }
+
+  @Test
   public void testRefreshingDifferentConnectionsKeepOwnKeyStores() throws Exception {
     VitessVTGateManager.close();
     String keystoreName1 = "primary";
