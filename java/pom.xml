@@ -73,8 +73,8 @@
     <netty.handler.version>4.1.34.Final</netty.handler.version>
     <tcnative.boring.ssl.version>2.0.22.Final</tcnative.boring.ssl.version>
 
-    <protobuf.java.version>3.6.1</protobuf.java.version>
-    <protobuf.protoc.version>3.6.1</protobuf.protoc.version>
+    <protobuf.java.version>3.25.5</protobuf.java.version>
+    <protobuf.protoc.version>3.25.5</protobuf.protoc.version>
     <checkstyle.plugin.version>3.0.0</checkstyle.plugin.version>
   </properties>
 
