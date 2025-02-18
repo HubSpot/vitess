@@ -186,7 +186,12 @@ func createPlanContext(st *semantics.SemTable) *PlanningContext {
 
 type vschema struct{}
 
-func (v *vschema) FindTable(tablename sqlparser.TableName) (*vindexes.Table, string, topodatapb.TabletType, key.Destination, error) {
+func (v *vschema) FindViewTarget(name sqlparser.TableName) (*vindexes.Keyspace, error) {
+	// TODO implement me
+	panic("implement me")
+}
+
+func (v *vschema) FindTable(tablename sqlparser.TableName) (*vindexes.BaseTable, string, topodatapb.TabletType, key.Destination, error) {
 	// TODO implement me
 	panic("implement me")
 }
@@ -196,7 +201,7 @@ func (v *vschema) FindView(name sqlparser.TableName) sqlparser.TableStatement {
 	panic("implement me")
 }
 
-func (v *vschema) FindTableOrVindex(tablename sqlparser.TableName) (*vindexes.Table, vindexes.Vindex, string, topodatapb.TabletType, key.Destination, error) {
+func (v *vschema) FindTableOrVindex(tablename sqlparser.TableName) (*vindexes.BaseTable, vindexes.Vindex, string, topodatapb.TabletType, key.Destination, error) {
 	// TODO implement me
 	panic("implement me")
 }

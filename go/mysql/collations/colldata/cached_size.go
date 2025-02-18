@@ -1,5 +1,5 @@
 /*
-Copyright 2021 The Vitess Authors.
+Copyright 2025 The Vitess Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -18,6 +18,10 @@ limitations under the License.
 package colldata
 
 import hack "vitess.io/vitess/go/hack"
+
+type cachedObject interface {
+	CachedSize(alloc bool) int64
+}
 
 func (cached *eightbitWildcard) CachedSize(alloc bool) int64 {
 	if cached == nil {
@@ -58,6 +62,10 @@ func (cached *unicodeWildcard) CachedSize(alloc bool) int64 {
 	size := int64(0)
 	if alloc {
 		size += int64(48)
+	}
+	// field charset vitess.io/vitess/go/mysql/collations/charset.Charset
+	if cc, ok := cached.charset.(cachedObject); ok {
+		size += cc.CachedSize(true)
 	}
 	// field pattern []rune
 	{

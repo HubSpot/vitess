@@ -253,7 +253,7 @@ func (vw *VSchemaWrapper) Destination() key.Destination {
 	return vw.Dest
 }
 
-func (vw *VSchemaWrapper) FindTable(tab sqlparser.TableName) (*vindexes.Table, string, topodatapb.TabletType, key.Destination, error) {
+func (vw *VSchemaWrapper) FindTable(tab sqlparser.TableName) (*vindexes.BaseTable, string, topodatapb.TabletType, key.Destination, error) {
 	destKeyspace, destTabletType, destTarget, err := topoproto.ParseDestination(tab.Qualifier.String(), topodatapb.TabletType_PRIMARY)
 	if err != nil {
 		return nil, destKeyspace, destTabletType, destTarget, err
@@ -273,22 +273,19 @@ func (vw *VSchemaWrapper) FindView(tab sqlparser.TableName) sqlparser.TableState
 	return vw.V.FindView(destKeyspace, tab.Name.String())
 }
 
-func (vw *VSchemaWrapper) FindTableOrVindex(tab sqlparser.TableName) (*vindexes.Table, vindexes.Vindex, string, topodatapb.TabletType, key.Destination, error) {
-	return vw.Vcursor.FindTableOrVindex(tab)
+func (vw *VSchemaWrapper) FindViewTarget(name sqlparser.TableName) (*vindexes.Keyspace, error) {
+	destKeyspace, _, _, err := topoproto.ParseDestination(name.Qualifier.String(), topodatapb.TabletType_PRIMARY)
+	if err != nil {
+		return nil, err
+	}
+	if ks, ok := vw.V.Keyspaces[destKeyspace]; ok {
+		return ks.Keyspace, nil
+	}
+	return nil, nil
 }
 
-func (vw *VSchemaWrapper) getActualKeyspace() string {
-	if vw.Keyspace == nil {
-		return ""
-	}
-	if !sqlparser.SystemSchema(vw.Keyspace.Name) {
-		return vw.Keyspace.Name
-	}
-	ks, err := vw.AnyKeyspace()
-	if err != nil {
-		return ""
-	}
-	return ks.Name
+func (vw *VSchemaWrapper) FindTableOrVindex(tab sqlparser.TableName) (*vindexes.BaseTable, vindexes.Vindex, string, topodatapb.TabletType, key.Destination, error) {
+	return vw.Vcursor.FindTableOrVindex(tab)
 }
 
 func (vw *VSchemaWrapper) SelectedKeyspace() (*vindexes.Keyspace, error) {

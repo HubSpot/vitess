@@ -1,5 +1,5 @@
 /*
-Copyright 2021 The Vitess Authors.
+Copyright 2025 The Vitess Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -37,6 +37,14 @@ func (cached *Result) CachedSize(alloc bool) int64 {
 	// field Rows []vitess.io/vitess/go/sqltypes.Row
 	{
 		size += hack.RuntimeAllocSize(int64(cap(cached.Rows)) * int64(24))
+		for _, elem := range cached.Rows {
+			{
+				size += hack.RuntimeAllocSize(int64(cap(elem)) * int64(32))
+				for _, elem := range elem {
+					size += elem.CachedSize(false)
+				}
+			}
+		}
 	}
 	// field SessionStateChanges string
 	size += hack.RuntimeAllocSize(int64(len(cached.SessionStateChanges)))

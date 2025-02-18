@@ -154,14 +154,14 @@ func markBindVariable(yylex yyLexer, bvar string) {
   partitions    Partitions
   tableExprs    TableExprs
   tableNames    TableNames
-  exprs         Exprs
+  exprs         []Expr
   values        Values
   valTuple      ValTuple
   orderBy       OrderBy
   updateExprs   UpdateExprs
   setExprs      SetExprs
-  selectExprs   SelectExprs
-  tableOptions     TableOptions
+  selectExprs   *SelectExprs
+  tableOptions  TableOptions
   starExpr      StarExpr
   groupBy	*GroupBy
 
@@ -402,6 +402,7 @@ func markBindVariable(yylex yyLexer, bvar string) {
 %token <str> NESTED NETWORK_NAMESPACE NOWAIT NULLS OJ OLD OPTIONAL ORDINALITY ORGANIZATION OTHERS PARTIAL PATH PERSIST PERSIST_ONLY PRECEDING PRIVILEGE_CHECKS_USER PROCESS
 %token <str> RANDOM REFERENCE REQUIRE_ROW_FORMAT RESOURCE RESPECT RESTART RETAIN REUSE ROLE SECONDARY SECONDARY_ENGINE SECONDARY_ENGINE_ATTRIBUTE SECONDARY_LOAD SECONDARY_UNLOAD SIMPLE SKIP SRID
 %token <str> THREAD_PRIORITY TIES UNBOUNDED VCPU VISIBLE RETURNING
+%token <str> MANUAL PARALLEL QUALIFY TABLESAMPLE
 
 // Performance Schema Functions
 %token <str> FORMAT_BYTES FORMAT_PICO_TIME PS_CURRENT_THREAD_ID PS_THREAD_ID
@@ -834,7 +835,7 @@ query_expression:
   }
 | SELECT comment_opt cache_opt NEXT num_val for_from table_name
   {
-    $$ = NewSelect(Comments($2), SelectExprs{&Nextval{Expr: $5}}, []string{$3}/*options*/, nil, TableExprs{&AliasedTableExpr{Expr: $7}}, nil/*where*/, nil/*groupBy*/, nil/*having*/, nil)
+    $$ = NewSelect(Comments($2), &SelectExprs{Exprs: []SelectExpr{&Nextval{Expr: $5}}}, []string{$3}/*options*/, nil, TableExprs{&AliasedTableExpr{Expr: $7}}, nil/*where*/, nil/*groupBy*/, nil/*having*/, nil)
   }
 
 query_expression_body:
@@ -1591,6 +1592,10 @@ column_format:
 {
     $$ = DefaultFormat
 }
+| COMPRESSED
+{
+    $$ = CompressedFormat
+}
 
 column_storage:
   VIRTUAL
@@ -1629,6 +1634,11 @@ generated_column_attribute_list_opt:
 | generated_column_attribute_list_opt keys
   {
     $1.KeyOpt = $2
+    $$ = $1
+  }
+| generated_column_attribute_list_opt SRID INTEGRAL
+  {
+    $1.SRID = NewIntLiteral($3)
     $$ = $1
   }
 | generated_column_attribute_list_opt VISIBLE
@@ -4925,11 +4935,13 @@ select_option:
 select_expression_list:
   select_expression
   {
-    $$ = SelectExprs{$1}
+    $$ = &SelectExprs{Exprs: []SelectExpr{$1}}
   }
 | select_expression_list ',' select_expression
   {
-    $$ = append($$, $3)
+    res := $1
+    res.Exprs = append(res.Exprs, $3)
+    $$ = res
   }
 
 select_expression:
@@ -5956,7 +5968,7 @@ subquery:
 expression_list:
   expression
   {
-    $$ = Exprs{$1}
+    $$ = []Expr{$1}
   }
 | expression_list ',' expression
   {
@@ -8485,6 +8497,7 @@ non_reserved_keyword:
 | LONGBLOB
 | LONGTEXT
 | LTRIM %prec FUNCTION_CALL_NON_KEYWORD
+| MANUAL
 | MANIFEST
 | MASTER_COMPRESSION_ALGORITHMS
 | MASTER_PUBLIC_KEY_PATH
@@ -8530,6 +8543,7 @@ non_reserved_keyword:
 | OTHERS
 | OVERWRITE
 | PACK_KEYS
+| PARALLEL
 | PARSER
 | PARTIAL
 | PARTITIONING
@@ -8553,6 +8567,7 @@ non_reserved_keyword:
 | PROCEDURE
 | PROCESSLIST
 | PURGE
+| QUALIFY
 | QUERIES
 | QUERY
 | RANDOM
@@ -8680,6 +8695,7 @@ non_reserved_keyword:
 | SUBPARTITIONS
 | SUM %prec FUNCTION_CALL_NON_KEYWORD
 | TABLES
+| TABLESAMPLE
 | TABLESPACE
 | TEMPORARY
 | TEMPTABLE

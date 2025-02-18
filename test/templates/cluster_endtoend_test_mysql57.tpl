@@ -19,7 +19,7 @@ env:
 jobs:
   build:
     name: Run endtoend tests on {{.Name}}
-    runs-on: {{if .Cores16}}gh-hosted-runners-16cores-1-24.04{{else}}ubuntu-24.04{{end}}
+    runs-on: {{.RunsOn}}
 
     steps:
     - name: Skip CI
@@ -73,6 +73,7 @@ jobs:
         token: ''
         filters: |
           end_to_end:
+            - 'test/config.json'
             - 'go/**/*.go'
             - 'go/vt/sidecardb/**/*.sql'
             - 'go/test/endtoend/onlineddl/vrepl_suite/**'

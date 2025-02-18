@@ -14,7 +14,7 @@ env:
 jobs:
   build:
     name: Run endtoend tests on {{.Name}}
-    runs-on: ubuntu-24.04
+    runs-on: {{.RunsOn}}
 
     steps:
     - name: Skip CI
@@ -55,6 +55,7 @@ jobs:
         token: ''
         filters: |
           end_to_end:
+            - 'test/config.json'
             - 'go/**/*.go'
             - 'go/vt/sidecardb/**/*.sql'
             - 'go/test/endtoend/vtgate/vitess_tester/**'
