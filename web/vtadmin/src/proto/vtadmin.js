@@ -93712,6 +93712,7 @@ export const binlogdata = $root.binlogdata = (() => {
          * @interface IVStreamOptions
          * @property {Array.<string>|null} [internal_tables] VStreamOptions internal_tables
          * @property {Object.<string,string>|null} [config_overrides] VStreamOptions config_overrides
+         * @property {Array.<string>|null} [tables_to_copy] VStreamOptions tables_to_copy
          */
 
         /**
@@ -93725,6 +93726,7 @@ export const binlogdata = $root.binlogdata = (() => {
         function VStreamOptions(properties) {
             this.internal_tables = [];
             this.config_overrides = {};
+            this.tables_to_copy = [];
             if (properties)
                 for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
@@ -93746,6 +93748,14 @@ export const binlogdata = $root.binlogdata = (() => {
          * @instance
          */
         VStreamOptions.prototype.config_overrides = $util.emptyObject;
+
+        /**
+         * VStreamOptions tables_to_copy.
+         * @member {Array.<string>} tables_to_copy
+         * @memberof binlogdata.VStreamOptions
+         * @instance
+         */
+        VStreamOptions.prototype.tables_to_copy = $util.emptyArray;
 
         /**
          * Creates a new VStreamOptions instance using the specified properties.
@@ -93777,6 +93787,9 @@ export const binlogdata = $root.binlogdata = (() => {
             if (message.config_overrides != null && Object.hasOwnProperty.call(message, "config_overrides"))
                 for (let keys = Object.keys(message.config_overrides), i = 0; i < keys.length; ++i)
                     writer.uint32(/* id 2, wireType 2 =*/18).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]).uint32(/* id 2, wireType 2 =*/18).string(message.config_overrides[keys[i]]).ldelim();
+            if (message.tables_to_copy != null && message.tables_to_copy.length)
+                for (let i = 0; i < message.tables_to_copy.length; ++i)
+                    writer.uint32(/* id 3, wireType 2 =*/26).string(message.tables_to_copy[i]);
             return writer;
         };
 
@@ -93840,6 +93853,12 @@ export const binlogdata = $root.binlogdata = (() => {
                         message.config_overrides[key] = value;
                         break;
                     }
+                case 3: {
+                        if (!(message.tables_to_copy && message.tables_to_copy.length))
+                            message.tables_to_copy = [];
+                        message.tables_to_copy.push(reader.string());
+                        break;
+                    }
                 default:
                     reader.skipType(tag & 7);
                     break;
@@ -93890,6 +93909,13 @@ export const binlogdata = $root.binlogdata = (() => {
                     if (!$util.isString(message.config_overrides[key[i]]))
                         return "config_overrides: string{k:string} expected";
             }
+            if (message.tables_to_copy != null && message.hasOwnProperty("tables_to_copy")) {
+                if (!Array.isArray(message.tables_to_copy))
+                    return "tables_to_copy: array expected";
+                for (let i = 0; i < message.tables_to_copy.length; ++i)
+                    if (!$util.isString(message.tables_to_copy[i]))
+                        return "tables_to_copy: string[] expected";
+            }
             return null;
         };
 
@@ -93919,6 +93945,13 @@ export const binlogdata = $root.binlogdata = (() => {
                 for (let keys = Object.keys(object.config_overrides), i = 0; i < keys.length; ++i)
                     message.config_overrides[keys[i]] = String(object.config_overrides[keys[i]]);
             }
+            if (object.tables_to_copy) {
+                if (!Array.isArray(object.tables_to_copy))
+                    throw TypeError(".binlogdata.VStreamOptions.tables_to_copy: array expected");
+                message.tables_to_copy = [];
+                for (let i = 0; i < object.tables_to_copy.length; ++i)
+                    message.tables_to_copy[i] = String(object.tables_to_copy[i]);
+            }
             return message;
         };
 
@@ -93935,8 +93968,10 @@ export const binlogdata = $root.binlogdata = (() => {
             if (!options)
                 options = {};
             let object = {};
-            if (options.arrays || options.defaults)
+            if (options.arrays || options.defaults) {
                 object.internal_tables = [];
+                object.tables_to_copy = [];
+            }
             if (options.objects || options.defaults)
                 object.config_overrides = {};
             if (message.internal_tables && message.internal_tables.length) {
@@ -93949,6 +93984,11 @@ export const binlogdata = $root.binlogdata = (() => {
                 object.config_overrides = {};
                 for (let j = 0; j < keys2.length; ++j)
                     object.config_overrides[keys2[j]] = message.config_overrides[keys2[j]];
+            }
+            if (message.tables_to_copy && message.tables_to_copy.length) {
+                object.tables_to_copy = [];
+                for (let j = 0; j < message.tables_to_copy.length; ++j)
+                    object.tables_to_copy[j] = message.tables_to_copy[j];
             }
             return object;
         };
