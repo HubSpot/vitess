@@ -79669,6 +79669,7 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
          * @property {Array.<string>|null} [shards] UpdateVReplicationWorkflowRequest shards
          * @property {Object.<string,string>|null} [config_overrides] UpdateVReplicationWorkflowRequest config_overrides
          * @property {string|null} [message] UpdateVReplicationWorkflowRequest message
+         * @property {Array.<binlogdata.IRule>|null} [filter_rules] UpdateVReplicationWorkflowRequest filter_rules
          */
 
         /**
@@ -79684,6 +79685,7 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
             this.tablet_types = [];
             this.shards = [];
             this.config_overrides = {};
+            this.filter_rules = [];
             if (properties)
                 for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
@@ -79762,6 +79764,14 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
          */
         UpdateVReplicationWorkflowRequest.prototype.message = null;
 
+        /**
+         * UpdateVReplicationWorkflowRequest filter_rules.
+         * @member {Array.<binlogdata.IRule>} filter_rules
+         * @memberof tabletmanagerdata.UpdateVReplicationWorkflowRequest
+         * @instance
+         */
+        UpdateVReplicationWorkflowRequest.prototype.filter_rules = $util.emptyArray;
+
         // OneOf field names bound to virtual getters and setters
         let $oneOfFields;
 
@@ -79838,6 +79848,9 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
                     writer.uint32(/* id 8, wireType 2 =*/66).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]).uint32(/* id 2, wireType 2 =*/18).string(message.config_overrides[keys[i]]).ldelim();
             if (message.message != null && Object.hasOwnProperty.call(message, "message"))
                 writer.uint32(/* id 9, wireType 2 =*/74).string(message.message);
+            if (message.filter_rules != null && message.filter_rules.length)
+                for (let i = 0; i < message.filter_rules.length; ++i)
+                    $root.binlogdata.Rule.encode(message.filter_rules[i], writer.uint32(/* id 10, wireType 2 =*/82).fork()).ldelim();
             return writer;
         };
 
@@ -79936,6 +79949,12 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
                     }
                 case 9: {
                         message.message = reader.string();
+                        break;
+                    }
+                case 10: {
+                        if (!(message.filter_rules && message.filter_rules.length))
+                            message.filter_rules = [];
+                        message.filter_rules.push($root.binlogdata.Rule.decode(reader, reader.uint32()));
                         break;
                     }
                 default:
@@ -80062,6 +80081,15 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
                 properties._message = 1;
                 if (!$util.isString(message.message))
                     return "message: string expected";
+            }
+            if (message.filter_rules != null && message.hasOwnProperty("filter_rules")) {
+                if (!Array.isArray(message.filter_rules))
+                    return "filter_rules: array expected";
+                for (let i = 0; i < message.filter_rules.length; ++i) {
+                    let error = $root.binlogdata.Rule.verify(message.filter_rules[i]);
+                    if (error)
+                        return "filter_rules." + error;
+                }
             }
             return null;
         };
@@ -80240,6 +80268,16 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
             }
             if (object.message != null)
                 message.message = String(object.message);
+            if (object.filter_rules) {
+                if (!Array.isArray(object.filter_rules))
+                    throw TypeError(".tabletmanagerdata.UpdateVReplicationWorkflowRequest.filter_rules: array expected");
+                message.filter_rules = [];
+                for (let i = 0; i < object.filter_rules.length; ++i) {
+                    if (typeof object.filter_rules[i] !== "object")
+                        throw TypeError(".tabletmanagerdata.UpdateVReplicationWorkflowRequest.filter_rules: object expected");
+                    message.filter_rules[i] = $root.binlogdata.Rule.fromObject(object.filter_rules[i]);
+                }
+            }
             return message;
         };
 
@@ -80260,6 +80298,7 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
                 object.cells = [];
                 object.tablet_types = [];
                 object.shards = [];
+                object.filter_rules = [];
             }
             if (options.objects || options.defaults)
                 object.config_overrides = {};
@@ -80307,6 +80346,11 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
                 object.message = message.message;
                 if (options.oneofs)
                     object._message = "message";
+            }
+            if (message.filter_rules && message.filter_rules.length) {
+                object.filter_rules = [];
+                for (let j = 0; j < message.filter_rules.length; ++j)
+                    object.filter_rules[j] = $root.binlogdata.Rule.toObject(message.filter_rules[j], options);
             }
             return object;
         };
@@ -84973,6 +85017,1414 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
         };
 
         return ChangeTagsResponse;
+    })();
+
+    tabletmanagerdata.UpdateSequenceTablesRequest = (function() {
+
+        /**
+         * Properties of an UpdateSequenceTablesRequest.
+         * @memberof tabletmanagerdata
+         * @interface IUpdateSequenceTablesRequest
+         * @property {Array.<tabletmanagerdata.UpdateSequenceTablesRequest.ISequenceMetadata>|null} [sequences] UpdateSequenceTablesRequest sequences
+         */
+
+        /**
+         * Constructs a new UpdateSequenceTablesRequest.
+         * @memberof tabletmanagerdata
+         * @classdesc Represents an UpdateSequenceTablesRequest.
+         * @implements IUpdateSequenceTablesRequest
+         * @constructor
+         * @param {tabletmanagerdata.IUpdateSequenceTablesRequest=} [properties] Properties to set
+         */
+        function UpdateSequenceTablesRequest(properties) {
+            this.sequences = [];
+            if (properties)
+                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * UpdateSequenceTablesRequest sequences.
+         * @member {Array.<tabletmanagerdata.UpdateSequenceTablesRequest.ISequenceMetadata>} sequences
+         * @memberof tabletmanagerdata.UpdateSequenceTablesRequest
+         * @instance
+         */
+        UpdateSequenceTablesRequest.prototype.sequences = $util.emptyArray;
+
+        /**
+         * Creates a new UpdateSequenceTablesRequest instance using the specified properties.
+         * @function create
+         * @memberof tabletmanagerdata.UpdateSequenceTablesRequest
+         * @static
+         * @param {tabletmanagerdata.IUpdateSequenceTablesRequest=} [properties] Properties to set
+         * @returns {tabletmanagerdata.UpdateSequenceTablesRequest} UpdateSequenceTablesRequest instance
+         */
+        UpdateSequenceTablesRequest.create = function create(properties) {
+            return new UpdateSequenceTablesRequest(properties);
+        };
+
+        /**
+         * Encodes the specified UpdateSequenceTablesRequest message. Does not implicitly {@link tabletmanagerdata.UpdateSequenceTablesRequest.verify|verify} messages.
+         * @function encode
+         * @memberof tabletmanagerdata.UpdateSequenceTablesRequest
+         * @static
+         * @param {tabletmanagerdata.IUpdateSequenceTablesRequest} message UpdateSequenceTablesRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        UpdateSequenceTablesRequest.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.sequences != null && message.sequences.length)
+                for (let i = 0; i < message.sequences.length; ++i)
+                    $root.tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata.encode(message.sequences[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+            return writer;
+        };
+
+        /**
+         * Encodes the specified UpdateSequenceTablesRequest message, length delimited. Does not implicitly {@link tabletmanagerdata.UpdateSequenceTablesRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof tabletmanagerdata.UpdateSequenceTablesRequest
+         * @static
+         * @param {tabletmanagerdata.IUpdateSequenceTablesRequest} message UpdateSequenceTablesRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        UpdateSequenceTablesRequest.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes an UpdateSequenceTablesRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof tabletmanagerdata.UpdateSequenceTablesRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {tabletmanagerdata.UpdateSequenceTablesRequest} UpdateSequenceTablesRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        UpdateSequenceTablesRequest.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tabletmanagerdata.UpdateSequenceTablesRequest();
+            while (reader.pos < end) {
+                let tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1: {
+                        if (!(message.sequences && message.sequences.length))
+                            message.sequences = [];
+                        message.sequences.push($root.tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata.decode(reader, reader.uint32()));
+                        break;
+                    }
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes an UpdateSequenceTablesRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof tabletmanagerdata.UpdateSequenceTablesRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {tabletmanagerdata.UpdateSequenceTablesRequest} UpdateSequenceTablesRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        UpdateSequenceTablesRequest.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies an UpdateSequenceTablesRequest message.
+         * @function verify
+         * @memberof tabletmanagerdata.UpdateSequenceTablesRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        UpdateSequenceTablesRequest.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.sequences != null && message.hasOwnProperty("sequences")) {
+                if (!Array.isArray(message.sequences))
+                    return "sequences: array expected";
+                for (let i = 0; i < message.sequences.length; ++i) {
+                    let error = $root.tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata.verify(message.sequences[i]);
+                    if (error)
+                        return "sequences." + error;
+                }
+            }
+            return null;
+        };
+
+        /**
+         * Creates an UpdateSequenceTablesRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof tabletmanagerdata.UpdateSequenceTablesRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {tabletmanagerdata.UpdateSequenceTablesRequest} UpdateSequenceTablesRequest
+         */
+        UpdateSequenceTablesRequest.fromObject = function fromObject(object) {
+            if (object instanceof $root.tabletmanagerdata.UpdateSequenceTablesRequest)
+                return object;
+            let message = new $root.tabletmanagerdata.UpdateSequenceTablesRequest();
+            if (object.sequences) {
+                if (!Array.isArray(object.sequences))
+                    throw TypeError(".tabletmanagerdata.UpdateSequenceTablesRequest.sequences: array expected");
+                message.sequences = [];
+                for (let i = 0; i < object.sequences.length; ++i) {
+                    if (typeof object.sequences[i] !== "object")
+                        throw TypeError(".tabletmanagerdata.UpdateSequenceTablesRequest.sequences: object expected");
+                    message.sequences[i] = $root.tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata.fromObject(object.sequences[i]);
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from an UpdateSequenceTablesRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof tabletmanagerdata.UpdateSequenceTablesRequest
+         * @static
+         * @param {tabletmanagerdata.UpdateSequenceTablesRequest} message UpdateSequenceTablesRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        UpdateSequenceTablesRequest.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            let object = {};
+            if (options.arrays || options.defaults)
+                object.sequences = [];
+            if (message.sequences && message.sequences.length) {
+                object.sequences = [];
+                for (let j = 0; j < message.sequences.length; ++j)
+                    object.sequences[j] = $root.tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata.toObject(message.sequences[j], options);
+            }
+            return object;
+        };
+
+        /**
+         * Converts this UpdateSequenceTablesRequest to JSON.
+         * @function toJSON
+         * @memberof tabletmanagerdata.UpdateSequenceTablesRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        UpdateSequenceTablesRequest.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the default type url for UpdateSequenceTablesRequest
+         * @function getTypeUrl
+         * @memberof tabletmanagerdata.UpdateSequenceTablesRequest
+         * @static
+         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns {string} The default type url
+         */
+        UpdateSequenceTablesRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+            if (typeUrlPrefix === undefined) {
+                typeUrlPrefix = "type.googleapis.com";
+            }
+            return typeUrlPrefix + "/tabletmanagerdata.UpdateSequenceTablesRequest";
+        };
+
+        UpdateSequenceTablesRequest.SequenceMetadata = (function() {
+
+            /**
+             * Properties of a SequenceMetadata.
+             * @memberof tabletmanagerdata.UpdateSequenceTablesRequest
+             * @interface ISequenceMetadata
+             * @property {string|null} [backing_table_name] SequenceMetadata backing_table_name
+             * @property {string|null} [backing_table_db_name] SequenceMetadata backing_table_db_name
+             * @property {number|Long|null} [max_value] SequenceMetadata max_value
+             */
+
+            /**
+             * Constructs a new SequenceMetadata.
+             * @memberof tabletmanagerdata.UpdateSequenceTablesRequest
+             * @classdesc Represents a SequenceMetadata.
+             * @implements ISequenceMetadata
+             * @constructor
+             * @param {tabletmanagerdata.UpdateSequenceTablesRequest.ISequenceMetadata=} [properties] Properties to set
+             */
+            function SequenceMetadata(properties) {
+                if (properties)
+                    for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null)
+                            this[keys[i]] = properties[keys[i]];
+            }
+
+            /**
+             * SequenceMetadata backing_table_name.
+             * @member {string} backing_table_name
+             * @memberof tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata
+             * @instance
+             */
+            SequenceMetadata.prototype.backing_table_name = "";
+
+            /**
+             * SequenceMetadata backing_table_db_name.
+             * @member {string} backing_table_db_name
+             * @memberof tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata
+             * @instance
+             */
+            SequenceMetadata.prototype.backing_table_db_name = "";
+
+            /**
+             * SequenceMetadata max_value.
+             * @member {number|Long} max_value
+             * @memberof tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata
+             * @instance
+             */
+            SequenceMetadata.prototype.max_value = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+            /**
+             * Creates a new SequenceMetadata instance using the specified properties.
+             * @function create
+             * @memberof tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata
+             * @static
+             * @param {tabletmanagerdata.UpdateSequenceTablesRequest.ISequenceMetadata=} [properties] Properties to set
+             * @returns {tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata} SequenceMetadata instance
+             */
+            SequenceMetadata.create = function create(properties) {
+                return new SequenceMetadata(properties);
+            };
+
+            /**
+             * Encodes the specified SequenceMetadata message. Does not implicitly {@link tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata.verify|verify} messages.
+             * @function encode
+             * @memberof tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata
+             * @static
+             * @param {tabletmanagerdata.UpdateSequenceTablesRequest.ISequenceMetadata} message SequenceMetadata message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            SequenceMetadata.encode = function encode(message, writer) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (message.backing_table_name != null && Object.hasOwnProperty.call(message, "backing_table_name"))
+                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.backing_table_name);
+                if (message.backing_table_db_name != null && Object.hasOwnProperty.call(message, "backing_table_db_name"))
+                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.backing_table_db_name);
+                if (message.max_value != null && Object.hasOwnProperty.call(message, "max_value"))
+                    writer.uint32(/* id 3, wireType 0 =*/24).int64(message.max_value);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified SequenceMetadata message, length delimited. Does not implicitly {@link tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata
+             * @static
+             * @param {tabletmanagerdata.UpdateSequenceTablesRequest.ISequenceMetadata} message SequenceMetadata message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            SequenceMetadata.encodeDelimited = function encodeDelimited(message, writer) {
+                return this.encode(message, writer).ldelim();
+            };
+
+            /**
+             * Decodes a SequenceMetadata message from the specified reader or buffer.
+             * @function decode
+             * @memberof tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata} SequenceMetadata
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            SequenceMetadata.decode = function decode(reader, length) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata();
+                while (reader.pos < end) {
+                    let tag = reader.uint32();
+                    switch (tag >>> 3) {
+                    case 1: {
+                            message.backing_table_name = reader.string();
+                            break;
+                        }
+                    case 2: {
+                            message.backing_table_db_name = reader.string();
+                            break;
+                        }
+                    case 3: {
+                            message.max_value = reader.int64();
+                            break;
+                        }
+                    default:
+                        reader.skipType(tag & 7);
+                        break;
+                    }
+                }
+                return message;
+            };
+
+            /**
+             * Decodes a SequenceMetadata message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata} SequenceMetadata
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            SequenceMetadata.decodeDelimited = function decodeDelimited(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a SequenceMetadata message.
+             * @function verify
+             * @memberof tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            SequenceMetadata.verify = function verify(message) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (message.backing_table_name != null && message.hasOwnProperty("backing_table_name"))
+                    if (!$util.isString(message.backing_table_name))
+                        return "backing_table_name: string expected";
+                if (message.backing_table_db_name != null && message.hasOwnProperty("backing_table_db_name"))
+                    if (!$util.isString(message.backing_table_db_name))
+                        return "backing_table_db_name: string expected";
+                if (message.max_value != null && message.hasOwnProperty("max_value"))
+                    if (!$util.isInteger(message.max_value) && !(message.max_value && $util.isInteger(message.max_value.low) && $util.isInteger(message.max_value.high)))
+                        return "max_value: integer|Long expected";
+                return null;
+            };
+
+            /**
+             * Creates a SequenceMetadata message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata} SequenceMetadata
+             */
+            SequenceMetadata.fromObject = function fromObject(object) {
+                if (object instanceof $root.tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata)
+                    return object;
+                let message = new $root.tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata();
+                if (object.backing_table_name != null)
+                    message.backing_table_name = String(object.backing_table_name);
+                if (object.backing_table_db_name != null)
+                    message.backing_table_db_name = String(object.backing_table_db_name);
+                if (object.max_value != null)
+                    if ($util.Long)
+                        (message.max_value = $util.Long.fromValue(object.max_value)).unsigned = false;
+                    else if (typeof object.max_value === "string")
+                        message.max_value = parseInt(object.max_value, 10);
+                    else if (typeof object.max_value === "number")
+                        message.max_value = object.max_value;
+                    else if (typeof object.max_value === "object")
+                        message.max_value = new $util.LongBits(object.max_value.low >>> 0, object.max_value.high >>> 0).toNumber();
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a SequenceMetadata message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata
+             * @static
+             * @param {tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata} message SequenceMetadata
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            SequenceMetadata.toObject = function toObject(message, options) {
+                if (!options)
+                    options = {};
+                let object = {};
+                if (options.defaults) {
+                    object.backing_table_name = "";
+                    object.backing_table_db_name = "";
+                    if ($util.Long) {
+                        let long = new $util.Long(0, 0, false);
+                        object.max_value = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                    } else
+                        object.max_value = options.longs === String ? "0" : 0;
+                }
+                if (message.backing_table_name != null && message.hasOwnProperty("backing_table_name"))
+                    object.backing_table_name = message.backing_table_name;
+                if (message.backing_table_db_name != null && message.hasOwnProperty("backing_table_db_name"))
+                    object.backing_table_db_name = message.backing_table_db_name;
+                if (message.max_value != null && message.hasOwnProperty("max_value"))
+                    if (typeof message.max_value === "number")
+                        object.max_value = options.longs === String ? String(message.max_value) : message.max_value;
+                    else
+                        object.max_value = options.longs === String ? $util.Long.prototype.toString.call(message.max_value) : options.longs === Number ? new $util.LongBits(message.max_value.low >>> 0, message.max_value.high >>> 0).toNumber() : message.max_value;
+                return object;
+            };
+
+            /**
+             * Converts this SequenceMetadata to JSON.
+             * @function toJSON
+             * @memberof tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            SequenceMetadata.prototype.toJSON = function toJSON() {
+                return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the default type url for SequenceMetadata
+             * @function getTypeUrl
+             * @memberof tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata
+             * @static
+             * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+             * @returns {string} The default type url
+             */
+            SequenceMetadata.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                if (typeUrlPrefix === undefined) {
+                    typeUrlPrefix = "type.googleapis.com";
+                }
+                return typeUrlPrefix + "/tabletmanagerdata.UpdateSequenceTablesRequest.SequenceMetadata";
+            };
+
+            return SequenceMetadata;
+        })();
+
+        return UpdateSequenceTablesRequest;
+    })();
+
+    tabletmanagerdata.UpdateSequenceTablesResponse = (function() {
+
+        /**
+         * Properties of an UpdateSequenceTablesResponse.
+         * @memberof tabletmanagerdata
+         * @interface IUpdateSequenceTablesResponse
+         */
+
+        /**
+         * Constructs a new UpdateSequenceTablesResponse.
+         * @memberof tabletmanagerdata
+         * @classdesc Represents an UpdateSequenceTablesResponse.
+         * @implements IUpdateSequenceTablesResponse
+         * @constructor
+         * @param {tabletmanagerdata.IUpdateSequenceTablesResponse=} [properties] Properties to set
+         */
+        function UpdateSequenceTablesResponse(properties) {
+            if (properties)
+                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * Creates a new UpdateSequenceTablesResponse instance using the specified properties.
+         * @function create
+         * @memberof tabletmanagerdata.UpdateSequenceTablesResponse
+         * @static
+         * @param {tabletmanagerdata.IUpdateSequenceTablesResponse=} [properties] Properties to set
+         * @returns {tabletmanagerdata.UpdateSequenceTablesResponse} UpdateSequenceTablesResponse instance
+         */
+        UpdateSequenceTablesResponse.create = function create(properties) {
+            return new UpdateSequenceTablesResponse(properties);
+        };
+
+        /**
+         * Encodes the specified UpdateSequenceTablesResponse message. Does not implicitly {@link tabletmanagerdata.UpdateSequenceTablesResponse.verify|verify} messages.
+         * @function encode
+         * @memberof tabletmanagerdata.UpdateSequenceTablesResponse
+         * @static
+         * @param {tabletmanagerdata.IUpdateSequenceTablesResponse} message UpdateSequenceTablesResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        UpdateSequenceTablesResponse.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            return writer;
+        };
+
+        /**
+         * Encodes the specified UpdateSequenceTablesResponse message, length delimited. Does not implicitly {@link tabletmanagerdata.UpdateSequenceTablesResponse.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof tabletmanagerdata.UpdateSequenceTablesResponse
+         * @static
+         * @param {tabletmanagerdata.IUpdateSequenceTablesResponse} message UpdateSequenceTablesResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        UpdateSequenceTablesResponse.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes an UpdateSequenceTablesResponse message from the specified reader or buffer.
+         * @function decode
+         * @memberof tabletmanagerdata.UpdateSequenceTablesResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {tabletmanagerdata.UpdateSequenceTablesResponse} UpdateSequenceTablesResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        UpdateSequenceTablesResponse.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tabletmanagerdata.UpdateSequenceTablesResponse();
+            while (reader.pos < end) {
+                let tag = reader.uint32();
+                switch (tag >>> 3) {
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes an UpdateSequenceTablesResponse message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof tabletmanagerdata.UpdateSequenceTablesResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {tabletmanagerdata.UpdateSequenceTablesResponse} UpdateSequenceTablesResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        UpdateSequenceTablesResponse.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies an UpdateSequenceTablesResponse message.
+         * @function verify
+         * @memberof tabletmanagerdata.UpdateSequenceTablesResponse
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        UpdateSequenceTablesResponse.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            return null;
+        };
+
+        /**
+         * Creates an UpdateSequenceTablesResponse message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof tabletmanagerdata.UpdateSequenceTablesResponse
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {tabletmanagerdata.UpdateSequenceTablesResponse} UpdateSequenceTablesResponse
+         */
+        UpdateSequenceTablesResponse.fromObject = function fromObject(object) {
+            if (object instanceof $root.tabletmanagerdata.UpdateSequenceTablesResponse)
+                return object;
+            return new $root.tabletmanagerdata.UpdateSequenceTablesResponse();
+        };
+
+        /**
+         * Creates a plain object from an UpdateSequenceTablesResponse message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof tabletmanagerdata.UpdateSequenceTablesResponse
+         * @static
+         * @param {tabletmanagerdata.UpdateSequenceTablesResponse} message UpdateSequenceTablesResponse
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        UpdateSequenceTablesResponse.toObject = function toObject() {
+            return {};
+        };
+
+        /**
+         * Converts this UpdateSequenceTablesResponse to JSON.
+         * @function toJSON
+         * @memberof tabletmanagerdata.UpdateSequenceTablesResponse
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        UpdateSequenceTablesResponse.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the default type url for UpdateSequenceTablesResponse
+         * @function getTypeUrl
+         * @memberof tabletmanagerdata.UpdateSequenceTablesResponse
+         * @static
+         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns {string} The default type url
+         */
+        UpdateSequenceTablesResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+            if (typeUrlPrefix === undefined) {
+                typeUrlPrefix = "type.googleapis.com";
+            }
+            return typeUrlPrefix + "/tabletmanagerdata.UpdateSequenceTablesResponse";
+        };
+
+        return UpdateSequenceTablesResponse;
+    })();
+
+    tabletmanagerdata.GetMaxValueForSequencesRequest = (function() {
+
+        /**
+         * Properties of a GetMaxValueForSequencesRequest.
+         * @memberof tabletmanagerdata
+         * @interface IGetMaxValueForSequencesRequest
+         * @property {Array.<tabletmanagerdata.GetMaxValueForSequencesRequest.ISequenceMetadata>|null} [sequences] GetMaxValueForSequencesRequest sequences
+         */
+
+        /**
+         * Constructs a new GetMaxValueForSequencesRequest.
+         * @memberof tabletmanagerdata
+         * @classdesc Represents a GetMaxValueForSequencesRequest.
+         * @implements IGetMaxValueForSequencesRequest
+         * @constructor
+         * @param {tabletmanagerdata.IGetMaxValueForSequencesRequest=} [properties] Properties to set
+         */
+        function GetMaxValueForSequencesRequest(properties) {
+            this.sequences = [];
+            if (properties)
+                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * GetMaxValueForSequencesRequest sequences.
+         * @member {Array.<tabletmanagerdata.GetMaxValueForSequencesRequest.ISequenceMetadata>} sequences
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest
+         * @instance
+         */
+        GetMaxValueForSequencesRequest.prototype.sequences = $util.emptyArray;
+
+        /**
+         * Creates a new GetMaxValueForSequencesRequest instance using the specified properties.
+         * @function create
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest
+         * @static
+         * @param {tabletmanagerdata.IGetMaxValueForSequencesRequest=} [properties] Properties to set
+         * @returns {tabletmanagerdata.GetMaxValueForSequencesRequest} GetMaxValueForSequencesRequest instance
+         */
+        GetMaxValueForSequencesRequest.create = function create(properties) {
+            return new GetMaxValueForSequencesRequest(properties);
+        };
+
+        /**
+         * Encodes the specified GetMaxValueForSequencesRequest message. Does not implicitly {@link tabletmanagerdata.GetMaxValueForSequencesRequest.verify|verify} messages.
+         * @function encode
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest
+         * @static
+         * @param {tabletmanagerdata.IGetMaxValueForSequencesRequest} message GetMaxValueForSequencesRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        GetMaxValueForSequencesRequest.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.sequences != null && message.sequences.length)
+                for (let i = 0; i < message.sequences.length; ++i)
+                    $root.tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata.encode(message.sequences[i], writer.uint32(/* id 1, wireType 2 =*/10).fork()).ldelim();
+            return writer;
+        };
+
+        /**
+         * Encodes the specified GetMaxValueForSequencesRequest message, length delimited. Does not implicitly {@link tabletmanagerdata.GetMaxValueForSequencesRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest
+         * @static
+         * @param {tabletmanagerdata.IGetMaxValueForSequencesRequest} message GetMaxValueForSequencesRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        GetMaxValueForSequencesRequest.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a GetMaxValueForSequencesRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {tabletmanagerdata.GetMaxValueForSequencesRequest} GetMaxValueForSequencesRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        GetMaxValueForSequencesRequest.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tabletmanagerdata.GetMaxValueForSequencesRequest();
+            while (reader.pos < end) {
+                let tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1: {
+                        if (!(message.sequences && message.sequences.length))
+                            message.sequences = [];
+                        message.sequences.push($root.tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata.decode(reader, reader.uint32()));
+                        break;
+                    }
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a GetMaxValueForSequencesRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {tabletmanagerdata.GetMaxValueForSequencesRequest} GetMaxValueForSequencesRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        GetMaxValueForSequencesRequest.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a GetMaxValueForSequencesRequest message.
+         * @function verify
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        GetMaxValueForSequencesRequest.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.sequences != null && message.hasOwnProperty("sequences")) {
+                if (!Array.isArray(message.sequences))
+                    return "sequences: array expected";
+                for (let i = 0; i < message.sequences.length; ++i) {
+                    let error = $root.tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata.verify(message.sequences[i]);
+                    if (error)
+                        return "sequences." + error;
+                }
+            }
+            return null;
+        };
+
+        /**
+         * Creates a GetMaxValueForSequencesRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {tabletmanagerdata.GetMaxValueForSequencesRequest} GetMaxValueForSequencesRequest
+         */
+        GetMaxValueForSequencesRequest.fromObject = function fromObject(object) {
+            if (object instanceof $root.tabletmanagerdata.GetMaxValueForSequencesRequest)
+                return object;
+            let message = new $root.tabletmanagerdata.GetMaxValueForSequencesRequest();
+            if (object.sequences) {
+                if (!Array.isArray(object.sequences))
+                    throw TypeError(".tabletmanagerdata.GetMaxValueForSequencesRequest.sequences: array expected");
+                message.sequences = [];
+                for (let i = 0; i < object.sequences.length; ++i) {
+                    if (typeof object.sequences[i] !== "object")
+                        throw TypeError(".tabletmanagerdata.GetMaxValueForSequencesRequest.sequences: object expected");
+                    message.sequences[i] = $root.tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata.fromObject(object.sequences[i]);
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a GetMaxValueForSequencesRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest
+         * @static
+         * @param {tabletmanagerdata.GetMaxValueForSequencesRequest} message GetMaxValueForSequencesRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        GetMaxValueForSequencesRequest.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            let object = {};
+            if (options.arrays || options.defaults)
+                object.sequences = [];
+            if (message.sequences && message.sequences.length) {
+                object.sequences = [];
+                for (let j = 0; j < message.sequences.length; ++j)
+                    object.sequences[j] = $root.tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata.toObject(message.sequences[j], options);
+            }
+            return object;
+        };
+
+        /**
+         * Converts this GetMaxValueForSequencesRequest to JSON.
+         * @function toJSON
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        GetMaxValueForSequencesRequest.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the default type url for GetMaxValueForSequencesRequest
+         * @function getTypeUrl
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest
+         * @static
+         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns {string} The default type url
+         */
+        GetMaxValueForSequencesRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+            if (typeUrlPrefix === undefined) {
+                typeUrlPrefix = "type.googleapis.com";
+            }
+            return typeUrlPrefix + "/tabletmanagerdata.GetMaxValueForSequencesRequest";
+        };
+
+        GetMaxValueForSequencesRequest.SequenceMetadata = (function() {
+
+            /**
+             * Properties of a SequenceMetadata.
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest
+             * @interface ISequenceMetadata
+             * @property {string|null} [backing_table_name] SequenceMetadata backing_table_name
+             * @property {string|null} [using_col_escaped] SequenceMetadata using_col_escaped
+             * @property {string|null} [using_table_name_escaped] SequenceMetadata using_table_name_escaped
+             * @property {string|null} [using_table_db_name_escaped] SequenceMetadata using_table_db_name_escaped
+             */
+
+            /**
+             * Constructs a new SequenceMetadata.
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest
+             * @classdesc Represents a SequenceMetadata.
+             * @implements ISequenceMetadata
+             * @constructor
+             * @param {tabletmanagerdata.GetMaxValueForSequencesRequest.ISequenceMetadata=} [properties] Properties to set
+             */
+            function SequenceMetadata(properties) {
+                if (properties)
+                    for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                        if (properties[keys[i]] != null)
+                            this[keys[i]] = properties[keys[i]];
+            }
+
+            /**
+             * SequenceMetadata backing_table_name.
+             * @member {string} backing_table_name
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata
+             * @instance
+             */
+            SequenceMetadata.prototype.backing_table_name = "";
+
+            /**
+             * SequenceMetadata using_col_escaped.
+             * @member {string} using_col_escaped
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata
+             * @instance
+             */
+            SequenceMetadata.prototype.using_col_escaped = "";
+
+            /**
+             * SequenceMetadata using_table_name_escaped.
+             * @member {string} using_table_name_escaped
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata
+             * @instance
+             */
+            SequenceMetadata.prototype.using_table_name_escaped = "";
+
+            /**
+             * SequenceMetadata using_table_db_name_escaped.
+             * @member {string} using_table_db_name_escaped
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata
+             * @instance
+             */
+            SequenceMetadata.prototype.using_table_db_name_escaped = "";
+
+            /**
+             * Creates a new SequenceMetadata instance using the specified properties.
+             * @function create
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata
+             * @static
+             * @param {tabletmanagerdata.GetMaxValueForSequencesRequest.ISequenceMetadata=} [properties] Properties to set
+             * @returns {tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata} SequenceMetadata instance
+             */
+            SequenceMetadata.create = function create(properties) {
+                return new SequenceMetadata(properties);
+            };
+
+            /**
+             * Encodes the specified SequenceMetadata message. Does not implicitly {@link tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata.verify|verify} messages.
+             * @function encode
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata
+             * @static
+             * @param {tabletmanagerdata.GetMaxValueForSequencesRequest.ISequenceMetadata} message SequenceMetadata message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            SequenceMetadata.encode = function encode(message, writer) {
+                if (!writer)
+                    writer = $Writer.create();
+                if (message.backing_table_name != null && Object.hasOwnProperty.call(message, "backing_table_name"))
+                    writer.uint32(/* id 1, wireType 2 =*/10).string(message.backing_table_name);
+                if (message.using_col_escaped != null && Object.hasOwnProperty.call(message, "using_col_escaped"))
+                    writer.uint32(/* id 2, wireType 2 =*/18).string(message.using_col_escaped);
+                if (message.using_table_name_escaped != null && Object.hasOwnProperty.call(message, "using_table_name_escaped"))
+                    writer.uint32(/* id 3, wireType 2 =*/26).string(message.using_table_name_escaped);
+                if (message.using_table_db_name_escaped != null && Object.hasOwnProperty.call(message, "using_table_db_name_escaped"))
+                    writer.uint32(/* id 4, wireType 2 =*/34).string(message.using_table_db_name_escaped);
+                return writer;
+            };
+
+            /**
+             * Encodes the specified SequenceMetadata message, length delimited. Does not implicitly {@link tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata.verify|verify} messages.
+             * @function encodeDelimited
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata
+             * @static
+             * @param {tabletmanagerdata.GetMaxValueForSequencesRequest.ISequenceMetadata} message SequenceMetadata message or plain object to encode
+             * @param {$protobuf.Writer} [writer] Writer to encode to
+             * @returns {$protobuf.Writer} Writer
+             */
+            SequenceMetadata.encodeDelimited = function encodeDelimited(message, writer) {
+                return this.encode(message, writer).ldelim();
+            };
+
+            /**
+             * Decodes a SequenceMetadata message from the specified reader or buffer.
+             * @function decode
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @param {number} [length] Message length if known beforehand
+             * @returns {tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata} SequenceMetadata
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            SequenceMetadata.decode = function decode(reader, length) {
+                if (!(reader instanceof $Reader))
+                    reader = $Reader.create(reader);
+                let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata();
+                while (reader.pos < end) {
+                    let tag = reader.uint32();
+                    switch (tag >>> 3) {
+                    case 1: {
+                            message.backing_table_name = reader.string();
+                            break;
+                        }
+                    case 2: {
+                            message.using_col_escaped = reader.string();
+                            break;
+                        }
+                    case 3: {
+                            message.using_table_name_escaped = reader.string();
+                            break;
+                        }
+                    case 4: {
+                            message.using_table_db_name_escaped = reader.string();
+                            break;
+                        }
+                    default:
+                        reader.skipType(tag & 7);
+                        break;
+                    }
+                }
+                return message;
+            };
+
+            /**
+             * Decodes a SequenceMetadata message from the specified reader or buffer, length delimited.
+             * @function decodeDelimited
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata
+             * @static
+             * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+             * @returns {tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata} SequenceMetadata
+             * @throws {Error} If the payload is not a reader or valid buffer
+             * @throws {$protobuf.util.ProtocolError} If required fields are missing
+             */
+            SequenceMetadata.decodeDelimited = function decodeDelimited(reader) {
+                if (!(reader instanceof $Reader))
+                    reader = new $Reader(reader);
+                return this.decode(reader, reader.uint32());
+            };
+
+            /**
+             * Verifies a SequenceMetadata message.
+             * @function verify
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata
+             * @static
+             * @param {Object.<string,*>} message Plain object to verify
+             * @returns {string|null} `null` if valid, otherwise the reason why it is not
+             */
+            SequenceMetadata.verify = function verify(message) {
+                if (typeof message !== "object" || message === null)
+                    return "object expected";
+                if (message.backing_table_name != null && message.hasOwnProperty("backing_table_name"))
+                    if (!$util.isString(message.backing_table_name))
+                        return "backing_table_name: string expected";
+                if (message.using_col_escaped != null && message.hasOwnProperty("using_col_escaped"))
+                    if (!$util.isString(message.using_col_escaped))
+                        return "using_col_escaped: string expected";
+                if (message.using_table_name_escaped != null && message.hasOwnProperty("using_table_name_escaped"))
+                    if (!$util.isString(message.using_table_name_escaped))
+                        return "using_table_name_escaped: string expected";
+                if (message.using_table_db_name_escaped != null && message.hasOwnProperty("using_table_db_name_escaped"))
+                    if (!$util.isString(message.using_table_db_name_escaped))
+                        return "using_table_db_name_escaped: string expected";
+                return null;
+            };
+
+            /**
+             * Creates a SequenceMetadata message from a plain object. Also converts values to their respective internal types.
+             * @function fromObject
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata
+             * @static
+             * @param {Object.<string,*>} object Plain object
+             * @returns {tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata} SequenceMetadata
+             */
+            SequenceMetadata.fromObject = function fromObject(object) {
+                if (object instanceof $root.tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata)
+                    return object;
+                let message = new $root.tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata();
+                if (object.backing_table_name != null)
+                    message.backing_table_name = String(object.backing_table_name);
+                if (object.using_col_escaped != null)
+                    message.using_col_escaped = String(object.using_col_escaped);
+                if (object.using_table_name_escaped != null)
+                    message.using_table_name_escaped = String(object.using_table_name_escaped);
+                if (object.using_table_db_name_escaped != null)
+                    message.using_table_db_name_escaped = String(object.using_table_db_name_escaped);
+                return message;
+            };
+
+            /**
+             * Creates a plain object from a SequenceMetadata message. Also converts values to other types if specified.
+             * @function toObject
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata
+             * @static
+             * @param {tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata} message SequenceMetadata
+             * @param {$protobuf.IConversionOptions} [options] Conversion options
+             * @returns {Object.<string,*>} Plain object
+             */
+            SequenceMetadata.toObject = function toObject(message, options) {
+                if (!options)
+                    options = {};
+                let object = {};
+                if (options.defaults) {
+                    object.backing_table_name = "";
+                    object.using_col_escaped = "";
+                    object.using_table_name_escaped = "";
+                    object.using_table_db_name_escaped = "";
+                }
+                if (message.backing_table_name != null && message.hasOwnProperty("backing_table_name"))
+                    object.backing_table_name = message.backing_table_name;
+                if (message.using_col_escaped != null && message.hasOwnProperty("using_col_escaped"))
+                    object.using_col_escaped = message.using_col_escaped;
+                if (message.using_table_name_escaped != null && message.hasOwnProperty("using_table_name_escaped"))
+                    object.using_table_name_escaped = message.using_table_name_escaped;
+                if (message.using_table_db_name_escaped != null && message.hasOwnProperty("using_table_db_name_escaped"))
+                    object.using_table_db_name_escaped = message.using_table_db_name_escaped;
+                return object;
+            };
+
+            /**
+             * Converts this SequenceMetadata to JSON.
+             * @function toJSON
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata
+             * @instance
+             * @returns {Object.<string,*>} JSON object
+             */
+            SequenceMetadata.prototype.toJSON = function toJSON() {
+                return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+            };
+
+            /**
+             * Gets the default type url for SequenceMetadata
+             * @function getTypeUrl
+             * @memberof tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata
+             * @static
+             * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+             * @returns {string} The default type url
+             */
+            SequenceMetadata.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+                if (typeUrlPrefix === undefined) {
+                    typeUrlPrefix = "type.googleapis.com";
+                }
+                return typeUrlPrefix + "/tabletmanagerdata.GetMaxValueForSequencesRequest.SequenceMetadata";
+            };
+
+            return SequenceMetadata;
+        })();
+
+        return GetMaxValueForSequencesRequest;
+    })();
+
+    tabletmanagerdata.GetMaxValueForSequencesResponse = (function() {
+
+        /**
+         * Properties of a GetMaxValueForSequencesResponse.
+         * @memberof tabletmanagerdata
+         * @interface IGetMaxValueForSequencesResponse
+         * @property {Object.<string,number|Long>|null} [max_values_by_sequence_table] GetMaxValueForSequencesResponse max_values_by_sequence_table
+         */
+
+        /**
+         * Constructs a new GetMaxValueForSequencesResponse.
+         * @memberof tabletmanagerdata
+         * @classdesc Represents a GetMaxValueForSequencesResponse.
+         * @implements IGetMaxValueForSequencesResponse
+         * @constructor
+         * @param {tabletmanagerdata.IGetMaxValueForSequencesResponse=} [properties] Properties to set
+         */
+        function GetMaxValueForSequencesResponse(properties) {
+            this.max_values_by_sequence_table = {};
+            if (properties)
+                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * GetMaxValueForSequencesResponse max_values_by_sequence_table.
+         * @member {Object.<string,number|Long>} max_values_by_sequence_table
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesResponse
+         * @instance
+         */
+        GetMaxValueForSequencesResponse.prototype.max_values_by_sequence_table = $util.emptyObject;
+
+        /**
+         * Creates a new GetMaxValueForSequencesResponse instance using the specified properties.
+         * @function create
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesResponse
+         * @static
+         * @param {tabletmanagerdata.IGetMaxValueForSequencesResponse=} [properties] Properties to set
+         * @returns {tabletmanagerdata.GetMaxValueForSequencesResponse} GetMaxValueForSequencesResponse instance
+         */
+        GetMaxValueForSequencesResponse.create = function create(properties) {
+            return new GetMaxValueForSequencesResponse(properties);
+        };
+
+        /**
+         * Encodes the specified GetMaxValueForSequencesResponse message. Does not implicitly {@link tabletmanagerdata.GetMaxValueForSequencesResponse.verify|verify} messages.
+         * @function encode
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesResponse
+         * @static
+         * @param {tabletmanagerdata.IGetMaxValueForSequencesResponse} message GetMaxValueForSequencesResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        GetMaxValueForSequencesResponse.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.max_values_by_sequence_table != null && Object.hasOwnProperty.call(message, "max_values_by_sequence_table"))
+                for (let keys = Object.keys(message.max_values_by_sequence_table), i = 0; i < keys.length; ++i)
+                    writer.uint32(/* id 1, wireType 2 =*/10).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]).uint32(/* id 2, wireType 0 =*/16).int64(message.max_values_by_sequence_table[keys[i]]).ldelim();
+            return writer;
+        };
+
+        /**
+         * Encodes the specified GetMaxValueForSequencesResponse message, length delimited. Does not implicitly {@link tabletmanagerdata.GetMaxValueForSequencesResponse.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesResponse
+         * @static
+         * @param {tabletmanagerdata.IGetMaxValueForSequencesResponse} message GetMaxValueForSequencesResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        GetMaxValueForSequencesResponse.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a GetMaxValueForSequencesResponse message from the specified reader or buffer.
+         * @function decode
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {tabletmanagerdata.GetMaxValueForSequencesResponse} GetMaxValueForSequencesResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        GetMaxValueForSequencesResponse.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tabletmanagerdata.GetMaxValueForSequencesResponse(), key, value;
+            while (reader.pos < end) {
+                let tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1: {
+                        if (message.max_values_by_sequence_table === $util.emptyObject)
+                            message.max_values_by_sequence_table = {};
+                        let end2 = reader.uint32() + reader.pos;
+                        key = "";
+                        value = 0;
+                        while (reader.pos < end2) {
+                            let tag2 = reader.uint32();
+                            switch (tag2 >>> 3) {
+                            case 1:
+                                key = reader.string();
+                                break;
+                            case 2:
+                                value = reader.int64();
+                                break;
+                            default:
+                                reader.skipType(tag2 & 7);
+                                break;
+                            }
+                        }
+                        message.max_values_by_sequence_table[key] = value;
+                        break;
+                    }
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a GetMaxValueForSequencesResponse message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {tabletmanagerdata.GetMaxValueForSequencesResponse} GetMaxValueForSequencesResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        GetMaxValueForSequencesResponse.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a GetMaxValueForSequencesResponse message.
+         * @function verify
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesResponse
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        GetMaxValueForSequencesResponse.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.max_values_by_sequence_table != null && message.hasOwnProperty("max_values_by_sequence_table")) {
+                if (!$util.isObject(message.max_values_by_sequence_table))
+                    return "max_values_by_sequence_table: object expected";
+                let key = Object.keys(message.max_values_by_sequence_table);
+                for (let i = 0; i < key.length; ++i)
+                    if (!$util.isInteger(message.max_values_by_sequence_table[key[i]]) && !(message.max_values_by_sequence_table[key[i]] && $util.isInteger(message.max_values_by_sequence_table[key[i]].low) && $util.isInteger(message.max_values_by_sequence_table[key[i]].high)))
+                        return "max_values_by_sequence_table: integer|Long{k:string} expected";
+            }
+            return null;
+        };
+
+        /**
+         * Creates a GetMaxValueForSequencesResponse message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesResponse
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {tabletmanagerdata.GetMaxValueForSequencesResponse} GetMaxValueForSequencesResponse
+         */
+        GetMaxValueForSequencesResponse.fromObject = function fromObject(object) {
+            if (object instanceof $root.tabletmanagerdata.GetMaxValueForSequencesResponse)
+                return object;
+            let message = new $root.tabletmanagerdata.GetMaxValueForSequencesResponse();
+            if (object.max_values_by_sequence_table) {
+                if (typeof object.max_values_by_sequence_table !== "object")
+                    throw TypeError(".tabletmanagerdata.GetMaxValueForSequencesResponse.max_values_by_sequence_table: object expected");
+                message.max_values_by_sequence_table = {};
+                for (let keys = Object.keys(object.max_values_by_sequence_table), i = 0; i < keys.length; ++i)
+                    if ($util.Long)
+                        (message.max_values_by_sequence_table[keys[i]] = $util.Long.fromValue(object.max_values_by_sequence_table[keys[i]])).unsigned = false;
+                    else if (typeof object.max_values_by_sequence_table[keys[i]] === "string")
+                        message.max_values_by_sequence_table[keys[i]] = parseInt(object.max_values_by_sequence_table[keys[i]], 10);
+                    else if (typeof object.max_values_by_sequence_table[keys[i]] === "number")
+                        message.max_values_by_sequence_table[keys[i]] = object.max_values_by_sequence_table[keys[i]];
+                    else if (typeof object.max_values_by_sequence_table[keys[i]] === "object")
+                        message.max_values_by_sequence_table[keys[i]] = new $util.LongBits(object.max_values_by_sequence_table[keys[i]].low >>> 0, object.max_values_by_sequence_table[keys[i]].high >>> 0).toNumber();
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a GetMaxValueForSequencesResponse message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesResponse
+         * @static
+         * @param {tabletmanagerdata.GetMaxValueForSequencesResponse} message GetMaxValueForSequencesResponse
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        GetMaxValueForSequencesResponse.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            let object = {};
+            if (options.objects || options.defaults)
+                object.max_values_by_sequence_table = {};
+            let keys2;
+            if (message.max_values_by_sequence_table && (keys2 = Object.keys(message.max_values_by_sequence_table)).length) {
+                object.max_values_by_sequence_table = {};
+                for (let j = 0; j < keys2.length; ++j)
+                    if (typeof message.max_values_by_sequence_table[keys2[j]] === "number")
+                        object.max_values_by_sequence_table[keys2[j]] = options.longs === String ? String(message.max_values_by_sequence_table[keys2[j]]) : message.max_values_by_sequence_table[keys2[j]];
+                    else
+                        object.max_values_by_sequence_table[keys2[j]] = options.longs === String ? $util.Long.prototype.toString.call(message.max_values_by_sequence_table[keys2[j]]) : options.longs === Number ? new $util.LongBits(message.max_values_by_sequence_table[keys2[j]].low >>> 0, message.max_values_by_sequence_table[keys2[j]].high >>> 0).toNumber() : message.max_values_by_sequence_table[keys2[j]];
+            }
+            return object;
+        };
+
+        /**
+         * Converts this GetMaxValueForSequencesResponse to JSON.
+         * @function toJSON
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesResponse
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        GetMaxValueForSequencesResponse.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the default type url for GetMaxValueForSequencesResponse
+         * @function getTypeUrl
+         * @memberof tabletmanagerdata.GetMaxValueForSequencesResponse
+         * @static
+         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns {string} The default type url
+         */
+        GetMaxValueForSequencesResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+            if (typeUrlPrefix === undefined) {
+                typeUrlPrefix = "type.googleapis.com";
+            }
+            return typeUrlPrefix + "/tabletmanagerdata.GetMaxValueForSequencesResponse";
+        };
+
+        return GetMaxValueForSequencesResponse;
     })();
 
     return tabletmanagerdata;
@@ -124766,12 +126218,14 @@ export const vtctldata = $root.vtctldata = (() => {
      * @property {number} CUSTOM=0 CUSTOM value
      * @property {number} MOVETABLES=1 MOVETABLES value
      * @property {number} CREATELOOKUPINDEX=2 CREATELOOKUPINDEX value
+     * @property {number} REFERENCE=3 REFERENCE value
      */
     vtctldata.MaterializationIntent = (function() {
         const valuesById = {}, values = Object.create(valuesById);
         values[valuesById[0] = "CUSTOM"] = 0;
         values[valuesById[1] = "MOVETABLES"] = 1;
         values[valuesById[2] = "CREATELOOKUPINDEX"] = 2;
+        values[valuesById[3] = "REFERENCE"] = 3;
         return values;
     })();
 
@@ -125460,6 +126914,7 @@ export const vtctldata = $root.vtctldata = (() => {
                 case 0:
                 case 1:
                 case 2:
+                case 3:
                     break;
                 }
             if (message.source_time_zone != null && message.hasOwnProperty("source_time_zone"))
@@ -125562,6 +127017,10 @@ export const vtctldata = $root.vtctldata = (() => {
             case "CREATELOOKUPINDEX":
             case 2:
                 message.materialization_intent = 2;
+                break;
+            case "REFERENCE":
+            case 3:
+                message.materialization_intent = 3;
                 break;
             }
             if (object.source_time_zone != null)
@@ -127938,6 +129397,7 @@ export const vtctldata = $root.vtctldata = (() => {
          * @property {Array.<string>|null} [shards] WorkflowOptions shards
          * @property {Object.<string,string>|null} [config] WorkflowOptions config
          * @property {string|null} [global_keyspace] WorkflowOptions global_keyspace
+         * @property {Array.<string>|null} [lookup_vindexes] WorkflowOptions lookup_vindexes
          */
 
         /**
@@ -127951,6 +129411,7 @@ export const vtctldata = $root.vtctldata = (() => {
         function WorkflowOptions(properties) {
             this.shards = [];
             this.config = {};
+            this.lookup_vindexes = [];
             if (properties)
                 for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
                     if (properties[keys[i]] != null)
@@ -127998,6 +129459,14 @@ export const vtctldata = $root.vtctldata = (() => {
         WorkflowOptions.prototype.global_keyspace = "";
 
         /**
+         * WorkflowOptions lookup_vindexes.
+         * @member {Array.<string>} lookup_vindexes
+         * @memberof vtctldata.WorkflowOptions
+         * @instance
+         */
+        WorkflowOptions.prototype.lookup_vindexes = $util.emptyArray;
+
+        /**
          * Creates a new WorkflowOptions instance using the specified properties.
          * @function create
          * @memberof vtctldata.WorkflowOptions
@@ -128033,6 +129502,9 @@ export const vtctldata = $root.vtctldata = (() => {
                     writer.uint32(/* id 4, wireType 2 =*/34).fork().uint32(/* id 1, wireType 2 =*/10).string(keys[i]).uint32(/* id 2, wireType 2 =*/18).string(message.config[keys[i]]).ldelim();
             if (message.global_keyspace != null && Object.hasOwnProperty.call(message, "global_keyspace"))
                 writer.uint32(/* id 5, wireType 2 =*/42).string(message.global_keyspace);
+            if (message.lookup_vindexes != null && message.lookup_vindexes.length)
+                for (let i = 0; i < message.lookup_vindexes.length; ++i)
+                    writer.uint32(/* id 6, wireType 2 =*/50).string(message.lookup_vindexes[i]);
             return writer;
         };
 
@@ -128108,6 +129580,12 @@ export const vtctldata = $root.vtctldata = (() => {
                         message.global_keyspace = reader.string();
                         break;
                     }
+                case 6: {
+                        if (!(message.lookup_vindexes && message.lookup_vindexes.length))
+                            message.lookup_vindexes = [];
+                        message.lookup_vindexes.push(reader.string());
+                        break;
+                    }
                 default:
                     reader.skipType(tag & 7);
                     break;
@@ -128173,6 +129651,13 @@ export const vtctldata = $root.vtctldata = (() => {
             if (message.global_keyspace != null && message.hasOwnProperty("global_keyspace"))
                 if (!$util.isString(message.global_keyspace))
                     return "global_keyspace: string expected";
+            if (message.lookup_vindexes != null && message.hasOwnProperty("lookup_vindexes")) {
+                if (!Array.isArray(message.lookup_vindexes))
+                    return "lookup_vindexes: array expected";
+                for (let i = 0; i < message.lookup_vindexes.length; ++i)
+                    if (!$util.isString(message.lookup_vindexes[i]))
+                        return "lookup_vindexes: string[] expected";
+            }
             return null;
         };
 
@@ -128226,6 +129711,13 @@ export const vtctldata = $root.vtctldata = (() => {
             }
             if (object.global_keyspace != null)
                 message.global_keyspace = String(object.global_keyspace);
+            if (object.lookup_vindexes) {
+                if (!Array.isArray(object.lookup_vindexes))
+                    throw TypeError(".vtctldata.WorkflowOptions.lookup_vindexes: array expected");
+                message.lookup_vindexes = [];
+                for (let i = 0; i < object.lookup_vindexes.length; ++i)
+                    message.lookup_vindexes[i] = String(object.lookup_vindexes[i]);
+            }
             return message;
         };
 
@@ -128242,8 +129734,10 @@ export const vtctldata = $root.vtctldata = (() => {
             if (!options)
                 options = {};
             let object = {};
-            if (options.arrays || options.defaults)
+            if (options.arrays || options.defaults) {
                 object.shards = [];
+                object.lookup_vindexes = [];
+            }
             if (options.objects || options.defaults)
                 object.config = {};
             if (options.defaults) {
@@ -128268,6 +129762,11 @@ export const vtctldata = $root.vtctldata = (() => {
             }
             if (message.global_keyspace != null && message.hasOwnProperty("global_keyspace"))
                 object.global_keyspace = message.global_keyspace;
+            if (message.lookup_vindexes && message.lookup_vindexes.length) {
+                object.lookup_vindexes = [];
+                for (let j = 0; j < message.lookup_vindexes.length; ++j)
+                    object.lookup_vindexes[j] = message.lookup_vindexes[j];
+            }
             return object;
         };
 
@@ -165167,6 +166666,505 @@ export const vtctldata = $root.vtctldata = (() => {
         };
 
         return MaterializeCreateResponse;
+    })();
+
+    vtctldata.WorkflowAddTablesRequest = (function() {
+
+        /**
+         * Properties of a WorkflowAddTablesRequest.
+         * @memberof vtctldata
+         * @interface IWorkflowAddTablesRequest
+         * @property {string|null} [workflow] WorkflowAddTablesRequest workflow
+         * @property {string|null} [keyspace] WorkflowAddTablesRequest keyspace
+         * @property {Array.<vtctldata.ITableMaterializeSettings>|null} [table_settings] WorkflowAddTablesRequest table_settings
+         * @property {vtctldata.MaterializationIntent|null} [materialization_intent] WorkflowAddTablesRequest materialization_intent
+         */
+
+        /**
+         * Constructs a new WorkflowAddTablesRequest.
+         * @memberof vtctldata
+         * @classdesc Represents a WorkflowAddTablesRequest.
+         * @implements IWorkflowAddTablesRequest
+         * @constructor
+         * @param {vtctldata.IWorkflowAddTablesRequest=} [properties] Properties to set
+         */
+        function WorkflowAddTablesRequest(properties) {
+            this.table_settings = [];
+            if (properties)
+                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * WorkflowAddTablesRequest workflow.
+         * @member {string} workflow
+         * @memberof vtctldata.WorkflowAddTablesRequest
+         * @instance
+         */
+        WorkflowAddTablesRequest.prototype.workflow = "";
+
+        /**
+         * WorkflowAddTablesRequest keyspace.
+         * @member {string} keyspace
+         * @memberof vtctldata.WorkflowAddTablesRequest
+         * @instance
+         */
+        WorkflowAddTablesRequest.prototype.keyspace = "";
+
+        /**
+         * WorkflowAddTablesRequest table_settings.
+         * @member {Array.<vtctldata.ITableMaterializeSettings>} table_settings
+         * @memberof vtctldata.WorkflowAddTablesRequest
+         * @instance
+         */
+        WorkflowAddTablesRequest.prototype.table_settings = $util.emptyArray;
+
+        /**
+         * WorkflowAddTablesRequest materialization_intent.
+         * @member {vtctldata.MaterializationIntent} materialization_intent
+         * @memberof vtctldata.WorkflowAddTablesRequest
+         * @instance
+         */
+        WorkflowAddTablesRequest.prototype.materialization_intent = 0;
+
+        /**
+         * Creates a new WorkflowAddTablesRequest instance using the specified properties.
+         * @function create
+         * @memberof vtctldata.WorkflowAddTablesRequest
+         * @static
+         * @param {vtctldata.IWorkflowAddTablesRequest=} [properties] Properties to set
+         * @returns {vtctldata.WorkflowAddTablesRequest} WorkflowAddTablesRequest instance
+         */
+        WorkflowAddTablesRequest.create = function create(properties) {
+            return new WorkflowAddTablesRequest(properties);
+        };
+
+        /**
+         * Encodes the specified WorkflowAddTablesRequest message. Does not implicitly {@link vtctldata.WorkflowAddTablesRequest.verify|verify} messages.
+         * @function encode
+         * @memberof vtctldata.WorkflowAddTablesRequest
+         * @static
+         * @param {vtctldata.IWorkflowAddTablesRequest} message WorkflowAddTablesRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        WorkflowAddTablesRequest.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.workflow != null && Object.hasOwnProperty.call(message, "workflow"))
+                writer.uint32(/* id 1, wireType 2 =*/10).string(message.workflow);
+            if (message.keyspace != null && Object.hasOwnProperty.call(message, "keyspace"))
+                writer.uint32(/* id 2, wireType 2 =*/18).string(message.keyspace);
+            if (message.table_settings != null && message.table_settings.length)
+                for (let i = 0; i < message.table_settings.length; ++i)
+                    $root.vtctldata.TableMaterializeSettings.encode(message.table_settings[i], writer.uint32(/* id 3, wireType 2 =*/26).fork()).ldelim();
+            if (message.materialization_intent != null && Object.hasOwnProperty.call(message, "materialization_intent"))
+                writer.uint32(/* id 4, wireType 0 =*/32).int32(message.materialization_intent);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified WorkflowAddTablesRequest message, length delimited. Does not implicitly {@link vtctldata.WorkflowAddTablesRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof vtctldata.WorkflowAddTablesRequest
+         * @static
+         * @param {vtctldata.IWorkflowAddTablesRequest} message WorkflowAddTablesRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        WorkflowAddTablesRequest.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a WorkflowAddTablesRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof vtctldata.WorkflowAddTablesRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {vtctldata.WorkflowAddTablesRequest} WorkflowAddTablesRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        WorkflowAddTablesRequest.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtctldata.WorkflowAddTablesRequest();
+            while (reader.pos < end) {
+                let tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1: {
+                        message.workflow = reader.string();
+                        break;
+                    }
+                case 2: {
+                        message.keyspace = reader.string();
+                        break;
+                    }
+                case 3: {
+                        if (!(message.table_settings && message.table_settings.length))
+                            message.table_settings = [];
+                        message.table_settings.push($root.vtctldata.TableMaterializeSettings.decode(reader, reader.uint32()));
+                        break;
+                    }
+                case 4: {
+                        message.materialization_intent = reader.int32();
+                        break;
+                    }
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a WorkflowAddTablesRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof vtctldata.WorkflowAddTablesRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {vtctldata.WorkflowAddTablesRequest} WorkflowAddTablesRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        WorkflowAddTablesRequest.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a WorkflowAddTablesRequest message.
+         * @function verify
+         * @memberof vtctldata.WorkflowAddTablesRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        WorkflowAddTablesRequest.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.workflow != null && message.hasOwnProperty("workflow"))
+                if (!$util.isString(message.workflow))
+                    return "workflow: string expected";
+            if (message.keyspace != null && message.hasOwnProperty("keyspace"))
+                if (!$util.isString(message.keyspace))
+                    return "keyspace: string expected";
+            if (message.table_settings != null && message.hasOwnProperty("table_settings")) {
+                if (!Array.isArray(message.table_settings))
+                    return "table_settings: array expected";
+                for (let i = 0; i < message.table_settings.length; ++i) {
+                    let error = $root.vtctldata.TableMaterializeSettings.verify(message.table_settings[i]);
+                    if (error)
+                        return "table_settings." + error;
+                }
+            }
+            if (message.materialization_intent != null && message.hasOwnProperty("materialization_intent"))
+                switch (message.materialization_intent) {
+                default:
+                    return "materialization_intent: enum value expected";
+                case 0:
+                case 1:
+                case 2:
+                case 3:
+                    break;
+                }
+            return null;
+        };
+
+        /**
+         * Creates a WorkflowAddTablesRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof vtctldata.WorkflowAddTablesRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {vtctldata.WorkflowAddTablesRequest} WorkflowAddTablesRequest
+         */
+        WorkflowAddTablesRequest.fromObject = function fromObject(object) {
+            if (object instanceof $root.vtctldata.WorkflowAddTablesRequest)
+                return object;
+            let message = new $root.vtctldata.WorkflowAddTablesRequest();
+            if (object.workflow != null)
+                message.workflow = String(object.workflow);
+            if (object.keyspace != null)
+                message.keyspace = String(object.keyspace);
+            if (object.table_settings) {
+                if (!Array.isArray(object.table_settings))
+                    throw TypeError(".vtctldata.WorkflowAddTablesRequest.table_settings: array expected");
+                message.table_settings = [];
+                for (let i = 0; i < object.table_settings.length; ++i) {
+                    if (typeof object.table_settings[i] !== "object")
+                        throw TypeError(".vtctldata.WorkflowAddTablesRequest.table_settings: object expected");
+                    message.table_settings[i] = $root.vtctldata.TableMaterializeSettings.fromObject(object.table_settings[i]);
+                }
+            }
+            switch (object.materialization_intent) {
+            default:
+                if (typeof object.materialization_intent === "number") {
+                    message.materialization_intent = object.materialization_intent;
+                    break;
+                }
+                break;
+            case "CUSTOM":
+            case 0:
+                message.materialization_intent = 0;
+                break;
+            case "MOVETABLES":
+            case 1:
+                message.materialization_intent = 1;
+                break;
+            case "CREATELOOKUPINDEX":
+            case 2:
+                message.materialization_intent = 2;
+                break;
+            case "REFERENCE":
+            case 3:
+                message.materialization_intent = 3;
+                break;
+            }
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a WorkflowAddTablesRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof vtctldata.WorkflowAddTablesRequest
+         * @static
+         * @param {vtctldata.WorkflowAddTablesRequest} message WorkflowAddTablesRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        WorkflowAddTablesRequest.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            let object = {};
+            if (options.arrays || options.defaults)
+                object.table_settings = [];
+            if (options.defaults) {
+                object.workflow = "";
+                object.keyspace = "";
+                object.materialization_intent = options.enums === String ? "CUSTOM" : 0;
+            }
+            if (message.workflow != null && message.hasOwnProperty("workflow"))
+                object.workflow = message.workflow;
+            if (message.keyspace != null && message.hasOwnProperty("keyspace"))
+                object.keyspace = message.keyspace;
+            if (message.table_settings && message.table_settings.length) {
+                object.table_settings = [];
+                for (let j = 0; j < message.table_settings.length; ++j)
+                    object.table_settings[j] = $root.vtctldata.TableMaterializeSettings.toObject(message.table_settings[j], options);
+            }
+            if (message.materialization_intent != null && message.hasOwnProperty("materialization_intent"))
+                object.materialization_intent = options.enums === String ? $root.vtctldata.MaterializationIntent[message.materialization_intent] === undefined ? message.materialization_intent : $root.vtctldata.MaterializationIntent[message.materialization_intent] : message.materialization_intent;
+            return object;
+        };
+
+        /**
+         * Converts this WorkflowAddTablesRequest to JSON.
+         * @function toJSON
+         * @memberof vtctldata.WorkflowAddTablesRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        WorkflowAddTablesRequest.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the default type url for WorkflowAddTablesRequest
+         * @function getTypeUrl
+         * @memberof vtctldata.WorkflowAddTablesRequest
+         * @static
+         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns {string} The default type url
+         */
+        WorkflowAddTablesRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+            if (typeUrlPrefix === undefined) {
+                typeUrlPrefix = "type.googleapis.com";
+            }
+            return typeUrlPrefix + "/vtctldata.WorkflowAddTablesRequest";
+        };
+
+        return WorkflowAddTablesRequest;
+    })();
+
+    vtctldata.WorkflowAddTablesResponse = (function() {
+
+        /**
+         * Properties of a WorkflowAddTablesResponse.
+         * @memberof vtctldata
+         * @interface IWorkflowAddTablesResponse
+         */
+
+        /**
+         * Constructs a new WorkflowAddTablesResponse.
+         * @memberof vtctldata
+         * @classdesc Represents a WorkflowAddTablesResponse.
+         * @implements IWorkflowAddTablesResponse
+         * @constructor
+         * @param {vtctldata.IWorkflowAddTablesResponse=} [properties] Properties to set
+         */
+        function WorkflowAddTablesResponse(properties) {
+            if (properties)
+                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * Creates a new WorkflowAddTablesResponse instance using the specified properties.
+         * @function create
+         * @memberof vtctldata.WorkflowAddTablesResponse
+         * @static
+         * @param {vtctldata.IWorkflowAddTablesResponse=} [properties] Properties to set
+         * @returns {vtctldata.WorkflowAddTablesResponse} WorkflowAddTablesResponse instance
+         */
+        WorkflowAddTablesResponse.create = function create(properties) {
+            return new WorkflowAddTablesResponse(properties);
+        };
+
+        /**
+         * Encodes the specified WorkflowAddTablesResponse message. Does not implicitly {@link vtctldata.WorkflowAddTablesResponse.verify|verify} messages.
+         * @function encode
+         * @memberof vtctldata.WorkflowAddTablesResponse
+         * @static
+         * @param {vtctldata.IWorkflowAddTablesResponse} message WorkflowAddTablesResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        WorkflowAddTablesResponse.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            return writer;
+        };
+
+        /**
+         * Encodes the specified WorkflowAddTablesResponse message, length delimited. Does not implicitly {@link vtctldata.WorkflowAddTablesResponse.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof vtctldata.WorkflowAddTablesResponse
+         * @static
+         * @param {vtctldata.IWorkflowAddTablesResponse} message WorkflowAddTablesResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        WorkflowAddTablesResponse.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a WorkflowAddTablesResponse message from the specified reader or buffer.
+         * @function decode
+         * @memberof vtctldata.WorkflowAddTablesResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {vtctldata.WorkflowAddTablesResponse} WorkflowAddTablesResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        WorkflowAddTablesResponse.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.vtctldata.WorkflowAddTablesResponse();
+            while (reader.pos < end) {
+                let tag = reader.uint32();
+                switch (tag >>> 3) {
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a WorkflowAddTablesResponse message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof vtctldata.WorkflowAddTablesResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {vtctldata.WorkflowAddTablesResponse} WorkflowAddTablesResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        WorkflowAddTablesResponse.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a WorkflowAddTablesResponse message.
+         * @function verify
+         * @memberof vtctldata.WorkflowAddTablesResponse
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        WorkflowAddTablesResponse.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            return null;
+        };
+
+        /**
+         * Creates a WorkflowAddTablesResponse message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof vtctldata.WorkflowAddTablesResponse
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {vtctldata.WorkflowAddTablesResponse} WorkflowAddTablesResponse
+         */
+        WorkflowAddTablesResponse.fromObject = function fromObject(object) {
+            if (object instanceof $root.vtctldata.WorkflowAddTablesResponse)
+                return object;
+            return new $root.vtctldata.WorkflowAddTablesResponse();
+        };
+
+        /**
+         * Creates a plain object from a WorkflowAddTablesResponse message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof vtctldata.WorkflowAddTablesResponse
+         * @static
+         * @param {vtctldata.WorkflowAddTablesResponse} message WorkflowAddTablesResponse
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        WorkflowAddTablesResponse.toObject = function toObject() {
+            return {};
+        };
+
+        /**
+         * Converts this WorkflowAddTablesResponse to JSON.
+         * @function toJSON
+         * @memberof vtctldata.WorkflowAddTablesResponse
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        WorkflowAddTablesResponse.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the default type url for WorkflowAddTablesResponse
+         * @function getTypeUrl
+         * @memberof vtctldata.WorkflowAddTablesResponse
+         * @static
+         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns {string} The default type url
+         */
+        WorkflowAddTablesResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+            if (typeUrlPrefix === undefined) {
+                typeUrlPrefix = "type.googleapis.com";
+            }
+            return typeUrlPrefix + "/vtctldata.WorkflowAddTablesResponse";
+        };
+
+        return WorkflowAddTablesResponse;
     })();
 
     vtctldata.MigrateCreateRequest = (function() {
