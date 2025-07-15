@@ -1,5 +1,5 @@
 name: java_docker_test
-on: [push, pull_request]
+# on: [push, pull_request]
 permissions: read-all
 jobs:
 

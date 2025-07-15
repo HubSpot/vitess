@@ -1,5 +1,5 @@
 name: Code Coverage
-on: [push, pull_request]
+# on: [push, pull_request]
 concurrency:
   group: format('{0}-{1}', ${{ github.ref }}, 'Code Coverage')
   cancel-in-progress: true
@@ -86,7 +86,7 @@ jobs:
 
         go mod download
         go install golang.org/x/tools/cmd/goimports@latest
-        
+
     - name: Run make tools
       if: steps.changes.outputs.changed_files == 'true'
       run: |

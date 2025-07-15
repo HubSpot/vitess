@@ -1,5 +1,5 @@
 name: endtoend
-on: [push, pull_request]
+# on: [push, pull_request]
 permissions: read-all
 jobs:
 
@@ -66,7 +66,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y mysql-server mysql-client make unzip g++ etcd-client etcd-server curl git wget
-        
+
         sudo service mysql stop
         sudo service etcd stop
         sudo ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/

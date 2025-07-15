@@ -1,9 +1,9 @@
 name: Update Golang Dependencies
 
-on:
-  schedule:
-    - cron: "0 0 1,15 * *" # Runs every month on the 1st and 15th days at midnight UTC
-  workflow_dispatch:
+# on:
+#   schedule:
+#     - cron: "0 0 1,15 * *" # Runs every month on the 1st and 15th days at midnight UTC
+#   workflow_dispatch:
 
 permissions: read-all
 
@@ -51,7 +51,7 @@ jobs:
           title: "Upgrade the Golang Dependencies"
           body: |
             This Pull Request updates all the Golang dependencies to their latest version using `go get -u ./...`.
-            
+
             cc @vitessio/release
           base: main
           labels: |

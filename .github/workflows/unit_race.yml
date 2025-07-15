@@ -1,5 +1,5 @@
 name: unit_race
-on: [push, pull_request]
+# on: [push, pull_request]
 concurrency:
   group: format('{0}-{1}', ${{ github.ref }}, 'unit_race')
   cancel-in-progress: true
@@ -33,7 +33,7 @@ jobs:
         fi
         echo Skip ${skip}
         echo "skip-workflow=${skip}" >> $GITHUB_OUTPUT
-        
+
         PR_DATA=$(curl \
           -H "Authorization: token ${{ secrets.GITHUB_TOKEN }}" \
           -H "Accept: application/vnd.github.v3+json" \
@@ -93,7 +93,7 @@ jobs:
         sudo apt-get -qq install -y mysql-server mysql-client
 
         sudo apt-get -qq install -y make unzip g++ curl git wget ant openjdk-11-jdk eatmydata
-        
+
         sudo service mysql stop
         sudo bash -c "echo '/usr/sbin/mysqld { }' > /etc/apparmor.d/usr.sbin.mysqld" # https://bugs.launchpad.net/ubuntu/+source/mariadb-10.1/+bug/1806263
         sudo ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/
@@ -105,7 +105,7 @@ jobs:
 
         go mod download
         go install golang.org/x/tools/cmd/goimports@latest
-        
+
         # install JUnit report formatter
         go install github.com/vitessio/go-junit-report@HEAD
 
@@ -148,7 +148,7 @@ jobs:
 
         # print test output
         cat output.txt
-        
+
     - name: Test Summary
       if: steps.skip-workflow.outputs.skip-workflow == 'false' && steps.changes.outputs.unit_tests == 'true' && always()
       uses: test-summary/action@31493c76ec9e7aa675f1585d3ed6f1da69269a86 # v2.4

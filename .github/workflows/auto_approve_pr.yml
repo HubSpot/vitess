@@ -1,7 +1,7 @@
 name: Auto Approval of Bot Pull Requests
-on:
-  pull_request:
-    types: [opened, reopened]
+# on:
+#   pull_request:
+#     types: [opened, reopened]
 
 permissions:
   contents: read

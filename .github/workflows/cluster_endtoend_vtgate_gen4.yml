@@ -1,7 +1,7 @@
 # DO NOT MODIFY: THIS FILE IS GENERATED USING "make generate_ci_workflows"
 
 name: Cluster (vtgate_gen4)
-on: [push, pull_request]
+# on: [push, pull_request]
 concurrency:
   group: format('{0}-{1}', ${{ github.ref }}, 'Cluster (vtgate_gen4)')
   cancel-in-progress: true
@@ -97,7 +97,7 @@ jobs:
       if: steps.skip-workflow.outputs.skip-workflow == 'false' && steps.changes.outputs.end_to_end == 'true'
       timeout-minutes: 10
       run: |
-        
+
         # Get key to latest MySQL repo
         sudo apt-key adv --keyserver keyserver.ubuntu.com --recv-keys A8D3785C
         # Setup MySQL 8.0

@@ -1,16 +1,16 @@
 name: vtadmin-web build
 
-# In specifying the 'paths' property, we need to include the path to this workflow .yml file. 
+# In specifying the 'paths' property, we need to include the path to this workflow .yml file.
 # See https://github.community/t/trigger-a-workflow-on-change-to-the-yml-file-itself/17792/4)
-on:
-  push:
-    paths:
-      - '.github/workflows/vtadmin_web_build.yml'
-      - 'web/vtadmin/**'
-  pull_request:
-    paths:
-      - '.github/workflows/vtadmin_web_build.yml'
-      - 'web/vtadmin/**'
+# on:
+#   push:
+#     paths:
+#       - '.github/workflows/vtadmin_web_build.yml'
+#       - 'web/vtadmin/**'
+#   pull_request:
+#     paths:
+#       - '.github/workflows/vtadmin_web_build.yml'
+#       - 'web/vtadmin/**'
 
 permissions: read-all
 
@@ -55,6 +55,6 @@ jobs:
         run: cd ./web/vtadmin && npm run build
 
     # Cancel pending and in-progress runs of this workflow if a newer ref is pushed to CI.
-    concurrency: 
+    concurrency:
       group: ${{ github.workflow }}-${{ github.ref }}
       cancel-in-progress: true

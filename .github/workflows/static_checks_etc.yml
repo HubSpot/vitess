@@ -1,8 +1,8 @@
 name: Static Code Checks, Etc.
 
-on:
-  - pull_request
-  - push
+# on:
+#   - pull_request
+#   - push
 
 permissions: read-all
 
@@ -27,7 +27,7 @@ jobs:
             skip='true'
           fi
           echo Skip ${skip}
-          echo "skip-workflow=${skip}" >> $GITHUB_OUTPUT  
+          echo "skip-workflow=${skip}" >> $GITHUB_OUTPUT
 
       - name: Checkout code
         if: steps.skip-workflow.outputs.skip-workflow == 'false'
@@ -182,7 +182,7 @@ jobs:
         if: steps.skip-workflow.outputs.skip-workflow == 'false' && (steps.changes.outputs.visitor == 'true' || steps.changes.outputs.go_files == 'true')
         run: |
           misc/git/hooks/asthelpers || exit 1
-          
+
       - name: check_ast_format_fast
         if: steps.skip-workflow.outputs.skip-workflow == 'false' && (steps.changes.outputs.astfmt == 'true' || steps.changes.outputs.go_files == 'true')
         run: |

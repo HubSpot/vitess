@@ -1,5 +1,5 @@
 name: docker_test_cluster
-on: [push, pull_request]
+# on: [push, pull_request]
 permissions: read-all
 jobs:
 

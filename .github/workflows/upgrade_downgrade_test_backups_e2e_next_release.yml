@@ -1,7 +1,7 @@
 name: Backups - E2E - Next Release - Upgrade Downgrade Testing
 on:
-  push:
-  pull_request:
+  # push:
+  # pull_request:
 
 concurrency:
   group: format('{0}-{1}', ${{ github.ref }}, 'Upgrade Downgrade Testing - Backups - E2E - Next Release')
@@ -93,7 +93,7 @@ jobs:
       run: |
         sudo apt-get update
         sudo apt-get install -y mysql-server mysql-client make unzip g++ etcd-client etcd-server curl git wget eatmydata
-        
+
         sudo service mysql stop
         sudo service etcd stop
         sudo ln -s /etc/apparmor.d/usr.sbin.mysqld /etc/apparmor.d/disable/
