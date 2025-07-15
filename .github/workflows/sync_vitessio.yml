@@ -18,7 +18,7 @@ jobs:
         with:
           ref: main-2025-q2
           fetch-depth: 0
-          persist-credentials: 'false'
+          persist-credentials: true # keep creds for push
 
       - name: Set up git user
         run: |
@@ -34,11 +34,5 @@ jobs:
       - name: Merge upstream main into fork main
         run: git merge upstream/main --ff --allow-unrelated-histories
 
-      - name: Add authentication for pushing
-        run: git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/Hubspot/vitess.git
-
       - name: Push changes to forked repo
-        run: |
-          git push origin main-2025-q2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: git push origin main-2025-q2
