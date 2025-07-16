@@ -77257,6 +77257,7 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
          * @interface IValidateVReplicationPermissionsResponse
          * @property {string|null} [user] ValidateVReplicationPermissionsResponse user
          * @property {boolean|null} [ok] ValidateVReplicationPermissionsResponse ok
+         * @property {string|null} [error] ValidateVReplicationPermissionsResponse error
          */
 
         /**
@@ -77291,6 +77292,14 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
         ValidateVReplicationPermissionsResponse.prototype.ok = false;
 
         /**
+         * ValidateVReplicationPermissionsResponse error.
+         * @member {string} error
+         * @memberof tabletmanagerdata.ValidateVReplicationPermissionsResponse
+         * @instance
+         */
+        ValidateVReplicationPermissionsResponse.prototype.error = "";
+
+        /**
          * Creates a new ValidateVReplicationPermissionsResponse instance using the specified properties.
          * @function create
          * @memberof tabletmanagerdata.ValidateVReplicationPermissionsResponse
@@ -77318,6 +77327,8 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
                 writer.uint32(/* id 1, wireType 2 =*/10).string(message.user);
             if (message.ok != null && Object.hasOwnProperty.call(message, "ok"))
                 writer.uint32(/* id 2, wireType 0 =*/16).bool(message.ok);
+            if (message.error != null && Object.hasOwnProperty.call(message, "error"))
+                writer.uint32(/* id 3, wireType 2 =*/26).string(message.error);
             return writer;
         };
 
@@ -77358,6 +77369,10 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
                     }
                 case 2: {
                         message.ok = reader.bool();
+                        break;
+                    }
+                case 3: {
+                        message.error = reader.string();
                         break;
                     }
                 default:
@@ -77401,6 +77416,9 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
             if (message.ok != null && message.hasOwnProperty("ok"))
                 if (typeof message.ok !== "boolean")
                     return "ok: boolean expected";
+            if (message.error != null && message.hasOwnProperty("error"))
+                if (!$util.isString(message.error))
+                    return "error: string expected";
             return null;
         };
 
@@ -77420,6 +77438,8 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
                 message.user = String(object.user);
             if (object.ok != null)
                 message.ok = Boolean(object.ok);
+            if (object.error != null)
+                message.error = String(object.error);
             return message;
         };
 
@@ -77439,11 +77459,14 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
             if (options.defaults) {
                 object.user = "";
                 object.ok = false;
+                object.error = "";
             }
             if (message.user != null && message.hasOwnProperty("user"))
                 object.user = message.user;
             if (message.ok != null && message.hasOwnProperty("ok"))
                 object.ok = message.ok;
+            if (message.error != null && message.hasOwnProperty("error"))
+                object.error = message.error;
             return object;
         };
 

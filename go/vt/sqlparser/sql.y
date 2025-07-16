@@ -3721,6 +3721,14 @@ alter_statement:
       UUID: string($4),
     }
   }
+| ALTER comment_opt VITESS_MIGRATION STRING COMPLETE VITESS_SHARDS STRING
+  {
+    $$ = &AlterMigration{
+      Type: CompleteMigrationType,
+      UUID: string($4),
+      Shards: string($7),
+    }
+  }
 | ALTER comment_opt VITESS_MIGRATION COMPLETE ALL
   {
     $$ = &AlterMigration{
@@ -4781,11 +4789,11 @@ use_table_name:
 begin_statement:
   BEGIN
   {
-    $$ = &Begin{}
+    $$ = &Begin{Type: BeginStmt}
   }
 | START TRANSACTION tx_chacteristics_opt
   {
-    $$ = &Begin{TxAccessModes: $3}
+    $$ = &Begin{Type: StartTransactionStmt, TxAccessModes: $3}
   }
 
 tx_chacteristics_opt:
