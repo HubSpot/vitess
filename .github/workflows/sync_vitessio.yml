@@ -25,13 +25,13 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
 
-      - name: Add upstream
+      - name: Add vitessio as upstream
         run: git remote add upstream https://github.com/vitessio/vitess.git
 
-      - name: Fetch upstream changes
+      - name: Fetch upstream changes from vitessio
         run: git fetch upstream
 
-      - name: Merge upstream main into fork main
+      - name: Merge vitessio main into hubspot fork main
         run: git merge upstream/main --ff --allow-unrelated-histories
 
       - name: Push changes to forked repo
