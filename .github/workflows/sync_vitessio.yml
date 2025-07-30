@@ -18,6 +18,7 @@ jobs:
         with:
           ref: main-2025-q2
           fetch-depth: 0
+          token: ${{ secrets.VITESS_SYNC_PAT }}
           persist-credentials: true # keep creds for push
 
       - name: Set up git user
