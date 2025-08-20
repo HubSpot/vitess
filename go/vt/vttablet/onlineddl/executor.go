@@ -98,6 +98,8 @@ var (
 	maxConcurrentOnlineDDLs = 256
 
 	migrationNextCheckIntervals = []time.Duration{1 * time.Second, 5 * time.Second, 10 * time.Second, 20 * time.Second}
+	vreplicationLockAcquisitionTimeout = 10 * time.Second
+	lockDiagnosticsTimeout = 2 * time.Second
 	cutoverIntervals            = []time.Duration{0, 1 * time.Minute, 5 * time.Minute, 10 * time.Minute, 30 * time.Minute}
 )
 
@@ -271,6 +273,87 @@ func (e *Executor) executeQueryWithSidecarDBReplacement(ctx context.Context, que
 // TabletAliasString returns tablet alias as string (duh)
 func (e *Executor) TabletAliasString() string {
 	return topoproto.TabletAliasString(e.tabletAlias)
+}
+
+// dumpProcessList dumps the current MySQL process list for debugging lock issues
+func (e *Executor) dumpProcessList(ctx context.Context, reason string) {
+	// Use a short timeout to avoid blocking if connection pool is exhausted
+	diagCtx, cancel := context.WithTimeout(ctx, lockDiagnosticsTimeout)
+	defer cancel()
+	
+	conn, err := e.pool.Get(diagCtx, nil)
+	if err != nil {
+		log.Warningf("Failed to get connection for process list dump (%s): %v", reason, err)
+		return
+	}
+	defer conn.Recycle()
+
+	result, err := conn.Conn.Exec(diagCtx, "SHOW FULL PROCESSLIST", 1000, false)
+	if err != nil {
+		log.Warningf("Failed to dump process list (%s): %v", reason, err)
+		return
+	}
+
+	log.Infof("Process list dump (%s):", reason)
+	for _, row := range result.Rows {
+		log.Infof("Process: %v", row)
+	}
+}
+
+// dumpDataLocks dumps the current MySQL data locks from performance_schema for debugging
+func (e *Executor) dumpDataLocks(ctx context.Context, reason string) {
+	// Use a short timeout to avoid blocking if connection pool is exhausted
+	diagCtx, cancel := context.WithTimeout(ctx, lockDiagnosticsTimeout)
+	defer cancel()
+	
+	conn, err := e.pool.Get(diagCtx, nil)
+	if err != nil {
+		log.Warningf("Failed to get connection for data locks dump (%s): %v", reason, err)
+		return
+	}
+	defer conn.Recycle()
+
+	result, err := conn.Conn.Exec(diagCtx, "SELECT * FROM performance_schema.data_locks", 1000, false)
+	if err != nil {
+		log.Warningf("Failed to get data locks (%s): %v", reason, err)
+		return
+	}
+
+	log.Infof("Data locks dump (%s):", reason)
+	for _, row := range result.Rows {
+		log.Infof("Lock: %v", row)
+	}
+}
+
+// dumpLockDiagnosticInfo combines process list and data locks information for comprehensive debugging
+func (e *Executor) dumpLockDiagnosticInfo(ctx context.Context, reason string) {
+	log.Infof("Lock diagnostic info (%s):", reason)
+	e.dumpProcessList(ctx, reason)
+	e.dumpDataLocks(ctx, reason)
+}
+
+// acquireTableLocks attempts to acquire table locks with timeout and diagnostic logging
+func (e *Executor) acquireTableLocks(ctx context.Context, lockConn *connpool.PooledConn, sentryTableName, migrationTable, uuid string, reenableWritesOnce func()) error {
+	lockCtx, cancel := context.WithTimeout(ctx, vreplicationLockAcquisitionTimeout)
+	defer cancel()
+	
+	lockTableQuery := sqlparser.BuildParsedQuery(sqlLockTwoTablesWrite, sentryTableName, migrationTable)
+	
+	log.Infof("acquireTableLocks: acquiring locks for migration %s with timeout %v", uuid, vreplicationLockAcquisitionTimeout)
+	_, err := lockConn.Conn.Exec(lockCtx, lockTableQuery.Query, 1, false)
+	
+	if err != nil {
+		reenableWritesOnce() // Ensure writes are re-enabled on failure
+		log.Errorf("acquireTableLocks: LOCK TABLES failed for migration %s: %v", uuid, err)
+		
+		// Dump diagnostic information to help debug lock contention
+		e.dumpLockDiagnosticInfo(ctx, fmt.Sprintf("lock acquisition failed for migration %s", uuid))
+		
+		return vterrors.Wrapf(err, "failed acquiring table locks for migration %s", uuid)
+	}
+	
+	log.Infof("acquireTableLocks: successfully acquired locks for migration %s", uuid)
+	return nil
 }
 
 // InitDBConfig initializes keyspace
@@ -1051,11 +1134,8 @@ func (e *Executor) cutOverVReplMigration(ctx context.Context, s *VReplStream, sh
 		// real production
 
 		e.updateMigrationStage(ctx, onlineDDL.UUID, "locking tables")
-		lockCtx, killWhileRenamingCancel := context.WithTimeout(ctx, onlineDDL.CutOverThreshold)
-		defer killWhileRenamingCancel()
-		lockTableQuery := sqlparser.BuildParsedQuery(sqlLockTwoTablesWrite, sentryTableName, onlineDDL.Table)
-		if _, err := lockConn.Conn.Exec(lockCtx, lockTableQuery.Query, 1, false); err != nil {
-			return vterrors.Wrapf(err, "failed locking tables")
+		if err := e.acquireTableLocks(ctx, lockConn, sentryTableName, onlineDDL.Table, onlineDDL.UUID, reenableWritesOnce); err != nil {
+			return err
 		}
 
 		e.updateMigrationStage(ctx, onlineDDL.UUID, "renaming tables")
