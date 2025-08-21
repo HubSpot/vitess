@@ -27,6 +27,7 @@ import (
 	"vitess.io/vitess/go/vt/sqlparser"
 
 	"vitess.io/vitess/go/sqltypes"
+	"vitess.io/vitess/go/thirdparty/hubspot/vtickets"
 	"vitess.io/vitess/go/vt/key"
 	querypb "vitess.io/vitess/go/vt/proto/query"
 	vtrpcpb "vitess.io/vitess/go/vt/proto/vtrpc"
@@ -98,6 +99,13 @@ type (
 		Values evalengine.Expr
 		// Insert using Select, offset for auto increment column
 		Offset int
+
+		// TODO: HubSpot: This is a hack to support the VTickets integration.
+		// We need to remove this once we have a proper way to support the VTickets integration.
+		// VTickets-specific fields
+		UseVTickets           bool
+		VTicketSourceKeyspace string
+		VTicketSourceTable    string
 	}
 
 	// InsertOpcode is a number representing the opcode
@@ -403,6 +411,29 @@ func (ic *InsertCommon) processGenerateFromValues(
 ) (insertID int64, err error) {
 	if ic.Generate == nil {
 		return 0, nil
+	}
+
+	// TODO: HubSpot: This is a hack to support the VTickets integration.
+	// We need to remove this once we have a proper way to support the VTickets integration.
+	// Check if VTickets should handle this auto-increment
+	if ic.Generate.UseVTickets {
+		if hook := vtickets.GetHook(); hook != nil {
+			handled, insertID, err := hook.ProcessVTickets(
+				ctx,
+				ic.Generate.UseVTickets,
+				ic.TableName,
+				ic.Keyspace.Name,
+				ic.Generate.VTicketSourceKeyspace,
+				ic.Generate.VTicketSourceTable,
+				ic.Generate.Values,
+				bindVars,
+			)
+			if handled {
+				return insertID, err
+			}
+		}
+		// If VTickets hook is not available, fall back to error
+		return 0, vterrors.New(vtrpcpb.Code_INTERNAL, "VTickets configured but hook not available")
 	}
 
 	// Scan input values to compute the number of values to generate, and
