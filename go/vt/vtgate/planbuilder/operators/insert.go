@@ -72,6 +72,12 @@ type Generate struct {
 
 	// added indicates whether the auto-increment column was already present in the insert column list or added.
 	added bool
+
+	// TODO: HubSpot: How can we not expose these fields in go/vitess
+	// VTickets-specific fields
+	UseVTickets           bool
+	VTicketSourceKeyspace string
+	VTicketSourceTable    string
 }
 
 func (i *Insert) ShortDescription() string {
@@ -610,10 +616,25 @@ func modifyForAutoinc(ctx *plancontext.PlanningContext, ins *sqlparser.Insert, v
 	if vTable.AutoIncrement == nil {
 		return nil
 	}
-	gen := &Generate{
-		Keyspace:  vTable.AutoIncrement.Sequence.Keyspace,
-		TableName: sqlparser.TableName{Name: vTable.AutoIncrement.Sequence.Name},
+
+	// TODO: HubSpot: This is a hack to support the VTickets integration.
+	// We need to remove this once we have a proper way to support the VTickets integration.
+	var gen *Generate
+	if vTable.AutoIncrement.UseVTickets {
+		// For VTickets, we create a placeholder Generate that will be handled by VTickets integration
+		gen = &Generate{
+			UseVTickets:           true,
+			VTicketSourceKeyspace: vTable.AutoIncrement.VTicketSourceKeyspace,
+			VTicketSourceTable:    vTable.AutoIncrement.VTicketSourceTable,
+		}
+	} else {
+		// Regular sequence-based generation
+		gen = &Generate{
+			Keyspace:  vTable.AutoIncrement.Sequence.Keyspace,
+			TableName: sqlparser.TableName{Name: vTable.AutoIncrement.Sequence.Name},
+		}
 	}
+
 	colNum, newColAdded := findOrAddColumn(ins, vTable.AutoIncrement.Column)
 	switch rows := ins.Rows.(type) {
 	case sqlparser.SelectStatement:

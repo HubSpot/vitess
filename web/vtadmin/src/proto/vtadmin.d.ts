@@ -50436,6 +50436,15 @@ export namespace vschema {
 
         /** AutoIncrement sequence */
         sequence?: (string|null);
+
+        /** AutoIncrement use_v_tickets */
+        use_v_tickets?: (boolean|null);
+
+        /** AutoIncrement v_ticket_source_keyspace */
+        v_ticket_source_keyspace?: (string|null);
+
+        /** AutoIncrement v_ticket_source_table */
+        v_ticket_source_table?: (string|null);
     }
 
     /** Represents an AutoIncrement. */
@@ -50452,6 +50461,15 @@ export namespace vschema {
 
         /** AutoIncrement sequence. */
         public sequence: string;
+
+        /** AutoIncrement use_v_tickets. */
+        public use_v_tickets: boolean;
+
+        /** AutoIncrement v_ticket_source_keyspace. */
+        public v_ticket_source_keyspace: string;
+
+        /** AutoIncrement v_ticket_source_table. */
+        public v_ticket_source_table: string;
 
         /**
          * Creates a new AutoIncrement instance using the specified properties.
