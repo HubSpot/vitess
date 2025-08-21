@@ -588,9 +588,20 @@ type AutoIncrement struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Column string                 `protobuf:"bytes,1,opt,name=column,proto3" json:"column,omitempty"`
 	// The sequence must match a table of type SEQUENCE.
-	Sequence      string `protobuf:"bytes,2,opt,name=sequence,proto3" json:"sequence,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Sequence string `protobuf:"bytes,2,opt,name=sequence,proto3" json:"sequence,omitempty"`
+	// if set to true, uses vtickets instead of sequences
+	// for auto-increment ids
+	UseVTickets bool `protobuf:"varint,3,opt,name=use_v_tickets,json=useVTickets,proto3" json:"use_v_tickets,omitempty"`
+	// if sharing a vticket with another keyspace (eg. copying)
+	// defaults to the current keyspace
+	// can be combined with VTicketSourceTable
+	VTicketSourceKeyspace string `protobuf:"bytes,4,opt,name=v_ticket_source_keyspace,json=vTicketSourceKeyspace,proto3" json:"v_ticket_source_keyspace,omitempty"`
+	// if sharing a vticket with another table (eg. copying)
+	// defaults to the current table
+	// can be combined with VTicketSourceKeyspace
+	VTicketSourceTable string `protobuf:"bytes,5,opt,name=v_ticket_source_table,json=vTicketSourceTable,proto3" json:"v_ticket_source_table,omitempty"`
+	unknownFields      protoimpl.UnknownFields
+	sizeCache          protoimpl.SizeCache
 }
 
 func (x *AutoIncrement) Reset() {
@@ -633,6 +644,27 @@ func (x *AutoIncrement) GetColumn() string {
 func (x *AutoIncrement) GetSequence() string {
 	if x != nil {
 		return x.Sequence
+	}
+	return ""
+}
+
+func (x *AutoIncrement) GetUseVTickets() bool {
+	if x != nil {
+		return x.UseVTickets
+	}
+	return false
+}
+
+func (x *AutoIncrement) GetVTicketSourceKeyspace() string {
+	if x != nil {
+		return x.VTicketSourceKeyspace
+	}
+	return ""
+}
+
+func (x *AutoIncrement) GetVTicketSourceTable() string {
+	if x != nil {
+		return x.VTicketSourceTable
 	}
 	return ""
 }
@@ -1186,10 +1218,13 @@ const file_vschema_proto_rawDesc = "" +
 	"\fColumnVindex\x12\x16\n" +
 	"\x06column\x18\x01 \x01(\tR\x06column\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
-	"\acolumns\x18\x03 \x03(\tR\acolumns\"C\n" +
+	"\acolumns\x18\x03 \x03(\tR\acolumns\"\xd3\x01\n" +
 	"\rAutoIncrement\x12\x16\n" +
 	"\x06column\x18\x01 \x01(\tR\x06column\x12\x1a\n" +
-	"\bsequence\x18\x02 \x01(\tR\bsequence\"\x8c\x02\n" +
+	"\bsequence\x18\x02 \x01(\tR\bsequence\x12\"\n" +
+	"\ruse_v_tickets\x18\x03 \x01(\bR\vuseVTickets\x127\n" +
+	"\x18v_ticket_source_keyspace\x18\x04 \x01(\tR\x15vTicketSourceKeyspace\x121\n" +
+	"\x15v_ticket_source_table\x18\x05 \x01(\tR\x12vTicketSourceTable\"\x8c\x02\n" +
 	"\x06Column\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
 	"\x04type\x18\x02 \x01(\x0e2\v.query.TypeR\x04type\x12\x1c\n" +

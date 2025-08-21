@@ -335,8 +335,11 @@ func (ks *KeyspaceSchema) MarshalJSON() ([]byte, error) {
 
 // AutoIncrement contains the auto-inc information for a table.
 type AutoIncrement struct {
-	Column   sqlparser.IdentifierCI `json:"column"`
-	Sequence *BaseTable             `json:"sequence"`
+	Column                sqlparser.IdentifierCI `json:"column"`
+	Sequence              *BaseTable             `json:"sequence"`
+	UseVTickets           bool                   `json:"use_v_tickets"`
+	VTicketSourceKeyspace string                 `json:"v_ticket_source_keyspace"`
+	VTicketSourceTable    string                 `json:"v_ticket_source_table"`
 }
 
 type Source struct {
@@ -928,6 +931,17 @@ func resolveAutoIncrement(source *vschemapb.SrvVSchema, vschema *VSchema, parser
 			if t == nil || table.AutoIncrement == nil {
 				continue
 			}
+
+			if table.AutoIncrement.UseVTickets {
+				t.AutoIncrement = &AutoIncrement{
+					Column:                sqlparser.NewIdentifierCI(table.AutoIncrement.Column),
+					UseVTickets:           table.AutoIncrement.UseVTickets,
+					VTicketSourceKeyspace: table.AutoIncrement.VTicketSourceKeyspace,
+					VTicketSourceTable:    table.AutoIncrement.VTicketSourceTable,
+				}
+				continue
+			}
+
 			seqks, seqtab, err := parser.ParseTable(table.AutoIncrement.Sequence)
 			var seq *BaseTable
 			if err == nil {

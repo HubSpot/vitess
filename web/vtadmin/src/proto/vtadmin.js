@@ -123780,6 +123780,9 @@ export const vschema = $root.vschema = (() => {
          * @interface IAutoIncrement
          * @property {string|null} [column] AutoIncrement column
          * @property {string|null} [sequence] AutoIncrement sequence
+         * @property {boolean|null} [use_v_tickets] AutoIncrement use_v_tickets
+         * @property {string|null} [v_ticket_source_keyspace] AutoIncrement v_ticket_source_keyspace
+         * @property {string|null} [v_ticket_source_table] AutoIncrement v_ticket_source_table
          */
 
         /**
@@ -123814,6 +123817,30 @@ export const vschema = $root.vschema = (() => {
         AutoIncrement.prototype.sequence = "";
 
         /**
+         * AutoIncrement use_v_tickets.
+         * @member {boolean} use_v_tickets
+         * @memberof vschema.AutoIncrement
+         * @instance
+         */
+        AutoIncrement.prototype.use_v_tickets = false;
+
+        /**
+         * AutoIncrement v_ticket_source_keyspace.
+         * @member {string} v_ticket_source_keyspace
+         * @memberof vschema.AutoIncrement
+         * @instance
+         */
+        AutoIncrement.prototype.v_ticket_source_keyspace = "";
+
+        /**
+         * AutoIncrement v_ticket_source_table.
+         * @member {string} v_ticket_source_table
+         * @memberof vschema.AutoIncrement
+         * @instance
+         */
+        AutoIncrement.prototype.v_ticket_source_table = "";
+
+        /**
          * Creates a new AutoIncrement instance using the specified properties.
          * @function create
          * @memberof vschema.AutoIncrement
@@ -123841,6 +123868,12 @@ export const vschema = $root.vschema = (() => {
                 writer.uint32(/* id 1, wireType 2 =*/10).string(message.column);
             if (message.sequence != null && Object.hasOwnProperty.call(message, "sequence"))
                 writer.uint32(/* id 2, wireType 2 =*/18).string(message.sequence);
+            if (message.use_v_tickets != null && Object.hasOwnProperty.call(message, "use_v_tickets"))
+                writer.uint32(/* id 3, wireType 0 =*/24).bool(message.use_v_tickets);
+            if (message.v_ticket_source_keyspace != null && Object.hasOwnProperty.call(message, "v_ticket_source_keyspace"))
+                writer.uint32(/* id 4, wireType 2 =*/34).string(message.v_ticket_source_keyspace);
+            if (message.v_ticket_source_table != null && Object.hasOwnProperty.call(message, "v_ticket_source_table"))
+                writer.uint32(/* id 5, wireType 2 =*/42).string(message.v_ticket_source_table);
             return writer;
         };
 
@@ -123881,6 +123914,18 @@ export const vschema = $root.vschema = (() => {
                     }
                 case 2: {
                         message.sequence = reader.string();
+                        break;
+                    }
+                case 3: {
+                        message.use_v_tickets = reader.bool();
+                        break;
+                    }
+                case 4: {
+                        message.v_ticket_source_keyspace = reader.string();
+                        break;
+                    }
+                case 5: {
+                        message.v_ticket_source_table = reader.string();
                         break;
                     }
                 default:
@@ -123924,6 +123969,15 @@ export const vschema = $root.vschema = (() => {
             if (message.sequence != null && message.hasOwnProperty("sequence"))
                 if (!$util.isString(message.sequence))
                     return "sequence: string expected";
+            if (message.use_v_tickets != null && message.hasOwnProperty("use_v_tickets"))
+                if (typeof message.use_v_tickets !== "boolean")
+                    return "use_v_tickets: boolean expected";
+            if (message.v_ticket_source_keyspace != null && message.hasOwnProperty("v_ticket_source_keyspace"))
+                if (!$util.isString(message.v_ticket_source_keyspace))
+                    return "v_ticket_source_keyspace: string expected";
+            if (message.v_ticket_source_table != null && message.hasOwnProperty("v_ticket_source_table"))
+                if (!$util.isString(message.v_ticket_source_table))
+                    return "v_ticket_source_table: string expected";
             return null;
         };
 
@@ -123943,6 +123997,12 @@ export const vschema = $root.vschema = (() => {
                 message.column = String(object.column);
             if (object.sequence != null)
                 message.sequence = String(object.sequence);
+            if (object.use_v_tickets != null)
+                message.use_v_tickets = Boolean(object.use_v_tickets);
+            if (object.v_ticket_source_keyspace != null)
+                message.v_ticket_source_keyspace = String(object.v_ticket_source_keyspace);
+            if (object.v_ticket_source_table != null)
+                message.v_ticket_source_table = String(object.v_ticket_source_table);
             return message;
         };
 
@@ -123962,11 +124022,20 @@ export const vschema = $root.vschema = (() => {
             if (options.defaults) {
                 object.column = "";
                 object.sequence = "";
+                object.use_v_tickets = false;
+                object.v_ticket_source_keyspace = "";
+                object.v_ticket_source_table = "";
             }
             if (message.column != null && message.hasOwnProperty("column"))
                 object.column = message.column;
             if (message.sequence != null && message.hasOwnProperty("sequence"))
                 object.sequence = message.sequence;
+            if (message.use_v_tickets != null && message.hasOwnProperty("use_v_tickets"))
+                object.use_v_tickets = message.use_v_tickets;
+            if (message.v_ticket_source_keyspace != null && message.hasOwnProperty("v_ticket_source_keyspace"))
+                object.v_ticket_source_keyspace = message.v_ticket_source_keyspace;
+            if (message.v_ticket_source_table != null && message.hasOwnProperty("v_ticket_source_table"))
+                object.v_ticket_source_table = message.v_ticket_source_table;
             return object;
         };
 
