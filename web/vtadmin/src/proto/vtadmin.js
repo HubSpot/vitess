@@ -90017,6 +90017,7 @@ export const binlogdata = $root.binlogdata = (() => {
      * @property {number} LASTPK=18 LASTPK value
      * @property {number} SAVEPOINT=19 SAVEPOINT value
      * @property {number} COPY_COMPLETED=20 COPY_COMPLETED value
+     * @property {number} PREVIOUS_GTIDS=21 PREVIOUS_GTIDS value
      */
     binlogdata.VEventType = (function() {
         const valuesById = {}, values = Object.create(valuesById);
@@ -90041,6 +90042,7 @@ export const binlogdata = $root.binlogdata = (() => {
         values[valuesById[18] = "LASTPK"] = 18;
         values[valuesById[19] = "SAVEPOINT"] = 19;
         values[valuesById[20] = "COPY_COMPLETED"] = 20;
+        values[valuesById[21] = "PREVIOUS_GTIDS"] = 21;
         return values;
     })();
 
@@ -92501,6 +92503,9 @@ export const binlogdata = $root.binlogdata = (() => {
          * @property {string|null} [shard] VEvent shard
          * @property {boolean|null} [throttled] VEvent throttled
          * @property {string|null} [throttled_reason] VEvent throttled_reason
+         * @property {number|Long|null} [commit_parent] VEvent commit_parent
+         * @property {number|Long|null} [sequence_number] VEvent sequence_number
+         * @property {string|null} [event_gtid] VEvent event_gtid
          */
 
         /**
@@ -92639,6 +92644,30 @@ export const binlogdata = $root.binlogdata = (() => {
         VEvent.prototype.throttled_reason = "";
 
         /**
+         * VEvent commit_parent.
+         * @member {number|Long} commit_parent
+         * @memberof binlogdata.VEvent
+         * @instance
+         */
+        VEvent.prototype.commit_parent = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+        /**
+         * VEvent sequence_number.
+         * @member {number|Long} sequence_number
+         * @memberof binlogdata.VEvent
+         * @instance
+         */
+        VEvent.prototype.sequence_number = $util.Long ? $util.Long.fromBits(0,0,false) : 0;
+
+        /**
+         * VEvent event_gtid.
+         * @member {string} event_gtid
+         * @memberof binlogdata.VEvent
+         * @instance
+         */
+        VEvent.prototype.event_gtid = "";
+
+        /**
          * Creates a new VEvent instance using the specified properties.
          * @function create
          * @memberof binlogdata.VEvent
@@ -92692,6 +92721,12 @@ export const binlogdata = $root.binlogdata = (() => {
                 writer.uint32(/* id 24, wireType 0 =*/192).bool(message.throttled);
             if (message.throttled_reason != null && Object.hasOwnProperty.call(message, "throttled_reason"))
                 writer.uint32(/* id 25, wireType 2 =*/202).string(message.throttled_reason);
+            if (message.commit_parent != null && Object.hasOwnProperty.call(message, "commit_parent"))
+                writer.uint32(/* id 26, wireType 0 =*/208).int64(message.commit_parent);
+            if (message.sequence_number != null && Object.hasOwnProperty.call(message, "sequence_number"))
+                writer.uint32(/* id 27, wireType 0 =*/216).int64(message.sequence_number);
+            if (message.event_gtid != null && Object.hasOwnProperty.call(message, "event_gtid"))
+                writer.uint32(/* id 28, wireType 2 =*/226).string(message.event_gtid);
             return writer;
         };
 
@@ -92786,6 +92821,18 @@ export const binlogdata = $root.binlogdata = (() => {
                         message.throttled_reason = reader.string();
                         break;
                     }
+                case 26: {
+                        message.commit_parent = reader.int64();
+                        break;
+                    }
+                case 27: {
+                        message.sequence_number = reader.int64();
+                        break;
+                    }
+                case 28: {
+                        message.event_gtid = reader.string();
+                        break;
+                    }
                 default:
                     reader.skipType(tag & 7);
                     break;
@@ -92846,6 +92893,7 @@ export const binlogdata = $root.binlogdata = (() => {
                 case 18:
                 case 19:
                 case 20:
+                case 21:
                     break;
                 }
             if (message.timestamp != null && message.hasOwnProperty("timestamp"))
@@ -92900,6 +92948,15 @@ export const binlogdata = $root.binlogdata = (() => {
             if (message.throttled_reason != null && message.hasOwnProperty("throttled_reason"))
                 if (!$util.isString(message.throttled_reason))
                     return "throttled_reason: string expected";
+            if (message.commit_parent != null && message.hasOwnProperty("commit_parent"))
+                if (!$util.isInteger(message.commit_parent) && !(message.commit_parent && $util.isInteger(message.commit_parent.low) && $util.isInteger(message.commit_parent.high)))
+                    return "commit_parent: integer|Long expected";
+            if (message.sequence_number != null && message.hasOwnProperty("sequence_number"))
+                if (!$util.isInteger(message.sequence_number) && !(message.sequence_number && $util.isInteger(message.sequence_number.low) && $util.isInteger(message.sequence_number.high)))
+                    return "sequence_number: integer|Long expected";
+            if (message.event_gtid != null && message.hasOwnProperty("event_gtid"))
+                if (!$util.isString(message.event_gtid))
+                    return "event_gtid: string expected";
             return null;
         };
 
@@ -93006,6 +93063,10 @@ export const binlogdata = $root.binlogdata = (() => {
             case 20:
                 message.type = 20;
                 break;
+            case "PREVIOUS_GTIDS":
+            case 21:
+                message.type = 21;
+                break;
             }
             if (object.timestamp != null)
                 if ($util.Long)
@@ -93064,6 +93125,26 @@ export const binlogdata = $root.binlogdata = (() => {
                 message.throttled = Boolean(object.throttled);
             if (object.throttled_reason != null)
                 message.throttled_reason = String(object.throttled_reason);
+            if (object.commit_parent != null)
+                if ($util.Long)
+                    (message.commit_parent = $util.Long.fromValue(object.commit_parent)).unsigned = false;
+                else if (typeof object.commit_parent === "string")
+                    message.commit_parent = parseInt(object.commit_parent, 10);
+                else if (typeof object.commit_parent === "number")
+                    message.commit_parent = object.commit_parent;
+                else if (typeof object.commit_parent === "object")
+                    message.commit_parent = new $util.LongBits(object.commit_parent.low >>> 0, object.commit_parent.high >>> 0).toNumber();
+            if (object.sequence_number != null)
+                if ($util.Long)
+                    (message.sequence_number = $util.Long.fromValue(object.sequence_number)).unsigned = false;
+                else if (typeof object.sequence_number === "string")
+                    message.sequence_number = parseInt(object.sequence_number, 10);
+                else if (typeof object.sequence_number === "number")
+                    message.sequence_number = object.sequence_number;
+                else if (typeof object.sequence_number === "object")
+                    message.sequence_number = new $util.LongBits(object.sequence_number.low >>> 0, object.sequence_number.high >>> 0).toNumber();
+            if (object.event_gtid != null)
+                message.event_gtid = String(object.event_gtid);
             return message;
         };
 
@@ -93104,6 +93185,17 @@ export const binlogdata = $root.binlogdata = (() => {
                 object.shard = "";
                 object.throttled = false;
                 object.throttled_reason = "";
+                if ($util.Long) {
+                    let long = new $util.Long(0, 0, false);
+                    object.commit_parent = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                } else
+                    object.commit_parent = options.longs === String ? "0" : 0;
+                if ($util.Long) {
+                    let long = new $util.Long(0, 0, false);
+                    object.sequence_number = options.longs === String ? long.toString() : options.longs === Number ? long.toNumber() : long;
+                } else
+                    object.sequence_number = options.longs === String ? "0" : 0;
+                object.event_gtid = "";
             }
             if (message.type != null && message.hasOwnProperty("type"))
                 object.type = options.enums === String ? $root.binlogdata.VEventType[message.type] === undefined ? message.type : $root.binlogdata.VEventType[message.type] : message.type;
@@ -93141,6 +93233,18 @@ export const binlogdata = $root.binlogdata = (() => {
                 object.throttled = message.throttled;
             if (message.throttled_reason != null && message.hasOwnProperty("throttled_reason"))
                 object.throttled_reason = message.throttled_reason;
+            if (message.commit_parent != null && message.hasOwnProperty("commit_parent"))
+                if (typeof message.commit_parent === "number")
+                    object.commit_parent = options.longs === String ? String(message.commit_parent) : message.commit_parent;
+                else
+                    object.commit_parent = options.longs === String ? $util.Long.prototype.toString.call(message.commit_parent) : options.longs === Number ? new $util.LongBits(message.commit_parent.low >>> 0, message.commit_parent.high >>> 0).toNumber() : message.commit_parent;
+            if (message.sequence_number != null && message.hasOwnProperty("sequence_number"))
+                if (typeof message.sequence_number === "number")
+                    object.sequence_number = options.longs === String ? String(message.sequence_number) : message.sequence_number;
+                else
+                    object.sequence_number = options.longs === String ? $util.Long.prototype.toString.call(message.sequence_number) : options.longs === Number ? new $util.LongBits(message.sequence_number.low >>> 0, message.sequence_number.high >>> 0).toNumber() : message.sequence_number;
+            if (message.event_gtid != null && message.hasOwnProperty("event_gtid"))
+                object.event_gtid = message.event_gtid;
             return object;
         };
 
