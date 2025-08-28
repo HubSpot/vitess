@@ -34,7 +34,6 @@ import (
 	"vitess.io/vitess/go/vt/callerid"
 	"vitess.io/vitess/go/vt/grpcclient"
 	"vitess.io/vitess/go/vt/log"
-	"vitess.io/vitess/go/vt/servenv"
 	"vitess.io/vitess/go/vt/sqlparser"
 	"vitess.io/vitess/go/vt/utils"
 	"vitess.io/vitess/go/vt/vitessdriver"
@@ -53,11 +52,8 @@ var (
 	vtgateName string
 )
 
-func init() {
-	servenv.OnParseFor("vtadmin", registerVtgateFlags)
-}
-
-func registerVtgateFlags(fs *pflag.FlagSet) {
+// RegisterVtgateFlags registers vtgate gRPC TLS flags for vtadmin
+func RegisterVtgateFlags(fs *pflag.FlagSet) {
 	utils.SetFlagStringVar(fs, &vtgateCert, "vtgate-grpc-cert", "", "the cert to use to connect to vtgate")
 	utils.SetFlagStringVar(fs, &vtgateKey, "vtgate-grpc-key", "", "the key to use to connect to vtgate")
 	utils.SetFlagStringVar(fs, &vtgateCA, "vtgate-grpc-ca", "", "the server ca to use to validate vtgate servers when connecting")

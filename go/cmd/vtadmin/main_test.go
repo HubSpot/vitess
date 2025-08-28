@@ -23,6 +23,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"vitess.io/vitess/go/vt/vtadmin/vtsql"
 	"vitess.io/vitess/go/vt/vtctl/grpcclientcommon"
 )
 
@@ -44,6 +45,9 @@ func TestMainFlagRegistration(t *testing.T) {
 	// Simulate what grpcclientcommon.RegisterFlags does
 	// Register TLS flags for gRPC connections to vtctld
 	grpcclientcommon.RegisterFlags(testCmd.Flags())
+	
+	// Register TLS flags for gRPC connections to vtgate
+	vtsql.RegisterVtgateFlags(testCmd.Flags())
 
 	// Test that the flags are properly registered
 	t.Run("grpc tls flags are registered", func(t *testing.T) {
@@ -67,5 +71,28 @@ func TestMainFlagRegistration(t *testing.T) {
 		serverNameFlag := testCmd.Flags().Lookup("vtctld-grpc-server-name")
 		require.NotNil(t, serverNameFlag, "vtctld-grpc-server-name flag should be registered")
 		assert.Equal(t, "", serverNameFlag.DefValue, "vtctld-grpc-server-name should have empty default value")
+	})
+
+	t.Run("vtgate grpc tls flags are registered", func(t *testing.T) {
+		certFlag := testCmd.Flags().Lookup("vtgate-grpc-cert")
+		require.NotNil(t, certFlag, "vtgate-grpc-cert flag should be registered")
+		assert.Equal(t, "", certFlag.DefValue, "vtgate-grpc-cert should have empty default value")
+		assert.Equal(t, "the cert to use to connect to vtgate", certFlag.Usage, "vtgate-grpc-cert should have correct usage")
+
+		keyFlag := testCmd.Flags().Lookup("vtgate-grpc-key")
+		require.NotNil(t, keyFlag, "vtgate-grpc-key flag should be registered")
+		assert.Equal(t, "", keyFlag.DefValue, "vtgate-grpc-key should have empty default value")
+
+		caFlag := testCmd.Flags().Lookup("vtgate-grpc-ca")
+		require.NotNil(t, caFlag, "vtgate-grpc-ca flag should be registered")
+		assert.Equal(t, "", caFlag.DefValue, "vtgate-grpc-ca should have empty default value")
+
+		crlFlag := testCmd.Flags().Lookup("vtgate-grpc-crl")
+		require.NotNil(t, crlFlag, "vtgate-grpc-crl flag should be registered")
+		assert.Equal(t, "", crlFlag.DefValue, "vtgate-grpc-crl should have empty default value")
+
+		serverNameFlag := testCmd.Flags().Lookup("vtgate-grpc-server-name")
+		require.NotNil(t, serverNameFlag, "vtgate-grpc-server-name flag should be registered")
+		assert.Equal(t, "", serverNameFlag.DefValue, "vtgate-grpc-server-name should have empty default value")
 	})
 }
