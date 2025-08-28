@@ -26,8 +26,6 @@ import (
 	"text/tabwriter"
 	"time"
 
-	"google.golang.org/grpc/credentials/insecure"
-
 	"google.golang.org/grpc"
 	grpcresolver "google.golang.org/grpc/resolver"
 
@@ -39,6 +37,7 @@ import (
 	"vitess.io/vitess/go/vt/vtadmin/cluster/resolver"
 	"vitess.io/vitess/go/vt/vtadmin/debug"
 	"vitess.io/vitess/go/vt/vtadmin/vtadminproto"
+	"vitess.io/vitess/go/vt/vtctl/grpcclientcommon"
 
 	vtadminpb "vitess.io/vitess/go/vt/proto/vtadmin"
 )
@@ -142,17 +141,23 @@ func (vtgate *VTGateProxy) dial(ctx context.Context, target string, opts ...grpc
 	vtadminproto.AnnotateClusterSpan(vtgate.cluster, span)
 	span.Annotate("is_using_credentials", vtgate.creds != nil)
 
+	// Get TLS configuration from command-line flags
+	tlsOpt, err := grpcclientcommon.SecureDialOption()
+	if err != nil {
+		return fmt.Errorf("error getting TLS dial option: %w", err)
+	}
+
+	dialOpts := append(opts, tlsOpt, grpc.WithResolvers(vtgate.resolver))
+
+	if vtgate.creds != nil {
+		dialOpts = append(dialOpts, grpc.WithPerRPCCredentials(vtgate.creds))
+	}
+
 	conf := vitessdriver.Configuration{
 		Protocol:        fmt.Sprintf("grpc_%s", vtgate.cluster.Id),
 		Address:         resolver.DialAddr(vtgate.resolver, "vtgate"),
 		Target:          target,
-		GRPCDialOptions: append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithResolvers(vtgate.resolver)),
-	}
-
-	if vtgate.creds != nil {
-		conf.GRPCDialOptions = append([]grpc.DialOption{
-			grpc.WithPerRPCCredentials(vtgate.creds),
-		}, conf.GRPCDialOptions...)
+		GRPCDialOptions: dialOpts,
 	}
 
 	vtgate.conn, err = vtgate.dialFunc(conf)
