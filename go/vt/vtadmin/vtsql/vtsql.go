@@ -161,6 +161,7 @@ func (vtgate *VTGateProxy) dial(ctx context.Context, target string, opts ...grpc
 	span.Annotate("is_using_credentials", vtgate.creds != nil)
 
 	// Get TLS configuration from vtgate-specific flags
+	log.Infof("vtgate TLS config: cert=%s, key=%s, ca=%s, crl=%s, name=%s", vtgateCert, vtgateKey, vtgateCA, vtgateCRL, vtgateName)
 	tlsOpt, err := grpcclient.SecureDialOption(vtgateCert, vtgateKey, vtgateCA, vtgateCRL, vtgateName)
 	if err != nil {
 		return fmt.Errorf("error getting TLS dial option: %w", err)
@@ -179,6 +180,7 @@ func (vtgate *VTGateProxy) dial(ctx context.Context, target string, opts ...grpc
 		GRPCDialOptions: dialOpts,
 	}
 
+	log.Infof("Attempting vtgate connection: protocol=%s, address=%s, target=%s, dialOpts count=%d", conf.Protocol, conf.Address, conf.Target, len(dialOpts))
 	vtgate.conn, err = vtgate.dialFunc(conf)
 	if err != nil {
 		return fmt.Errorf("error dialing vtgate: %w", err)
