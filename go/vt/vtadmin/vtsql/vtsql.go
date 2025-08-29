@@ -21,6 +21,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"text/tabwriter"
@@ -160,8 +161,32 @@ func (vtgate *VTGateProxy) dial(ctx context.Context, target string, opts ...grpc
 	vtadminproto.AnnotateClusterSpan(vtgate.cluster, span)
 	span.Annotate("is_using_credentials", vtgate.creds != nil)
 
-	// Get TLS configuration from vtgate-specific flags
+	// Get TLS configuration from vtgate-specific flags  
 	log.Infof("vtgate TLS config: cert=%s, key=%s, ca=%s, crl=%s, name=%s", vtgateCert, vtgateKey, vtgateCA, vtgateCRL, vtgateName)
+	
+	// Verify certificate files exist
+	if vtgateCert != "" {
+		if _, err := os.Stat(vtgateCert); os.IsNotExist(err) {
+			log.Errorf("vtgate client cert file does not exist: %s", vtgateCert)
+		} else {
+			log.Infof("vtgate client cert file exists: %s", vtgateCert)
+		}
+	}
+	if vtgateKey != "" {
+		if _, err := os.Stat(vtgateKey); os.IsNotExist(err) {
+			log.Errorf("vtgate client key file does not exist: %s", vtgateKey)
+		} else {
+			log.Infof("vtgate client key file exists: %s", vtgateKey)
+		}
+	}
+	if vtgateCA != "" {
+		if _, err := os.Stat(vtgateCA); os.IsNotExist(err) {
+			log.Errorf("vtgate CA file does not exist: %s", vtgateCA)
+		} else {
+			log.Infof("vtgate CA file exists: %s", vtgateCA)
+		}
+	}
+	
 	tlsOpt, err := grpcclient.SecureDialOption(vtgateCert, vtgateKey, vtgateCA, vtgateCRL, vtgateName)
 	if err != nil {
 		return fmt.Errorf("error getting TLS dial option: %w", err)
