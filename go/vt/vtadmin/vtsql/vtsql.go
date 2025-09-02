@@ -29,6 +29,7 @@ import (
 	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
 	grpcresolver "google.golang.org/grpc/resolver"
+	"vitess.io/vitess/go/vt/grpcclient"
 	"vitess.io/vitess/go/vt/utils"
 
 	"vitess.io/vitess/go/trace"
@@ -160,8 +161,14 @@ func (vtgate *VTGateProxy) dial(ctx context.Context, target string, opts ...grpc
 	vtadminproto.AnnotateClusterSpan(vtgate.cluster, span)
 	span.Annotate("is_using_credentials", vtgate.creds != nil)
 
+	// Get TLS configuration from vtgate-specific flags
+	tlsOpt, err := grpcclient.SecureDialOption(vtgateCert, vtgateKey, vtgateCA, vtgateCRL, vtgateName)
+	if err != nil {
+		return fmt.Errorf("error getting TLS dial option: %w", err)
+	}
+
 	// Combine user-provided opts with resolver options
-	dialOpts := append(opts, grpc.WithResolvers(vtgate.resolver))
+	dialOpts := append(opts, tlsOpt, grpc.WithResolvers(vtgate.resolver))
 
 	conf := vitessdriver.Configuration{
 		Protocol:        fmt.Sprintf("grpc_%s", vtgate.cluster.Id),

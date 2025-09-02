@@ -122,8 +122,8 @@ func Test_dial_options_handling(t *testing.T) {
 	assert.Equal(t, "grpc_test", capturedConfig.Protocol)
 	assert.Equal(t, "test-target", capturedConfig.Target)
 	
-	// Check that dial options include both user options and resolver
-	require.Len(t, capturedConfig.GRPCDialOptions, 3) // 2 user opts + 1 resolver opt
+	// Check that dial options include user options, TLS option, and resolver
+	require.Len(t, capturedConfig.GRPCDialOptions, 4) // 2 user opts + 1 TLS opt + 1 resolver opt
 	
 	// The test verifies that user-provided options are preserved
 	// and that resolver options are properly combined
@@ -161,8 +161,8 @@ func Test_dial_with_credentials(t *testing.T) {
 
 	// When credentials are provided, they should be prepended to dial options
 	assert.NotEmpty(t, capturedConfig.GRPCDialOptions)
-	// First option should be the credential option, followed by resolver option
-	require.Len(t, capturedConfig.GRPCDialOptions, 2) // creds + resolver
+	// First option should be the credential option, followed by TLS option and resolver option
+	require.Len(t, capturedConfig.GRPCDialOptions, 3) // creds + TLS + resolver
 }
 
 // mockGRPCResolver is a mock implementation of grpcresolver.Builder for testing
