@@ -26,8 +26,10 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"github.com/spf13/pflag"
 	"google.golang.org/grpc"
 	grpcresolver "google.golang.org/grpc/resolver"
+	"vitess.io/vitess/go/vt/utils"
 
 	"vitess.io/vitess/go/trace"
 	"vitess.io/vitess/go/vt/callerid"
@@ -41,6 +43,23 @@ import (
 	vtadminpb "vitess.io/vitess/go/vt/proto/vtadmin"
 	_ "vitess.io/vitess/go/vt/vtgate/grpcvtgateconn" // Import for TLS flag registration
 )
+
+var (
+	vtgateCert string
+	vtgateKey  string
+	vtgateCA   string
+	vtgateCRL  string
+	vtgateName string
+)
+
+// RegisterVtgateFlags registers vtgate gRPC TLS flags for vtadmin
+func RegisterVtgateFlags(fs *pflag.FlagSet) {
+	utils.SetFlagStringVar(fs, &vtgateCert, "vtgate-grpc-cert", "", "the cert to use to connect to vtgate")
+	utils.SetFlagStringVar(fs, &vtgateKey, "vtgate-grpc-key", "", "the key to use to connect to vtgate")
+	utils.SetFlagStringVar(fs, &vtgateCA, "vtgate-grpc-ca", "", "the server ca to use to validate vtgate servers when connecting")
+	utils.SetFlagStringVar(fs, &vtgateCRL, "vtgate-grpc-crl", "", "the server crl to use to validate vtgate server certificates when connecting")
+	utils.SetFlagStringVar(fs, &vtgateName, "vtgate-grpc-server-name", "", "the server name to use to validate vtgate server certificate")
+}
 
 // DB defines the connection and query interface of vitess SQL queries used by
 // VTAdmin clusters.
