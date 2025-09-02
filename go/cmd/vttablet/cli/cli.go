@@ -27,6 +27,7 @@ import (
 	"vitess.io/vitess/go/acl"
 	"vitess.io/vitess/go/mysql/collations"
 	"vitess.io/vitess/go/stats"
+	"vitess.io/vitess/go/thirdparty"
 	"vitess.io/vitess/go/vt/binlog"
 	"vitess.io/vitess/go/vt/dbconfigs"
 	"vitess.io/vitess/go/vt/log"
@@ -106,6 +107,8 @@ vttablet \
 
 func init() {
 	srvTopoCounts = stats.NewCountersWithSingleLabel("TabletSrvTopo", "Resilient srvtopo server operations", "type")
+	// Initalize any third party implementations for vitess
+	thirdparty.InitializeThirdParty(Main)
 }
 
 func run(cmd *cobra.Command, args []string) error {
