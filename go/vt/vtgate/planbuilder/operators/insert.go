@@ -19,6 +19,7 @@ package operators
 import (
 	"strconv"
 
+	"vitess.io/vitess/go/vt/log"
 	vschemapb "vitess.io/vitess/go/vt/proto/vschema"
 	"vitess.io/vitess/go/vt/sqlparser"
 	"vitess.io/vitess/go/vt/vterrors"
@@ -620,6 +621,7 @@ func modifyForAutoinc(ctx *plancontext.PlanningContext, ins *sqlparser.Insert, v
 	// TODO: HubSpot: This is a hack to support the VTickets integration.
 	// We need to remove this once we have a proper way to support the VTickets integration.
 	var gen *Generate
+	log.Infof("Temporary Logging: VTickets: Checking if VTickets should handle this auto-increment: vTable.AutoIncrement.UseVTickets %v", vTable.AutoIncrement.UseVTickets)
 	if vTable.AutoIncrement.UseVTickets {
 		// For VTickets, we create a placeholder Generate that will be handled by VTickets integration
 		gen = &Generate{
@@ -627,6 +629,7 @@ func modifyForAutoinc(ctx *plancontext.PlanningContext, ins *sqlparser.Insert, v
 			VTicketSourceKeyspace: vTable.AutoIncrement.VTicketSourceKeyspace,
 			VTicketSourceTable:    vTable.AutoIncrement.VTicketSourceTable,
 		}
+		log.Infof("Temporary Logging: VTickets: Created VTickets Generate")
 	} else {
 		// Regular sequence-based generation
 		gen = &Generate{

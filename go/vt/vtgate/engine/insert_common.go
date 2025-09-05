@@ -24,6 +24,7 @@ import (
 	"strings"
 
 	"vitess.io/vitess/go/mysql/collations"
+	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/sqlparser"
 
 	"vitess.io/vitess/go/sqltypes"
@@ -416,6 +417,7 @@ func (ic *InsertCommon) processGenerateFromValues(
 	// TODO: HubSpot: This is a hack to support the VTickets integration.
 	// We need to remove this once we have a proper way to support the VTickets integration.
 	// Check if VTickets should handle this auto-increment
+	log.Infof("Temporary Logging: VTickets: Checking if VTickets should handle this auto-increment: ic.Generate.UseVTickets %v", ic.Generate.UseVTickets)
 	if ic.Generate.UseVTickets {
 		if hook := vtickets.GetHook(); hook != nil {
 			handled, insertID, err := hook.ProcessVTickets(
