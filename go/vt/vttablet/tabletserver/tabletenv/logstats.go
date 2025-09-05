@@ -28,6 +28,7 @@ import (
 	"vitess.io/vitess/go/logstats"
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/streamlog"
+	summaryStats "vitess.io/vitess/go/thirdparty/hubspot/stats"
 	"vitess.io/vitess/go/vt/callerid"
 	"vitess.io/vitess/go/vt/callinfo"
 
@@ -81,6 +82,7 @@ func NewLogStats(ctx context.Context, methodName string, config streamlog.QueryL
 func (stats *LogStats) Send() {
 	stats.EndTime = time.Now()
 	StatsLogger.Send(stats)
+	summaryStats.SummaryStatistics.RecordStats(stats)
 }
 
 // ImmediateCaller returns the immediate caller stored in LogStats.Ctx
@@ -109,6 +111,18 @@ func (stats *LogStats) AddRewrittenSQL(sql string, start time.Time) {
 // TotalTime returns how long this query has been running
 func (stats *LogStats) TotalTime() time.Duration {
 	return stats.EndTime.Sub(stats.StartTime)
+}
+
+// GetMysqlResponseTime returns the time spent querying MySQL
+// This method implements the QueryStats interface
+func (stats *LogStats) GetMysqlResponseTime() time.Duration {
+	return stats.MysqlResponseTime
+}
+
+// GetWaitingForConnection returns the time spent waiting for a connection
+// This method implements the QueryStats interface
+func (stats *LogStats) GetWaitingForConnection() time.Duration {
+	return stats.WaitingForConnection
 }
 
 // RewrittenSQL returns a semicolon separated list of SQL statements
@@ -248,3 +262,6 @@ func (stats *LogStats) Logf(w io.Writer, params url.Values) error {
 
 	return log.Flush(w)
 }
+
+// Compile-time check to ensure LogStats implements QueryStats interface
+var _ summaryStats.QueryStats = (*LogStats)(nil)
