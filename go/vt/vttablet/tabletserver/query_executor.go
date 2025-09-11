@@ -51,6 +51,22 @@ import (
 	"vitess.io/vitess/go/vt/vttablet/tabletserver/tx"
 )
 
+// VTicketSequenceGenerator provides an interface for vticket sequence generation
+// This interface allows the vtickets package to register a handler without creating circular imports
+type VTicketSequenceGenerator interface {
+	GenerateSequenceIDs(ctx context.Context, keyspace, originalTable, sourceKeyspace, sourceTable string, count int64) (startID int64, err error)
+}
+
+var (
+	// Global vticket sequence generator, set by the vtickets package
+	vticketsSequenceGenerator VTicketSequenceGenerator
+)
+
+// RegisterVTicketSequenceGenerator allows the vtickets package to register its sequence generator
+func RegisterVTicketSequenceGenerator(generator VTicketSequenceGenerator) {
+	vticketsSequenceGenerator = generator
+}
+
 // QueryExecutor is used for executing a query request.
 type QueryExecutor struct {
 	query          string
@@ -668,6 +684,12 @@ func (qre *QueryExecutor) execNextval() (*sqltypes.Result, error) {
 	t := qre.plan.Table
 	t.SequenceInfo.Lock()
 	defer t.SequenceInfo.Unlock()
+
+	// Check if this sequence should use vtickets instead
+	if t.SequenceInfo.UseVTickets {
+		return qre.execVTicketNextval(t, inc)
+	}
+
 	if t.SequenceInfo.NextVal == 0 || t.SequenceInfo.NextVal+inc > t.SequenceInfo.LastVal {
 		_, err := qre.execAsTransaction(func(conn *StatefulConnection) (*sqltypes.Result, error) {
 			query := fmt.Sprintf("select next_id, cache from %s where id = 0 for update", sqlparser.String(tableName))
@@ -722,6 +744,34 @@ func (qre *QueryExecutor) execNextval() (*sqltypes.Result, error) {
 		Fields: sequenceFields,
 		Rows: [][]sqltypes.Value{{
 			sqltypes.NewInt64(ret),
+		}},
+	}, nil
+}
+
+// execVTicketNextval generates IDs using vtickets service instead of traditional sequences
+func (qre *QueryExecutor) execVTicketNextval(t *eschema.Table, inc int64) (*sqltypes.Result, error) {
+	if vticketsSequenceGenerator == nil {
+		return nil, vterrors.Errorf(vtrpcpb.Code_UNIMPLEMENTED, "vtickets sequence generator not available")
+	}
+
+	// Use the registered vtickets sequence generator
+	startID, err := vticketsSequenceGenerator.GenerateSequenceIDs(
+		qre.ctx,
+		qre.tsv.GetKeyspace(),
+		t.Name.String(),
+		t.SequenceInfo.VTicketSourceKeyspace,
+		t.SequenceInfo.VTicketSourceTable,
+		inc,
+	)
+
+	if err != nil {
+		return nil, vterrors.Errorf(vtrpcpb.Code_INTERNAL, "failed to generate vtickets: %v", err)
+	}
+
+	return &sqltypes.Result{
+		Fields: sequenceFields,
+		Rows: [][]sqltypes.Value{{
+			sqltypes.NewInt64(startID),
 		}},
 	}, nil
 }

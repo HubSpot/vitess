@@ -71,6 +71,22 @@ type SequenceInfo struct {
 	sync.Mutex
 	NextVal int64
 	LastVal int64
+
+	// VTickets configuration
+	UseVTickets           bool
+	VTicketSourceKeyspace string
+	VTicketSourceTable    string
+
+	// VTickets cache - similar to sequence cache but for vticket ranges
+	VTicketRanges []VTicketRange
+	VTicketIndex  int
+}
+
+// VTicketRange represents a cached range of vticket IDs
+type VTicketRange struct {
+	Lower   int64
+	Upper   int64
+	Current int64
 }
 
 // Reset clears the cache for the sequence. This is called to ensure that we always start with a fresh cache,

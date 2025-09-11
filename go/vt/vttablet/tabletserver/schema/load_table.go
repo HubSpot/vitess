@@ -28,6 +28,7 @@ import (
 	"vitess.io/vitess/go/vt/mysqlctl"
 	"vitess.io/vitess/go/vt/mysqlctl/tmutils"
 	querypb "vitess.io/vitess/go/vt/proto/query"
+	vschemapb "vitess.io/vitess/go/vt/proto/vschema"
 	"vitess.io/vitess/go/vt/sqlparser"
 	"vitess.io/vitess/go/vt/vtgate/evalengine"
 	"vitess.io/vitess/go/vt/vttablet/tabletserver/connpool"
@@ -48,6 +49,7 @@ func LoadTable(conn *connpool.PooledConn, databaseName, tableName, tableType str
 	case strings.Contains(comment, "vitess_sequence"):
 		ta.Type = Sequence
 		ta.SequenceInfo = &SequenceInfo{}
+		// VTickets configuration will be populated from VSchema during post-processing
 	case strings.Contains(comment, "vitess_message"):
 		if err := loadMessageInfo(ta, comment, collationEnv); err != nil {
 			return nil, err
@@ -55,6 +57,43 @@ func LoadTable(conn *connpool.PooledConn, databaseName, tableName, tableType str
 		ta.Type = Message
 	}
 	return ta, nil
+}
+
+// PopulateVTicketsFromVSchema populates VTickets configuration for sequence tables from VSchema
+// This should be called after tables are loaded to apply VSchema AutoIncrement configurations
+func PopulateVTicketsFromVSchema(tables map[string]*Table, vschema *vschemapb.Keyspace, keyspaceName string) {
+	if vschema == nil || vschema.Tables == nil {
+		return
+	}
+
+	for tableName, table := range tables {
+		if table.Type != Sequence || table.SequenceInfo == nil {
+			continue
+		}
+
+		// Find corresponding VSchema table configuration
+		if vschemaTable, exists := vschema.Tables[tableName]; exists && vschemaTable.AutoIncrement != nil {
+			autoInc := vschemaTable.AutoIncrement
+
+			if autoInc.UseVTickets {
+				table.SequenceInfo.UseVTickets = true
+
+				// Set source keyspace (defaults to current keyspace)
+				if autoInc.VTicketSourceKeyspace != "" {
+					table.SequenceInfo.VTicketSourceKeyspace = autoInc.VTicketSourceKeyspace
+				} else {
+					table.SequenceInfo.VTicketSourceKeyspace = keyspaceName
+				}
+
+				// Set source table (defaults to current table name)
+				if autoInc.VTicketSourceTable != "" {
+					table.SequenceInfo.VTicketSourceTable = autoInc.VTicketSourceTable
+				} else {
+					table.SequenceInfo.VTicketSourceTable = tableName
+				}
+			}
+		}
+	}
 }
 
 func fetchColumns(ta *Table, conn *connpool.PooledConn, databaseName, sqlTableName string) error {

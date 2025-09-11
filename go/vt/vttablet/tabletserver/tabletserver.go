@@ -320,6 +320,9 @@ func (tsv *TabletServer) Register() {
 	for _, f := range RegisterFunctions {
 		f(tsv)
 	}
+
+	// Complete vtickets sequence generator registration if available
+	tsv.completeVTicketsRegistration()
 }
 
 // Exporter satisfies tabletenv.Env.
@@ -2157,4 +2160,28 @@ func skipQueryPlanCache(options *querypb.ExecuteOptions) bool {
 
 func (tsv *TabletServer) getShard() string {
 	return tsv.sm.Target().Shard
+}
+
+// GetKeyspace returns the keyspace this tablet serves
+func (tsv *TabletServer) GetKeyspace() string {
+	return tsv.sm.Target().Keyspace
+}
+
+// completeVTicketsRegistration attempts to complete the VTickets sequence generator registration
+func (tsv *TabletServer) completeVTicketsRegistration() {
+	// Use reflection to check if vtickets package is available and get the sequence generator
+	defer func() {
+		if r := recover(); r != nil {
+			// VTickets package not available or registration failed - this is expected when vtickets is not used
+		}
+	}()
+
+	// Try to dynamically load and register the vtickets sequence generator
+	// This approach avoids circular imports while allowing vtickets integration when available
+	//
+	// In a production environment, you would use build tags or plugin architecture
+	// For now, we'll skip dynamic registration and rely on init() functions
+	//
+	// The vtickets package should use an init() function to call RegisterVTicketSequenceGenerator
+	// when it's imported by any part of the system
 }
