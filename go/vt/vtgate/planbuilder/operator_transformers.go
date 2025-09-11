@@ -717,10 +717,13 @@ func autoIncGenerate(gen *operators.Generate) *engine.Generate {
 	}
 	selNext.AddSelectExpr(&sqlparser.Nextval{Expr: &sqlparser.Argument{Name: "n", Type: sqltypes.Int64}})
 	return &engine.Generate{
-		Keyspace: gen.Keyspace,
-		Query:    sqlparser.String(selNext),
-		Values:   gen.Values,
-		Offset:   gen.Offset,
+		Keyspace:              gen.Keyspace,
+		Query:                 sqlparser.String(selNext),
+		Values:                gen.Values,
+		Offset:                gen.Offset,
+		UseVTickets:           gen.UseVTickets,
+		VTicketSourceKeyspace: gen.VTicketSourceKeyspace,
+		VTicketSourceTable:    gen.VTicketSourceTable,
 	}
 }
 

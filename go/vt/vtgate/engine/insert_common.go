@@ -419,6 +419,7 @@ func (ic *InsertCommon) processGenerateFromValues(
 	// Check if VTickets should handle this auto-increment
 	log.Infof("Temporary Logging: VTickets: Checking if VTickets should handle this auto-increment: ic.Generate.UseVTickets %v", ic.Generate.UseVTickets)
 	if ic.Generate.UseVTickets {
+		log.Infof("Temporary Logging: Using VTickets to generate values")
 		if hook := vtickets.GetHook(); hook != nil {
 			handled, insertID, err := hook.ProcessVTickets(
 				ctx,
