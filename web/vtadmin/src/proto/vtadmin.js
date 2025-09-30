@@ -99963,6 +99963,7 @@ export const query = $root.query = (() => {
          * @property {number|Long|null} [authoritative_timeout] ExecuteOptions authoritative_timeout
          * @property {boolean|null} [fetch_last_insert_id] ExecuteOptions fetch_last_insert_id
          * @property {boolean|null} [in_dml_execution] ExecuteOptions in_dml_execution
+         * @property {number|Long|null} [transaction_timeout] ExecuteOptions transaction_timeout
          */
 
         /**
@@ -100101,6 +100102,14 @@ export const query = $root.query = (() => {
          */
         ExecuteOptions.prototype.in_dml_execution = false;
 
+        /**
+         * ExecuteOptions transaction_timeout.
+         * @member {number|Long|null|undefined} transaction_timeout
+         * @memberof query.ExecuteOptions
+         * @instance
+         */
+        ExecuteOptions.prototype.transaction_timeout = null;
+
         // OneOf field names bound to virtual getters and setters
         let $oneOfFields;
 
@@ -100112,6 +100121,12 @@ export const query = $root.query = (() => {
          */
         Object.defineProperty(ExecuteOptions.prototype, "timeout", {
             get: $util.oneOfGetter($oneOfFields = ["authoritative_timeout"]),
+            set: $util.oneOfSetter($oneOfFields)
+        });
+
+        // Virtual OneOf for proto3 optional field
+        Object.defineProperty(ExecuteOptions.prototype, "_transaction_timeout", {
+            get: $util.oneOfGetter($oneOfFields = ["transaction_timeout"]),
             set: $util.oneOfSetter($oneOfFields)
         });
 
@@ -100173,6 +100188,8 @@ export const query = $root.query = (() => {
                 writer.uint32(/* id 18, wireType 0 =*/144).bool(message.fetch_last_insert_id);
             if (message.in_dml_execution != null && Object.hasOwnProperty.call(message, "in_dml_execution"))
                 writer.uint32(/* id 19, wireType 0 =*/152).bool(message.in_dml_execution);
+            if (message.transaction_timeout != null && Object.hasOwnProperty.call(message, "transaction_timeout"))
+                writer.uint32(/* id 20, wireType 0 =*/160).int64(message.transaction_timeout);
             return writer;
         };
 
@@ -100272,6 +100289,10 @@ export const query = $root.query = (() => {
                     }
                 case 19: {
                         message.in_dml_execution = reader.bool();
+                        break;
+                    }
+                case 20: {
+                        message.transaction_timeout = reader.int64();
                         break;
                     }
                 default:
@@ -100408,6 +100429,11 @@ export const query = $root.query = (() => {
             if (message.in_dml_execution != null && message.hasOwnProperty("in_dml_execution"))
                 if (typeof message.in_dml_execution !== "boolean")
                     return "in_dml_execution: boolean expected";
+            if (message.transaction_timeout != null && message.hasOwnProperty("transaction_timeout")) {
+                properties._transaction_timeout = 1;
+                if (!$util.isInteger(message.transaction_timeout) && !(message.transaction_timeout && $util.isInteger(message.transaction_timeout.low) && $util.isInteger(message.transaction_timeout.high)))
+                    return "transaction_timeout: integer|Long expected";
+            }
             return null;
         };
 
@@ -100624,6 +100650,15 @@ export const query = $root.query = (() => {
                 message.fetch_last_insert_id = Boolean(object.fetch_last_insert_id);
             if (object.in_dml_execution != null)
                 message.in_dml_execution = Boolean(object.in_dml_execution);
+            if (object.transaction_timeout != null)
+                if ($util.Long)
+                    (message.transaction_timeout = $util.Long.fromValue(object.transaction_timeout)).unsigned = false;
+                else if (typeof object.transaction_timeout === "string")
+                    message.transaction_timeout = parseInt(object.transaction_timeout, 10);
+                else if (typeof object.transaction_timeout === "number")
+                    message.transaction_timeout = object.transaction_timeout;
+                else if (typeof object.transaction_timeout === "object")
+                    message.transaction_timeout = new $util.LongBits(object.transaction_timeout.low >>> 0, object.transaction_timeout.high >>> 0).toNumber();
             return message;
         };
 
@@ -100703,6 +100738,14 @@ export const query = $root.query = (() => {
                 object.fetch_last_insert_id = message.fetch_last_insert_id;
             if (message.in_dml_execution != null && message.hasOwnProperty("in_dml_execution"))
                 object.in_dml_execution = message.in_dml_execution;
+            if (message.transaction_timeout != null && message.hasOwnProperty("transaction_timeout")) {
+                if (typeof message.transaction_timeout === "number")
+                    object.transaction_timeout = options.longs === String ? String(message.transaction_timeout) : message.transaction_timeout;
+                else
+                    object.transaction_timeout = options.longs === String ? $util.Long.prototype.toString.call(message.transaction_timeout) : options.longs === Number ? new $util.LongBits(message.transaction_timeout.low >>> 0, message.transaction_timeout.high >>> 0).toNumber() : message.transaction_timeout;
+                if (options.oneofs)
+                    object._transaction_timeout = "transaction_timeout";
+            }
             return object;
         };
 
