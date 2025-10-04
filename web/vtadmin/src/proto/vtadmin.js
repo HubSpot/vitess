@@ -64864,6 +64864,384 @@ export const tabletmanagerdata = $root.tabletmanagerdata = (() => {
         return StartReplicationResponse;
     })();
 
+    tabletmanagerdata.RestartReplicationRequest = (function() {
+
+        /**
+         * Properties of a RestartReplicationRequest.
+         * @memberof tabletmanagerdata
+         * @interface IRestartReplicationRequest
+         * @property {boolean|null} [semiSync] RestartReplicationRequest semiSync
+         */
+
+        /**
+         * Constructs a new RestartReplicationRequest.
+         * @memberof tabletmanagerdata
+         * @classdesc Represents a RestartReplicationRequest.
+         * @implements IRestartReplicationRequest
+         * @constructor
+         * @param {tabletmanagerdata.IRestartReplicationRequest=} [properties] Properties to set
+         */
+        function RestartReplicationRequest(properties) {
+            if (properties)
+                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * RestartReplicationRequest semiSync.
+         * @member {boolean} semiSync
+         * @memberof tabletmanagerdata.RestartReplicationRequest
+         * @instance
+         */
+        RestartReplicationRequest.prototype.semiSync = false;
+
+        /**
+         * Creates a new RestartReplicationRequest instance using the specified properties.
+         * @function create
+         * @memberof tabletmanagerdata.RestartReplicationRequest
+         * @static
+         * @param {tabletmanagerdata.IRestartReplicationRequest=} [properties] Properties to set
+         * @returns {tabletmanagerdata.RestartReplicationRequest} RestartReplicationRequest instance
+         */
+        RestartReplicationRequest.create = function create(properties) {
+            return new RestartReplicationRequest(properties);
+        };
+
+        /**
+         * Encodes the specified RestartReplicationRequest message. Does not implicitly {@link tabletmanagerdata.RestartReplicationRequest.verify|verify} messages.
+         * @function encode
+         * @memberof tabletmanagerdata.RestartReplicationRequest
+         * @static
+         * @param {tabletmanagerdata.IRestartReplicationRequest} message RestartReplicationRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        RestartReplicationRequest.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            if (message.semiSync != null && Object.hasOwnProperty.call(message, "semiSync"))
+                writer.uint32(/* id 1, wireType 0 =*/8).bool(message.semiSync);
+            return writer;
+        };
+
+        /**
+         * Encodes the specified RestartReplicationRequest message, length delimited. Does not implicitly {@link tabletmanagerdata.RestartReplicationRequest.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof tabletmanagerdata.RestartReplicationRequest
+         * @static
+         * @param {tabletmanagerdata.IRestartReplicationRequest} message RestartReplicationRequest message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        RestartReplicationRequest.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a RestartReplicationRequest message from the specified reader or buffer.
+         * @function decode
+         * @memberof tabletmanagerdata.RestartReplicationRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {tabletmanagerdata.RestartReplicationRequest} RestartReplicationRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        RestartReplicationRequest.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tabletmanagerdata.RestartReplicationRequest();
+            while (reader.pos < end) {
+                let tag = reader.uint32();
+                switch (tag >>> 3) {
+                case 1: {
+                        message.semiSync = reader.bool();
+                        break;
+                    }
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a RestartReplicationRequest message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof tabletmanagerdata.RestartReplicationRequest
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {tabletmanagerdata.RestartReplicationRequest} RestartReplicationRequest
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        RestartReplicationRequest.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a RestartReplicationRequest message.
+         * @function verify
+         * @memberof tabletmanagerdata.RestartReplicationRequest
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        RestartReplicationRequest.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            if (message.semiSync != null && message.hasOwnProperty("semiSync"))
+                if (typeof message.semiSync !== "boolean")
+                    return "semiSync: boolean expected";
+            return null;
+        };
+
+        /**
+         * Creates a RestartReplicationRequest message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof tabletmanagerdata.RestartReplicationRequest
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {tabletmanagerdata.RestartReplicationRequest} RestartReplicationRequest
+         */
+        RestartReplicationRequest.fromObject = function fromObject(object) {
+            if (object instanceof $root.tabletmanagerdata.RestartReplicationRequest)
+                return object;
+            let message = new $root.tabletmanagerdata.RestartReplicationRequest();
+            if (object.semiSync != null)
+                message.semiSync = Boolean(object.semiSync);
+            return message;
+        };
+
+        /**
+         * Creates a plain object from a RestartReplicationRequest message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof tabletmanagerdata.RestartReplicationRequest
+         * @static
+         * @param {tabletmanagerdata.RestartReplicationRequest} message RestartReplicationRequest
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        RestartReplicationRequest.toObject = function toObject(message, options) {
+            if (!options)
+                options = {};
+            let object = {};
+            if (options.defaults)
+                object.semiSync = false;
+            if (message.semiSync != null && message.hasOwnProperty("semiSync"))
+                object.semiSync = message.semiSync;
+            return object;
+        };
+
+        /**
+         * Converts this RestartReplicationRequest to JSON.
+         * @function toJSON
+         * @memberof tabletmanagerdata.RestartReplicationRequest
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        RestartReplicationRequest.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the default type url for RestartReplicationRequest
+         * @function getTypeUrl
+         * @memberof tabletmanagerdata.RestartReplicationRequest
+         * @static
+         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns {string} The default type url
+         */
+        RestartReplicationRequest.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+            if (typeUrlPrefix === undefined) {
+                typeUrlPrefix = "type.googleapis.com";
+            }
+            return typeUrlPrefix + "/tabletmanagerdata.RestartReplicationRequest";
+        };
+
+        return RestartReplicationRequest;
+    })();
+
+    tabletmanagerdata.RestartReplicationResponse = (function() {
+
+        /**
+         * Properties of a RestartReplicationResponse.
+         * @memberof tabletmanagerdata
+         * @interface IRestartReplicationResponse
+         */
+
+        /**
+         * Constructs a new RestartReplicationResponse.
+         * @memberof tabletmanagerdata
+         * @classdesc Represents a RestartReplicationResponse.
+         * @implements IRestartReplicationResponse
+         * @constructor
+         * @param {tabletmanagerdata.IRestartReplicationResponse=} [properties] Properties to set
+         */
+        function RestartReplicationResponse(properties) {
+            if (properties)
+                for (let keys = Object.keys(properties), i = 0; i < keys.length; ++i)
+                    if (properties[keys[i]] != null)
+                        this[keys[i]] = properties[keys[i]];
+        }
+
+        /**
+         * Creates a new RestartReplicationResponse instance using the specified properties.
+         * @function create
+         * @memberof tabletmanagerdata.RestartReplicationResponse
+         * @static
+         * @param {tabletmanagerdata.IRestartReplicationResponse=} [properties] Properties to set
+         * @returns {tabletmanagerdata.RestartReplicationResponse} RestartReplicationResponse instance
+         */
+        RestartReplicationResponse.create = function create(properties) {
+            return new RestartReplicationResponse(properties);
+        };
+
+        /**
+         * Encodes the specified RestartReplicationResponse message. Does not implicitly {@link tabletmanagerdata.RestartReplicationResponse.verify|verify} messages.
+         * @function encode
+         * @memberof tabletmanagerdata.RestartReplicationResponse
+         * @static
+         * @param {tabletmanagerdata.IRestartReplicationResponse} message RestartReplicationResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        RestartReplicationResponse.encode = function encode(message, writer) {
+            if (!writer)
+                writer = $Writer.create();
+            return writer;
+        };
+
+        /**
+         * Encodes the specified RestartReplicationResponse message, length delimited. Does not implicitly {@link tabletmanagerdata.RestartReplicationResponse.verify|verify} messages.
+         * @function encodeDelimited
+         * @memberof tabletmanagerdata.RestartReplicationResponse
+         * @static
+         * @param {tabletmanagerdata.IRestartReplicationResponse} message RestartReplicationResponse message or plain object to encode
+         * @param {$protobuf.Writer} [writer] Writer to encode to
+         * @returns {$protobuf.Writer} Writer
+         */
+        RestartReplicationResponse.encodeDelimited = function encodeDelimited(message, writer) {
+            return this.encode(message, writer).ldelim();
+        };
+
+        /**
+         * Decodes a RestartReplicationResponse message from the specified reader or buffer.
+         * @function decode
+         * @memberof tabletmanagerdata.RestartReplicationResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @param {number} [length] Message length if known beforehand
+         * @returns {tabletmanagerdata.RestartReplicationResponse} RestartReplicationResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        RestartReplicationResponse.decode = function decode(reader, length) {
+            if (!(reader instanceof $Reader))
+                reader = $Reader.create(reader);
+            let end = length === undefined ? reader.len : reader.pos + length, message = new $root.tabletmanagerdata.RestartReplicationResponse();
+            while (reader.pos < end) {
+                let tag = reader.uint32();
+                switch (tag >>> 3) {
+                default:
+                    reader.skipType(tag & 7);
+                    break;
+                }
+            }
+            return message;
+        };
+
+        /**
+         * Decodes a RestartReplicationResponse message from the specified reader or buffer, length delimited.
+         * @function decodeDelimited
+         * @memberof tabletmanagerdata.RestartReplicationResponse
+         * @static
+         * @param {$protobuf.Reader|Uint8Array} reader Reader or buffer to decode from
+         * @returns {tabletmanagerdata.RestartReplicationResponse} RestartReplicationResponse
+         * @throws {Error} If the payload is not a reader or valid buffer
+         * @throws {$protobuf.util.ProtocolError} If required fields are missing
+         */
+        RestartReplicationResponse.decodeDelimited = function decodeDelimited(reader) {
+            if (!(reader instanceof $Reader))
+                reader = new $Reader(reader);
+            return this.decode(reader, reader.uint32());
+        };
+
+        /**
+         * Verifies a RestartReplicationResponse message.
+         * @function verify
+         * @memberof tabletmanagerdata.RestartReplicationResponse
+         * @static
+         * @param {Object.<string,*>} message Plain object to verify
+         * @returns {string|null} `null` if valid, otherwise the reason why it is not
+         */
+        RestartReplicationResponse.verify = function verify(message) {
+            if (typeof message !== "object" || message === null)
+                return "object expected";
+            return null;
+        };
+
+        /**
+         * Creates a RestartReplicationResponse message from a plain object. Also converts values to their respective internal types.
+         * @function fromObject
+         * @memberof tabletmanagerdata.RestartReplicationResponse
+         * @static
+         * @param {Object.<string,*>} object Plain object
+         * @returns {tabletmanagerdata.RestartReplicationResponse} RestartReplicationResponse
+         */
+        RestartReplicationResponse.fromObject = function fromObject(object) {
+            if (object instanceof $root.tabletmanagerdata.RestartReplicationResponse)
+                return object;
+            return new $root.tabletmanagerdata.RestartReplicationResponse();
+        };
+
+        /**
+         * Creates a plain object from a RestartReplicationResponse message. Also converts values to other types if specified.
+         * @function toObject
+         * @memberof tabletmanagerdata.RestartReplicationResponse
+         * @static
+         * @param {tabletmanagerdata.RestartReplicationResponse} message RestartReplicationResponse
+         * @param {$protobuf.IConversionOptions} [options] Conversion options
+         * @returns {Object.<string,*>} Plain object
+         */
+        RestartReplicationResponse.toObject = function toObject() {
+            return {};
+        };
+
+        /**
+         * Converts this RestartReplicationResponse to JSON.
+         * @function toJSON
+         * @memberof tabletmanagerdata.RestartReplicationResponse
+         * @instance
+         * @returns {Object.<string,*>} JSON object
+         */
+        RestartReplicationResponse.prototype.toJSON = function toJSON() {
+            return this.constructor.toObject(this, $protobuf.util.toJSONOptions);
+        };
+
+        /**
+         * Gets the default type url for RestartReplicationResponse
+         * @function getTypeUrl
+         * @memberof tabletmanagerdata.RestartReplicationResponse
+         * @static
+         * @param {string} [typeUrlPrefix] your custom typeUrlPrefix(default "type.googleapis.com")
+         * @returns {string} The default type url
+         */
+        RestartReplicationResponse.getTypeUrl = function getTypeUrl(typeUrlPrefix) {
+            if (typeUrlPrefix === undefined) {
+                typeUrlPrefix = "type.googleapis.com";
+            }
+            return typeUrlPrefix + "/tabletmanagerdata.RestartReplicationResponse";
+        };
+
+        return RestartReplicationResponse;
+    })();
+
     tabletmanagerdata.StartReplicationUntilAfterRequest = (function() {
 
         /**
