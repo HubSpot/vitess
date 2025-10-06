@@ -209,6 +209,9 @@ func (m *AutoIncrement) CloneVT() *AutoIncrement {
 	r := new(AutoIncrement)
 	r.Column = m.Column
 	r.Sequence = m.Sequence
+	r.UseVTickets = m.UseVTickets
+	r.VTicketSourceKeyspace = m.VTicketSourceKeyspace
+	r.VTicketSourceTable = m.VTicketSourceTable
 	if len(m.unknownFields) > 0 {
 		r.unknownFields = make([]byte, len(m.unknownFields))
 		copy(r.unknownFields, m.unknownFields)
@@ -904,6 +907,30 @@ func (m *AutoIncrement) MarshalToSizedBufferVT(dAtA []byte) (int, error) {
 	if m.unknownFields != nil {
 		i -= len(m.unknownFields)
 		copy(dAtA[i:], m.unknownFields)
+	}
+	if len(m.VTicketSourceTable) > 0 {
+		i -= len(m.VTicketSourceTable)
+		copy(dAtA[i:], m.VTicketSourceTable)
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VTicketSourceTable)))
+		i--
+		dAtA[i] = 0x2a
+	}
+	if len(m.VTicketSourceKeyspace) > 0 {
+		i -= len(m.VTicketSourceKeyspace)
+		copy(dAtA[i:], m.VTicketSourceKeyspace)
+		i = protohelpers.EncodeVarint(dAtA, i, uint64(len(m.VTicketSourceKeyspace)))
+		i--
+		dAtA[i] = 0x22
+	}
+	if m.UseVTickets {
+		i--
+		if m.UseVTickets {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i--
+		dAtA[i] = 0x18
 	}
 	if len(m.Sequence) > 0 {
 		i -= len(m.Sequence)
@@ -1608,6 +1635,17 @@ func (m *AutoIncrement) SizeVT() (n int) {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
 	l = len(m.Sequence)
+	if l > 0 {
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	if m.UseVTickets {
+		n += 2
+	}
+	l = len(m.VTicketSourceKeyspace)
+	if l > 0 {
+		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
+	}
+	l = len(m.VTicketSourceTable)
 	if l > 0 {
 		n += 1 + l + protohelpers.SizeOfVarint(uint64(l))
 	}
@@ -3264,6 +3302,90 @@ func (m *AutoIncrement) UnmarshalVT(dAtA []byte) error {
 				return io.ErrUnexpectedEOF
 			}
 			m.Sequence = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 3:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field UseVTickets", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.UseVTickets = bool(v != 0)
+		case 4:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field VTicketSourceKeyspace", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.VTicketSourceKeyspace = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 5:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field VTicketSourceTable", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return protohelpers.ErrIntOverflow
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return protohelpers.ErrInvalidLength
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.VTicketSourceTable = string(dAtA[iNdEx:postIndex])
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
