@@ -258,6 +258,11 @@ func NewTabletServer(ctx context.Context, env *vtenv.Environment, name string, c
 	tsv.registerThrottlerHandlers()
 	tsv.registerDebugEnvHandler()
 
+	// bind the topo server, schema engine, and is serving function to the external auto-increment ID service
+	externalAutoIncIDService.BindTopoServer(tsv.topoServer)
+	externalAutoIncIDService.BindSchemaEngine(tsv.se)
+	externalAutoIncIDService.BindIsServing(tsv.IsServing)
+
 	return tsv
 }
 

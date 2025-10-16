@@ -30,6 +30,7 @@ import (
 	"vitess.io/vitess/go/ptr"
 	"vitess.io/vitess/go/sqlescape"
 	"vitess.io/vitess/go/sqltypes"
+	"vitess.io/vitess/go/vt/log"
 	querypb "vitess.io/vitess/go/vt/proto/query"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vschemapb "vitess.io/vitess/go/vt/proto/vschema"
@@ -928,7 +929,25 @@ func resolveAutoIncrement(source *vschemapb.SrvVSchema, vschema *VSchema, parser
 			if t == nil || table.AutoIncrement == nil {
 				continue
 			}
-			seqks, seqtab, err := parser.ParseTable(table.AutoIncrement.Sequence)
+			var seqks, seqtab string
+			var err error
+			// For HubSpot VTickets, we want to hack alongside of sequences.  We'll inject enough info into the vtgate
+			// for the underlying sequence auto-incrementer parser/rewriter to work in the query planner
+			// Then in the vttablet we'll skip over Sequences and use VTickets to get the next ID value
+			if table.AutoIncrement.UseVTickets {
+				log.Infof("VTICKETS: VTickets is Enabled for table %s", tname)
+				// If VTicketSourceKeyspace is set then we are using a remote VTickets Source Table, so lets use both those values...
+				if table.AutoIncrement.VTicketSourceKeyspace != "" {
+					seqks = table.AutoIncrement.VTicketSourceKeyspace
+					seqtab = table.AutoIncrement.VTicketSourceTable
+				} else {
+					// Otherwise, we are using a local VTickets Source Table, so lets use the table name (and default to this keyspace)
+					seqks, seqtab = ksname, tname
+				}
+			} else {
+				// The original Vitess Sequence behavior
+				seqks, seqtab, err = parser.ParseTable(table.AutoIncrement.Sequence)
+			}
 			var seq *BaseTable
 			if err == nil {
 				// Ensure that sequence tables also obey routing rules.
