@@ -942,7 +942,7 @@ func resolveAutoIncrement(source *vschemapb.SrvVSchema, vschema *VSchema, parser
 					seqtab = table.AutoIncrement.VTicketSourceTable
 				} else {
 					// Otherwise, we are using a local VTickets Source Table, so lets use the table name (and default to this keyspace)
-					seqks, seqtab, err = parser.ParseTable(tname)
+					seqks, seqtab = ksname, tname
 				}
 			} else {
 				// The original Vitess Sequence behavior
@@ -953,6 +953,7 @@ func resolveAutoIncrement(source *vschemapb.SrvVSchema, vschema *VSchema, parser
 			if err == nil {
 				// Ensure that sequence tables also obey routing rules.
 				seq, err = vschema.FindRoutedTable(seqks, seqtab, topodatapb.TabletType_PRIMARY)
+				log.Infof("VTICKETS: seq: %+v, err: %v", seq, err)
 				if seq == nil && err == nil {
 					err = vterrors.Errorf(vtrpcpb.Code_NOT_FOUND, "table %s not found", seqtab)
 				}
