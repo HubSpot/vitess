@@ -639,6 +639,12 @@ func (qre *QueryExecutor) execNextval() (*sqltypes.Result, error) {
 		return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "invalid increment for sequence %s: %s", tableName, v.String())
 	}
 
+	// If external auto-increment ID service is enabled, then use it to get the next ID(s) and short circuit the normal sequence behavior
+	if externalAutoIncIDService.IsExternalAutoIncIDEnabled(qre.tsv.sm.target.Keyspace, qre.plan.Table.Name.String()) {
+		return externalAutoIncIDService.GetNextIDs(qre.plan.Table.Name.String(), inc)
+	}
+
+	// Otherwise, use the normal sequence behavior
 	t := qre.plan.Table
 	t.SequenceInfo.Lock()
 	defer t.SequenceInfo.Unlock()

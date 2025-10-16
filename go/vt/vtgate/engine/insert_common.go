@@ -360,7 +360,7 @@ func (ic *InsertCommon) processGenerateFromSelect(
 	vcursor VCursor,
 	loggingPrimitive Primitive,
 	rows []sqltypes.Row,
-) (insertID int64, err error) {
+) (firstInsertID int64, err error) {
 	if ic.Generate == nil {
 		return 0, nil
 	}
@@ -381,25 +381,55 @@ func (ic *InsertCommon) processGenerateFromSelect(
 		return 0, nil
 	}
 
-	insertID, err = ic.execGenerate(ctx, vcursor, loggingPrimitive, count)
+	var insertIDs []sqltypes.Value = make([]sqltypes.Value, 0)
+	firstInsertID, insertIDs, err = ic.execGenerate(ctx, vcursor, loggingPrimitive, count)
 	if err != nil {
 		return 0, err
 	}
 
-	used := insertID
+	used := firstInsertID
+	insertIDsIndex := 0
 	for idx, val := range rows {
 		if genColPresent {
 			if shouldGenerate(val[offset], evalengine.ParseSQLMode(vcursor.SQLMode())) {
-				val[offset] = sqltypes.NewInt64(used)
+				// if we have insertIDs to use, use them, otherwise generate a +1 new id off the last id we used
+				// note: vitess sequences only returns only a single id value and then increments that id for each id field
+				// note: external auto inc service return a list of all the id values we need for each id field (this supports skipped id values)
+				if insertIDsIndex < len(insertIDs) {
+					val[offset] = insertIDs[insertIDsIndex]
+					// store the current id value in the used variable
+					used, err = insertIDs[insertIDsIndex].ToCastInt64()
+					if err != nil {
+						return 0, err
+					}
+					insertIDsIndex++
+				} else {
+					val[offset] = sqltypes.NewInt64(used)
+				}
+				// increment the used variable by 1 (in case we don't have any insertIDs to use on the next iteration)
 				used++
 			}
 		} else {
-			rows[idx] = append(val, sqltypes.NewInt64(used))
+			// if we have insertIDs to use, use them, otherwise generate a +1 new id off the last id we used
+			// note: vitess sequences only returns only a single id value and then increments that id for each id field
+			// note: external auto inc service return a list of all the id values we need for each id field (this supports skipped id values)
+			if insertIDsIndex < len(insertIDs) {
+				rows[idx] = append(val, insertIDs[insertIDsIndex])
+				// store the current id value in the used variable
+				used, err = insertIDs[insertIDsIndex].ToCastInt64()
+				if err != nil {
+					return 0, err
+				}
+				insertIDsIndex++
+			} else {
+				rows[idx] = append(val, sqltypes.NewInt64(used))
+			}
+			// increment the used variable by 1 (in case we don't have any insertIDs to use on the next iteration)
 			used++
 		}
 	}
 
-	return insertID, nil
+	return firstInsertID, nil
 }
 
 // processGenerateFromValues generates new values using a sequence if necessary.
@@ -410,7 +440,7 @@ func (ic *InsertCommon) processGenerateFromValues(
 	vcursor VCursor,
 	loggingPrimitive Primitive,
 	bindVars map[string]*querypb.BindVariable,
-) (insertID int64, err error) {
+) (firstInsertID int64, err error) {
 	if ic.Generate == nil {
 		return 0, nil
 	}
@@ -431,43 +461,67 @@ func (ic *InsertCommon) processGenerateFromValues(
 	}
 
 	// If generation is needed, generate the requested number of values (as one call).
+	var insertIDs []sqltypes.Value = make([]sqltypes.Value, 0)
 	if count != 0 {
-		insertID, err = ic.execGenerate(ctx, vcursor, loggingPrimitive, count)
+		firstInsertID, insertIDs, err = ic.execGenerate(ctx, vcursor, loggingPrimitive, count)
 		if err != nil {
 			return 0, err
 		}
 	}
 
 	// Fill the holes where no value was supplied.
-	cur := insertID
+	cur := firstInsertID
+	insertIDsIndex := 0
 	for i, v := range values {
 		if shouldGenerate(v, evalengine.ParseSQLMode(vcursor.SQLMode())) {
-			bindVars[SeqVarName+strconv.Itoa(i)] = sqltypes.Int64BindVariable(cur)
+			// if we have snsertIDs to use, use them, otherwise generate a +1 new id off the last id we used
+			// note: vitess sequences only returns only a single id value and then increments that id for each id field
+			// note: external auto inc service return a list of all the id values we need for each id field (this support skipped id values)
+			if insertIDsIndex < len(insertIDs) {
+				bindVars[SeqVarName+strconv.Itoa(i)] = sqltypes.ValueBindVariable(insertIDs[insertIDsIndex])
+				// store the current id value in the cur variable
+				cur, err = insertIDs[insertIDsIndex].ToCastInt64()
+				if err != nil {
+					return 0, err
+				}
+				insertIDsIndex++
+			} else {
+				bindVars[SeqVarName+strconv.Itoa(i)] = sqltypes.Int64BindVariable(cur)
+			}
+			// increment the cur variable by 1 (in case we don't have any insertIDs to use on the next iteration)
 			cur++
 		} else {
 			bindVars[SeqVarName+strconv.Itoa(i)] = sqltypes.ValueBindVariable(v)
 		}
 	}
-	return insertID, nil
+	return firstInsertID, nil
 }
 
-func (ic *InsertCommon) execGenerate(ctx context.Context, vcursor VCursor, loggingPrimitive Primitive, count int64) (int64, error) {
+// HubSpot Fix: instead of returning just the first insert id, return both the first insert id and the list of all the specific id values to use (for instances where ID values are not in order)
+func (ic *InsertCommon) execGenerate(ctx context.Context, vcursor VCursor, loggingPrimitive Primitive, count int64) (int64, []sqltypes.Value, error) {
 	// If generation is needed, generate the requested number of values (as one call).
 	rss, _, err := vcursor.ResolveDestinations(ctx, ic.Generate.Keyspace.Name, nil, []key.ShardDestination{key.DestinationAnyShard{}})
 	if err != nil {
-		return 0, err
+		return 0, nil, err
 	}
 	if len(rss) != 1 {
-		return 0, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "auto sequence generation can happen through single shard only, it is getting routed to %d shards", len(rss))
+		return 0, nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "auto sequence generation can happen through single shard only, it is getting routed to %d shards", len(rss))
 	}
 	bindVars := map[string]*querypb.BindVariable{nextValBV: sqltypes.Int64BindVariable(count)}
 	qr, err := vcursor.ExecuteStandalone(ctx, loggingPrimitive, ic.Generate.Query, bindVars, rss[0], ic.FetchLastInsertID)
 	if err != nil {
-		return 0, err
+		return 0, nil, err
+	}
+
+	// HubSpot fix: return all the row values we need to generate for each id field
+	insertIDs := make([]sqltypes.Value, len(qr.Rows))
+	for i, row := range qr.Rows {
+		insertIDs[i] = row[0]
 	}
 	// If no rows are returned, it's an internal error, and the code
 	// must panic, which will be caught and reported.
-	return qr.Rows[0][0].ToCastInt64()
+	firstInsertID, err := qr.Rows[0][0].ToCastInt64()
+	return firstInsertID, insertIDs, nil
 }
 
 // shouldGenerate determines if a sequence value should be generated for a given value
