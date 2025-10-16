@@ -30,6 +30,7 @@ import (
 	"vitess.io/vitess/go/ptr"
 	"vitess.io/vitess/go/sqlescape"
 	"vitess.io/vitess/go/sqltypes"
+	"vitess.io/vitess/go/vt/log"
 	querypb "vitess.io/vitess/go/vt/proto/query"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vschemapb "vitess.io/vitess/go/vt/proto/vschema"
@@ -934,6 +935,7 @@ func resolveAutoIncrement(source *vschemapb.SrvVSchema, vschema *VSchema, parser
 			// for the underlying sequence auto-incrementer parser/rewriter to work in the query planner
 			// Then in the vttablet we'll skip over Sequences and use VTickets to get the next ID value
 			if table.AutoIncrement.UseVTickets {
+				log.Infof("VTICKETS: VTickets is Enabled for table %s", tname)
 				// If VTicketSourceKeyspace is set then we are using a remote VTickets Source Table, so lets use both those values...
 				if table.AutoIncrement.VTicketSourceKeyspace != "" {
 					seqks = table.AutoIncrement.VTicketSourceKeyspace
@@ -946,6 +948,7 @@ func resolveAutoIncrement(source *vschemapb.SrvVSchema, vschema *VSchema, parser
 				// The original Vitess Sequence behavior
 				seqks, seqtab, err = parser.ParseTable(table.AutoIncrement.Sequence)
 			}
+			log.Infof("VTICKETS: seqks: %s, seqtab: %s", seqks, seqtab)
 			var seq *BaseTable
 			if err == nil {
 				// Ensure that sequence tables also obey routing rules.
@@ -971,6 +974,7 @@ func resolveAutoIncrement(source *vschemapb.SrvVSchema, vschema *VSchema, parser
 				Column:   sqlparser.NewIdentifierCI(table.AutoIncrement.Column),
 				Sequence: seq,
 			}
+			log.Infof("VTICKETS: AutoIncrement for table %s: %+v", tname, t.AutoIncrement)
 		}
 	}
 }
