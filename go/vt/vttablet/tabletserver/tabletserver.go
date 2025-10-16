@@ -920,7 +920,7 @@ func (tsv *TabletServer) execute(ctx context.Context, target *querypb.Target, sq
 	if err != nil {
 		return nil, err
 	}
-
+	log.Infof("VTICKETS: execute: targetType: %s, sql: %s, bindVariables: %+v, options: %+v", targetType, sql, bindVariables, options)
 	allowOnShutdown := transactionID != 0
 	timeout := tsv.loadQueryTimeoutWithTxAndOptions(transactionID, options)
 	err = tsv.execRequest(
@@ -932,7 +932,7 @@ func (tsv *TabletServer) execute(ctx context.Context, target *querypb.Target, sq
 				bindVariables = make(map[string]*querypb.BindVariable)
 			}
 			query, comments := sqlparser.SplitMarginComments(sql)
-
+			log.Infof("VTICKETS: execute: query: %s, comments: %+v", query, comments)
 			plan, err := tsv.qe.GetPlan(ctx, logStats, query, skipQueryPlanCache(options), options.GetInDmlExecution() && tsv.config.PassthroughDML)
 			if err != nil {
 				return err

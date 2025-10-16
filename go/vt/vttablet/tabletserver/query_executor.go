@@ -162,6 +162,7 @@ func (qre *QueryExecutor) Execute() (reply *sqltypes.Result, err error) {
 		return nil, reqThrottledErr
 	}
 
+	log.Infof("VTICKETS: Execute: qre.plan.PlanID: %d", qre.plan.PlanID)
 	if qre.plan.PlanID == p.PlanNextval {
 		return qre.execNextval()
 	}
