@@ -937,6 +937,7 @@ func (tsv *TabletServer) execute(ctx context.Context, target *querypb.Target, sq
 			if err != nil {
 				return err
 			}
+			log.Infof("VTICKETS: execute: plan: %+v", plan)
 
 			if err = plan.IsValid(reservedID != 0, len(settings) > 0); err != nil {
 				return err
@@ -969,7 +970,9 @@ func (tsv *TabletServer) execute(ctx context.Context, target *querypb.Target, sq
 				targetTabletType: targetType,
 				setting:          connSetting,
 			}
+			log.Infof("VTICKETS: execute: qre: %+v", qre)
 			result, err = qre.Execute()
+			log.Infof("VTICKETS: execute: result: %+v, err: %v", result, err)
 			if err != nil {
 				return err
 			}
