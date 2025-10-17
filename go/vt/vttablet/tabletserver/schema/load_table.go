@@ -25,6 +25,7 @@ import (
 
 	"vitess.io/vitess/go/mysql/collations"
 	"vitess.io/vitess/go/sqltypes"
+	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/mysqlctl"
 	"vitess.io/vitess/go/vt/mysqlctl/tmutils"
 	querypb "vitess.io/vitess/go/vt/proto/query"
@@ -35,6 +36,7 @@ import (
 
 // LoadTable creates a Table from the schema info in the database.
 func LoadTable(conn *connpool.PooledConn, databaseName, tableName, tableType string, comment string, collationEnv *collations.Environment) (*Table, error) {
+	log.Infof("VTICKETS: LoadTable: tableName: %s, tableType: %s, comment: %s", tableName, tableType, comment)
 	ta := NewTable(tableName, NoType)
 	if strings.Contains(tableType, tmutils.TableView) {
 		ta.Type = View
@@ -45,7 +47,7 @@ func LoadTable(conn *connpool.PooledConn, databaseName, tableName, tableType str
 		return nil, err
 	}
 	switch {
-	case strings.Contains(comment, "vitess_sequence"):
+	case strings.Contains(comment, "vitess_sequence"), strings.Contains(tableType, "VTICKETS"):
 		ta.Type = Sequence
 		ta.SequenceInfo = &SequenceInfo{}
 	case strings.Contains(comment, "vitess_message"):
