@@ -944,7 +944,6 @@ func resolveAutoIncrement(source *vschemapb.SrvVSchema, vschema *VSchema, parser
 					// Otherwise, we are using a local VTickets Source Table, so lets use the table name (and default to this keyspace)
 					seqks, seqtab = ksname, tname
 				}
-				t.Type = "VTICKETS" // Lets set a new Table Type for VTickets for load_table to identity in tabletserver schema
 			} else {
 				// The original Vitess Sequence behavior
 				seqks, seqtab, err = parser.ParseTable(table.AutoIncrement.Sequence)

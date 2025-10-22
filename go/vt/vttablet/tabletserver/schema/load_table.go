@@ -47,7 +47,7 @@ func LoadTable(conn *connpool.PooledConn, databaseName, tableName, tableType str
 		return nil, err
 	}
 	switch {
-	case strings.Contains(comment, "vitess_sequence"), strings.Contains(tableType, "VTICKETS"):
+	case strings.Contains(comment, "vitess_sequence"):
 		ta.Type = Sequence
 		ta.SequenceInfo = &SequenceInfo{}
 	case strings.Contains(comment, "vitess_message"):
