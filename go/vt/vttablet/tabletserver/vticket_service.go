@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"vitess.io/vitess/go/sqltypes"
+	"vitess.io/vitess/go/vt/log"
 	querypb "vitess.io/vitess/go/vt/proto/query"
 )
 
@@ -23,6 +24,7 @@ type VTicketsServiceUninitialized struct{}
 
 func (d *VTicketsServiceUninitialized) RegisterTabletServer(tabletServer *TabletServer) {
 	// vtickets not enabled do nothing
+	log.Infof("VTICKETS: VTicketsServiceUninitialized.RegisterTabletServer: this should not be called...")
 }
 
 func (d *VTicketsServiceUninitialized) InitializeVTickets(target *querypb.Target) {
@@ -40,5 +42,6 @@ func (d *VTicketsServiceUninitialized) GetNextVTicketID(tableName string, sequen
 var vTicketsService VTicketsService = &VTicketsServiceUninitialized{}
 
 func RegisterVTicketsService(thirdPartyVTicketsService VTicketsService) {
+	log.Infof("VTICKETS: RegisterVTicketsService: registering third party vTicketsService")
 	vTicketsService = thirdPartyVTicketsService
 }
