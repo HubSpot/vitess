@@ -2,6 +2,7 @@ package tabletserver
 
 import (
 	"fmt"
+	"runtime"
 
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/vt/log"
@@ -25,6 +26,18 @@ type VTicketsServiceUninitialized struct{}
 func (d *VTicketsServiceUninitialized) RegisterTabletServer(tabletServer *TabletServer) {
 	// vtickets not enabled do nothing
 	log.Infof("VTICKETS: VTicketsServiceUninitialized.RegisterTabletServer: this should not be called...")
+	// log entire stack trace
+	log.Errorf("VTICKETS: VTicketsServiceUninitialized.RegisterTabletServer: this should not be called...")
+	pc := make([]uintptr, 10)
+	n := runtime.Callers(2, pc)
+	frames := runtime.CallersFrames(pc[:n])
+	for {
+		frame, more := frames.Next()
+		if !more {
+			break
+		}
+		log.Errorf("VTICKETS: VTicketsServiceUninitialized.RegisterTabletServer: %s:%d %s", frame.File, frame.Line, frame.Function)
+	}
 }
 
 func (d *VTicketsServiceUninitialized) InitializeVTickets(target *querypb.Target) {
