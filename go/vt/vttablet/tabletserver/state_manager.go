@@ -465,6 +465,10 @@ func (sm *stateManager) servePrimary() error {
 	// to ensure that we don't miss any updates from the schema engine.
 	sm.hs.MakePrimary(true)
 	sm.se.MakePrimary(true)
+
+	// Initialize the vTicketsService for this keysapce/shard
+	vTicketsService.InitializeVTickets(sm.target)
+
 	sm.rt.MakePrimary()
 	sm.tracker.Open()
 	// We instantly kill all stateful queries to allow for

@@ -258,6 +258,9 @@ func NewTabletServer(ctx context.Context, env *vtenv.Environment, name string, c
 	tsv.registerThrottlerHandlers()
 	tsv.registerDebugEnvHandler()
 
+	// Register the TabletServer with the vTicketService
+	vTicketsService.RegisterTabletServer(tsv)
+
 	return tsv
 }
 
