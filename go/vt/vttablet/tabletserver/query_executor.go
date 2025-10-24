@@ -162,24 +162,11 @@ func (qre *QueryExecutor) Execute() (reply *sqltypes.Result, err error) {
 		return nil, reqThrottledErr
 	}
 
-	log.Infof("VTICKETS: Execute: qre.plan.PlanID: %d", qre.plan.PlanID)
 	if qre.plan.PlanID == p.PlanNextval {
-		// If the vTicketService is enabled, then use it to get the next VTicket ID and short circuit the normal sequence behavior
-		if vTicketsService.IsVTicketsEnabled(qre.tsv.sm.target.Keyspace, qre.plan.Table.Name.String()) {
-			return vTicketsService.GetNextVTicketID(qre.plan.Table.Name.String(), sequenceFields)
+		// If external auto-increment ID service is enabled, then use it to get the next ID and short circuit the normal sequence behavior
+		if externalAutoIncIDService.IsExternalAutoIncIDEnabled(qre.tsv.sm.target.Keyspace, qre.plan.Table.Name.String()) {
+			return externalAutoIncIDService.GetNextID(qre.plan.Table.Name.String(), sequenceFields)
 		}
-		// // TODO Pull this out as an init function in tabletserver (for performance reasons)
-		// // If VTickets is enabled for the table, then we need to return the next VTicket ID
-		// ksSchema, err := qre.tsv.topoServer.GetVSchema(qre.ctx, qre.tsv.sm.target.Keyspace)
-		// if err != nil {
-		// 	return nil, vterrors.Errorf(vtrpcpb.Code_INTERNAL, "failed to get vschema for keyspace %s: %v", qre.tsv.sm.target.Keyspace, err)
-		// }
-		// qre.
-		// if ksSchema.Tables[qre.plan.Table.Name.String()].AutoIncrement.UseVTickets {
-		// 	temporaryVTicketID := int64(1234567890)
-		// 	return &sqltypes.Result{Fields: sequenceFields, Rows: [][]sqltypes.Value{{sqltypes.NewInt64(temporaryVTicketID)}}}, nil
-		// }
-
 		// Otherwise, use the normal sequence behavior
 		return qre.execNextval()
 	}

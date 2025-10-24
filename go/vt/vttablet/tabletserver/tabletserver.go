@@ -258,8 +258,9 @@ func NewTabletServer(ctx context.Context, env *vtenv.Environment, name string, c
 	tsv.registerThrottlerHandlers()
 	tsv.registerDebugEnvHandler()
 
-	// Register the TabletServer with the vTicketService
-	vTicketsService.RegisterTabletServer(tsv)
+	// bind the topo server and schema engine to the external auto-increment ID service
+	externalAutoIncIDService.BindTopoServer(tsv.topoServer)
+	externalAutoIncIDService.BindSchemaEngine(tsv.se)
 
 	return tsv
 }
@@ -923,7 +924,6 @@ func (tsv *TabletServer) execute(ctx context.Context, target *querypb.Target, sq
 	if err != nil {
 		return nil, err
 	}
-	log.Infof("VTICKETS: execute: targetType: %s, sql: %s, bindVariables: %+v, options: %+v", targetType, sql, bindVariables, options)
 	allowOnShutdown := transactionID != 0
 	timeout := tsv.loadQueryTimeoutWithTxAndOptions(transactionID, options)
 	err = tsv.execRequest(
@@ -935,12 +935,10 @@ func (tsv *TabletServer) execute(ctx context.Context, target *querypb.Target, sq
 				bindVariables = make(map[string]*querypb.BindVariable)
 			}
 			query, comments := sqlparser.SplitMarginComments(sql)
-			log.Infof("VTICKETS: execute: query: %s, comments: %+v", query, comments)
 			plan, err := tsv.qe.GetPlan(ctx, logStats, query, skipQueryPlanCache(options), options.GetInDmlExecution() && tsv.config.PassthroughDML)
 			if err != nil {
 				return err
 			}
-			log.Infof("VTICKETS: execute: plan: %+v", plan)
 
 			if err = plan.IsValid(reservedID != 0, len(settings) > 0); err != nil {
 				return err
@@ -973,9 +971,7 @@ func (tsv *TabletServer) execute(ctx context.Context, target *querypb.Target, sq
 				targetTabletType: targetType,
 				setting:          connSetting,
 			}
-			log.Infof("VTICKETS: execute: qre: %+v", qre)
 			result, err = qre.Execute()
-			log.Infof("VTICKETS: execute: result: %+v, err: %v", result, err)
 			if err != nil {
 				return err
 			}

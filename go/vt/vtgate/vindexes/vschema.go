@@ -948,12 +948,10 @@ func resolveAutoIncrement(source *vschemapb.SrvVSchema, vschema *VSchema, parser
 				// The original Vitess Sequence behavior
 				seqks, seqtab, err = parser.ParseTable(table.AutoIncrement.Sequence)
 			}
-			log.Infof("VTICKETS: seqks: %s, seqtab: %s", seqks, seqtab)
 			var seq *BaseTable
 			if err == nil {
 				// Ensure that sequence tables also obey routing rules.
 				seq, err = vschema.FindRoutedTable(seqks, seqtab, topodatapb.TabletType_PRIMARY)
-				log.Infof("VTICKETS: seq: %+v, err: %v", seq, err)
 				if seq == nil && err == nil {
 					err = vterrors.Errorf(vtrpcpb.Code_NOT_FOUND, "table %s not found", seqtab)
 				}
@@ -975,7 +973,6 @@ func resolveAutoIncrement(source *vschemapb.SrvVSchema, vschema *VSchema, parser
 				Column:   sqlparser.NewIdentifierCI(table.AutoIncrement.Column),
 				Sequence: seq,
 			}
-			log.Infof("VTICKETS: AutoIncrement for table %s: %+v", tname, t.AutoIncrement)
 		}
 	}
 }

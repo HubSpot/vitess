@@ -19,7 +19,6 @@ package operators
 import (
 	"strconv"
 
-	"vitess.io/vitess/go/vt/log"
 	vschemapb "vitess.io/vitess/go/vt/proto/vschema"
 	"vitess.io/vitess/go/vt/sqlparser"
 	"vitess.io/vitess/go/vt/vterrors"
@@ -608,7 +607,6 @@ func populateInsertColumnlist(ins *sqlparser.Insert, table *vindexes.BaseTable) 
 // modifyForAutoinc modifies the AST and the plan to generate necessary autoinc values.
 // For row values cases, bind variable names are generated using baseName.
 func modifyForAutoinc(ctx *plancontext.PlanningContext, ins *sqlparser.Insert, vTable *vindexes.BaseTable) *Generate {
-	log.Infof("VTICKETS: modifyForAutoinc: %+v", vTable.AutoIncrement)
 	if vTable.AutoIncrement == nil {
 		return nil
 	}
@@ -644,6 +642,5 @@ func modifyForAutoinc(ctx *plancontext.PlanningContext, ins *sqlparser.Insert, v
 			panic(err)
 		}
 	}
-	log.Infof("VTICKETS: modifyForAutoinc: gen: %+v", gen)
 	return gen
 }

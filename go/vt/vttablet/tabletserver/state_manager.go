@@ -467,7 +467,7 @@ func (sm *stateManager) servePrimary() error {
 	sm.se.MakePrimary(true)
 
 	// Initialize the vTicketsService for this keysapce/shard
-	vTicketsService.InitializeVTickets(sm.target)
+	externalAutoIncIDService.InitializeExternalAutoIncIDService(sm.target)
 
 	sm.rt.MakePrimary()
 	sm.tracker.Open()
