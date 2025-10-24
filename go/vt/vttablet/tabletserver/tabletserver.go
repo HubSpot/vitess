@@ -924,6 +924,7 @@ func (tsv *TabletServer) execute(ctx context.Context, target *querypb.Target, sq
 	if err != nil {
 		return nil, err
 	}
+
 	allowOnShutdown := transactionID != 0
 	timeout := tsv.loadQueryTimeoutWithTxAndOptions(transactionID, options)
 	err = tsv.execRequest(
@@ -935,6 +936,7 @@ func (tsv *TabletServer) execute(ctx context.Context, target *querypb.Target, sq
 				bindVariables = make(map[string]*querypb.BindVariable)
 			}
 			query, comments := sqlparser.SplitMarginComments(sql)
+
 			plan, err := tsv.qe.GetPlan(ctx, logStats, query, skipQueryPlanCache(options), options.GetInDmlExecution() && tsv.config.PassthroughDML)
 			if err != nil {
 				return err

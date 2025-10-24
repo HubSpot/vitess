@@ -61,8 +61,9 @@ func analyzeSelect(env *vtenv.Environment, sel *sqlparser.Select, tables map[str
 	if nextVal, ok := sel.GetColumns()[0].(*sqlparser.Nextval); ok {
 		log.Infof("VTICKETS: analyzeSelect: nextVal: %+v, plan.Table: %+v, plan.Table.Type: %d", nextVal, plan.Table, plan.Table.Type)
 
-		// HubSpot HACK for != vs >for VTickets - plan.Table.Type is 0 (NoType) for VTickets and 1 for Sequence
-		// This allows for VTickets to create a PlanNextval plan for VTickets and shouldn't break because NEXTVAL is only used for sequences...
+		// !!!!! HubSpot HACK !!!!! for != (not equal to) vs > (greater than) for VTickets
+		// plan.Table.Type is 0 (NoType) for VTickets and 1 for Sequence
+		// This allows for VTickets to create a PlanNextval plan for VTickets and *shouldn't break* because NEXTVAL is only used for sequences...
 		if plan.Table == nil || plan.Table.Type > schema.Sequence {
 			return nil, vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "%s is not a sequence", sqlparser.ToString(sel.From))
 		}

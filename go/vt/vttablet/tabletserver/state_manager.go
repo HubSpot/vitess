@@ -466,7 +466,7 @@ func (sm *stateManager) servePrimary() error {
 	sm.hs.MakePrimary(true)
 	sm.se.MakePrimary(true)
 
-	// Initialize the vTicketsService for this keysapce/shard
+	// Initialize the ExternalAutoIncIDService for this keysapce/shard
 	externalAutoIncIDService.InitializeExternalAutoIncIDService(sm.target)
 
 	sm.rt.MakePrimary()
