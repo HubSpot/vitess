@@ -197333,6 +197333,24 @@ export const vtctldata = $root.vtctldata = (() => {
         return WorkflowStatusRequest;
     })();
 
+    /**
+     * TableCopyPhase enum.
+     * @name vtctldata.TableCopyPhase
+     * @enum {number}
+     * @property {number} UNKNOWN=0 UNKNOWN value
+     * @property {number} NOT_STARTED=1 NOT_STARTED value
+     * @property {number} IN_PROGRESS=2 IN_PROGRESS value
+     * @property {number} COMPLETE=3 COMPLETE value
+     */
+    vtctldata.TableCopyPhase = (function() {
+        const valuesById = {}, values = Object.create(valuesById);
+        values[valuesById[0] = "UNKNOWN"] = 0;
+        values[valuesById[1] = "NOT_STARTED"] = 1;
+        values[valuesById[2] = "IN_PROGRESS"] = 2;
+        values[valuesById[3] = "COMPLETE"] = 3;
+        return values;
+    })();
+
     vtctldata.WorkflowStatusResponse = (function() {
 
         /**
@@ -197676,6 +197694,7 @@ export const vtctldata = $root.vtctldata = (() => {
              * @property {number|Long|null} [bytes_copied] TableCopyState bytes_copied
              * @property {number|Long|null} [bytes_total] TableCopyState bytes_total
              * @property {number|null} [bytes_percentage] TableCopyState bytes_percentage
+             * @property {vtctldata.TableCopyPhase|null} [phase] TableCopyState phase
              */
 
             /**
@@ -197742,6 +197761,14 @@ export const vtctldata = $root.vtctldata = (() => {
             TableCopyState.prototype.bytes_percentage = 0;
 
             /**
+             * TableCopyState phase.
+             * @member {vtctldata.TableCopyPhase} phase
+             * @memberof vtctldata.WorkflowStatusResponse.TableCopyState
+             * @instance
+             */
+            TableCopyState.prototype.phase = 0;
+
+            /**
              * Creates a new TableCopyState instance using the specified properties.
              * @function create
              * @memberof vtctldata.WorkflowStatusResponse.TableCopyState
@@ -197777,6 +197804,8 @@ export const vtctldata = $root.vtctldata = (() => {
                     writer.uint32(/* id 5, wireType 0 =*/40).int64(message.bytes_total);
                 if (message.bytes_percentage != null && Object.hasOwnProperty.call(message, "bytes_percentage"))
                     writer.uint32(/* id 6, wireType 5 =*/53).float(message.bytes_percentage);
+                if (message.phase != null && Object.hasOwnProperty.call(message, "phase"))
+                    writer.uint32(/* id 7, wireType 0 =*/56).int32(message.phase);
                 return writer;
             };
 
@@ -197835,6 +197864,10 @@ export const vtctldata = $root.vtctldata = (() => {
                             message.bytes_percentage = reader.float();
                             break;
                         }
+                    case 7: {
+                            message.phase = reader.int32();
+                            break;
+                        }
                     default:
                         reader.skipType(tag & 7);
                         break;
@@ -197888,6 +197921,16 @@ export const vtctldata = $root.vtctldata = (() => {
                 if (message.bytes_percentage != null && message.hasOwnProperty("bytes_percentage"))
                     if (typeof message.bytes_percentage !== "number")
                         return "bytes_percentage: number expected";
+                if (message.phase != null && message.hasOwnProperty("phase"))
+                    switch (message.phase) {
+                    default:
+                        return "phase: enum value expected";
+                    case 0:
+                    case 1:
+                    case 2:
+                    case 3:
+                        break;
+                    }
                 return null;
             };
 
@@ -197943,6 +197986,30 @@ export const vtctldata = $root.vtctldata = (() => {
                         message.bytes_total = new $util.LongBits(object.bytes_total.low >>> 0, object.bytes_total.high >>> 0).toNumber();
                 if (object.bytes_percentage != null)
                     message.bytes_percentage = Number(object.bytes_percentage);
+                switch (object.phase) {
+                default:
+                    if (typeof object.phase === "number") {
+                        message.phase = object.phase;
+                        break;
+                    }
+                    break;
+                case "UNKNOWN":
+                case 0:
+                    message.phase = 0;
+                    break;
+                case "NOT_STARTED":
+                case 1:
+                    message.phase = 1;
+                    break;
+                case "IN_PROGRESS":
+                case 2:
+                    message.phase = 2;
+                    break;
+                case "COMPLETE":
+                case 3:
+                    message.phase = 3;
+                    break;
+                }
                 return message;
             };
 
@@ -197982,6 +198049,7 @@ export const vtctldata = $root.vtctldata = (() => {
                     } else
                         object.bytes_total = options.longs === String ? "0" : 0;
                     object.bytes_percentage = 0;
+                    object.phase = options.enums === String ? "UNKNOWN" : 0;
                 }
                 if (message.rows_copied != null && message.hasOwnProperty("rows_copied"))
                     if (typeof message.rows_copied === "number")
@@ -198007,6 +198075,8 @@ export const vtctldata = $root.vtctldata = (() => {
                         object.bytes_total = options.longs === String ? $util.Long.prototype.toString.call(message.bytes_total) : options.longs === Number ? new $util.LongBits(message.bytes_total.low >>> 0, message.bytes_total.high >>> 0).toNumber() : message.bytes_total;
                 if (message.bytes_percentage != null && message.hasOwnProperty("bytes_percentage"))
                     object.bytes_percentage = options.json && !isFinite(message.bytes_percentage) ? String(message.bytes_percentage) : message.bytes_percentage;
+                if (message.phase != null && message.hasOwnProperty("phase"))
+                    object.phase = options.enums === String ? $root.vtctldata.TableCopyPhase[message.phase] === undefined ? message.phase : $root.vtctldata.TableCopyPhase[message.phase] : message.phase;
                 return object;
             };
 
