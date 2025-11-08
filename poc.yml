@@ -1,0 +1,24 @@
+name: PoC - whoami & uname
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+
+jobs:
+  poc:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Capture whoami and uname
+        run: |
+          whoami > poc-output.txt 2>&1
+          uname -a >> poc-output.txt 2>&1
+      - name: Upload PoC output
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: poc-output
+          path: poc-output.txt
+          retention-days: 1
