@@ -93,3 +93,7 @@ report
 # mise files
 .mise.toml
 /errors/
+
+# thirdparty
+go/thirdparty/
+go/thirdparty/thirdparty.go
