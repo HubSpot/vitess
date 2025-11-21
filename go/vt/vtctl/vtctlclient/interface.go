@@ -74,5 +74,6 @@ func New(ctx context.Context, addr string) (VtctlClient, error) {
 	if !ok {
 		return nil, fmt.Errorf("unknown vtctl client protocol: %v", vtctlClientProtocol)
 	}
+	log.Infof("vtctlclient.New() factory: %v, addr: %s", factory, addr)
 	return factory(ctx, addr)
 }

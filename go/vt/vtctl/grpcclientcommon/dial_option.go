@@ -23,12 +23,14 @@ import (
 	"google.golang.org/grpc"
 
 	"vitess.io/vitess/go/vt/grpcclient"
+	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/servenv"
 )
 
 var cert, key, ca, crl, name string
 
 func init() {
+	log.Infof("grpcclientcommon.init()")
 	servenv.OnParseFor("vtctl", RegisterFlags)
 	servenv.OnParseFor("vttestserver", RegisterFlags)
 	servenv.OnParseFor("vtctlclient", RegisterFlags)
@@ -41,11 +43,13 @@ func RegisterFlags(fs *pflag.FlagSet) {
 	fs.StringVar(&ca, "vtctld_grpc_ca", ca, "the server ca to use to validate servers when connecting")
 	fs.StringVar(&crl, "vtctld_grpc_crl", crl, "the server crl to use to validate server certificates when connecting")
 	fs.StringVar(&name, "vtctld_grpc_server_name", name, "the server name to use to validate server certificate")
+	log.Infof("RegisterFlags() cert: %s, key: %s, ca: %s, crl: %s, name: %s", cert, key, ca, crl, name)
 }
 
 // SecureDialOption returns a grpc.DialOption configured to use TLS (or
 // insecure if no flags were set) based on the vtctld_grpc_* flags declared by
 // this package.
 func SecureDialOption() (grpc.DialOption, error) {
+	log.Infof("SecureDialOption() cert: %s, key: %s, ca: %s, crl: %s, name: %s", cert, key, ca, crl, name)
 	return grpcclient.SecureDialOption(cert, key, ca, crl, name)
 }

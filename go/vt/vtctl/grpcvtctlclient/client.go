@@ -24,6 +24,7 @@ import (
 	"google.golang.org/grpc"
 
 	"vitess.io/vitess/go/vt/grpcclient"
+	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/logutil"
 	"vitess.io/vitess/go/vt/vtctl/grpcclientcommon"
 	"vitess.io/vitess/go/vt/vtctl/vtctlclient"
@@ -89,4 +90,5 @@ func (client *gRPCVtctlClient) Close() {
 
 func init() {
 	vtctlclient.RegisterFactory("grpc", gRPCVtctlClientFactory)
+	log.Infof("grpcvtctlclient.init()")
 }
