@@ -24,6 +24,8 @@ import (
 	"time"
 
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/grpc/codes"
+	"google.golang.org/grpc/status"
 
 	"vitess.io/vitess/go/event"
 	"vitess.io/vitess/go/mysql/replication"
@@ -756,6 +758,25 @@ func (pr *PlannedReparenter) verifyAllTabletsReachable(ctx context.Context, tabl
 		errorGroup.Go(func() error {
 			statusValues, err := pr.tmc.GetGlobalStatusVars(groupCtx, tablet, []string{InnodbBufferPoolsDataVar})
 			if err != nil {
+				// If the tablet is running an older Vitess version (e.g., Vitess 14) that doesn't
+				// support GetGlobalStatusVars, fall back to Ping to verify reachability.
+				// The UNIMPLEMENTED error code indicates the RPC method doesn't exist on the server.
+				// We check both gRPC status code (for raw gRPC errors) and vterrors code (for wrapped errors).
+				isUnimplemented := false
+				if s, ok := status.FromError(err); ok && s.Code() == codes.Unimplemented {
+					isUnimplemented = true
+				}
+				if isUnimplemented {
+					pr.logger.Warningf("HubSpot Fix: Tablet %v is running an older Vitess version without GetGlobalStatusVars, falling back to Ping", topoproto.TabletAliasString(tablet.Alias))
+					if pingErr := pr.tmc.Ping(groupCtx, tablet); pingErr != nil {
+						return pingErr
+					}
+					// Tablet is reachable but doesn't support GetGlobalStatusVars, use 0 as default
+					mu.Lock()
+					defer mu.Unlock()
+					innodbBufferPoolsData[tblStr] = 0
+					return nil
+				}
 				return err
 			}
 			// We are ignoring the error in conversion because some MySQL variants might not have this
