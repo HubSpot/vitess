@@ -855,7 +855,18 @@ func (tm *TabletManager) setReplicationSourceLocked(ctx context.Context, parentA
 		if err != nil {
 			return err
 		}
-		primarySid, err := replication.ParseSID(primaryStatus.ServerUuid)
+		// If ServerUuid is empty, the primary may be running an older Vitess version
+		// (e.g., Vitess 14) where PrimaryStatus proto doesn't include server_uuid.
+		// Fall back to FullStatus which has ServerUuid in all versions.
+		serverUuid := primaryStatus.ServerUuid
+		if serverUuid == "" {
+			fullStatus, err := tm.tmc.FullStatus(ctx, parent.Tablet)
+			if err != nil {
+				return err
+			}
+			serverUuid = fullStatus.ServerUuid
+		}
+		primarySid, err := replication.ParseSID(serverUuid)
 		if err != nil {
 			return err
 		}
