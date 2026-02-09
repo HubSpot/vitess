@@ -47,6 +47,7 @@ var (
 	ts               *topo.Server
 	tmc              tmclient.TabletManagerClient
 	clustersToWatch  []string
+	cellsToWatch     []string
 	shutdownWaitTime = 30 * time.Second
 	// shardsToWatch is a map storing the shards for a given keyspace that need to be watched.
 	// We store the key range for all the shards that we want to watch.
@@ -98,6 +99,7 @@ func getTabletsWatchedByShardStats() map[string]int64 {
 // RegisterFlags registers the flags required by VTOrc
 func RegisterFlags(fs *pflag.FlagSet) {
 	fs.StringSliceVar(&clustersToWatch, "clusters_to_watch", clustersToWatch, "Comma-separated list of keyspaces or keyspace/keyranges that this instance will monitor and repair. Defaults to all clusters in the topology. Example: \"ks1,ks2/-80\"")
+	fs.StringSliceVar(&cellsToWatch, "cells_to_watch", cellsToWatch, "Comma-separated list of cells that this instance will monitor and repair. Defaults to all cells in the topology. Example: \"vt_blue,vt_green\"")
 	fs.DurationVar(&shutdownWaitTime, "shutdown_wait_time", shutdownWaitTime, "Maximum time to wait for VTOrc to release all the locks that it is holding before shutting down on SIGTERM")
 }
 
@@ -142,6 +144,9 @@ func initializeShardsToWatch() error {
 
 // shouldWatchTablet checks if the given tablet is part of the watch list.
 func shouldWatchTablet(tablet *topodatapb.Tablet) bool {
+	if len(cellsToWatch) > 0 && !slices.Contains(cellsToWatch, tablet.GetAlias().GetCell()) {
+		return false
+	}
 	// If we are watching all keyspaces, then we want to watch this tablet too.
 	if len(shardsToWatch) == 0 {
 		return true
@@ -230,6 +235,16 @@ func refreshTabletsUsing(ctx context.Context, loader func(tabletAlias string), f
 		return err
 	}
 
+	if len(cellsToWatch) > 0 {
+		var filteredCells []string
+		for _, cell := range cells {
+			if slices.Contains(cellsToWatch, cell) {
+				filteredCells = append(filteredCells, cell)
+			}
+		}
+		cells = filteredCells
+	}
+
 	// Get all tablets from all cells.
 	getTabletsCtx, getTabletsCancel := context.WithTimeout(ctx, topo.RemoteOperationTimeout)
 	defer getTabletsCancel()
@@ -254,7 +269,6 @@ func refreshTabletsUsing(ctx context.Context, loader func(tabletAlias string), f
 				}
 			}
 		}()
-
 		// Refresh the filtered tablets and forget stale tablets.
 		query := "select alias from vitess_tablet where cell = ?"
 		args := sqlutils.Args(cell)
@@ -291,9 +305,15 @@ func refreshTabletsInKeyspaceShard(ctx context.Context, keyspace, shard string, 
 		log.Errorf("Error fetching tablets for keyspace/shard %v/%v: %v", keyspace, shard, err)
 		return
 	}
+	matchedTablets := make([]*topo.TabletInfo, 0, len(tablets))
+	for _, t := range tablets {
+		if shouldWatchTablet(t.Tablet) {
+			matchedTablets = append(matchedTablets, t)
+		}
+	}
 	query := "select alias from vitess_tablet where keyspace = ? and shard = ?"
 	args := sqlutils.Args(keyspace, shard)
-	refreshTablets(tablets, query, args, loader, forceRefresh, tabletsToIgnore)
+	refreshTablets(matchedTablets, query, args, loader, forceRefresh, tabletsToIgnore)
 }
 
 func refreshTablets(tablets []*topo.TabletInfo, query string, args []any, loader func(tabletAlias string), forceRefresh bool, tabletsToIgnore []string) {
@@ -386,7 +406,7 @@ func setReplicationSource(ctx context.Context, replica *topodatapb.Tablet, prima
 func shardPrimary(keyspace string, shard string) (primary *topodatapb.Tablet, err error) {
 	query := `SELECT
 		info
-	FROM 
+	FROM
 		vitess_tablet
 	WHERE
 		keyspace = ? AND shard = ?
