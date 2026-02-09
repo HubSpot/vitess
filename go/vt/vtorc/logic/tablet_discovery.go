@@ -242,6 +242,7 @@ func refreshTabletsUsing(ctx context.Context, loader func(tabletAlias string), f
 				filteredCells = append(filteredCells, cell)
 			}
 		}
+		log.Infof("refreshTabletsUsing: cellsToWatch=%v knownCells=%v filteredCells=%v", cellsToWatch, cells, filteredCells)
 		cells = filteredCells
 	}
 
@@ -266,9 +267,12 @@ func refreshTabletsUsing(ctx context.Context, loader func(tabletAlias string), f
 			for _, t := range tablets {
 				if shouldWatchTablet(t.Tablet) {
 					matchedTablets = append(matchedTablets, t)
+				} else {
+					log.Infof("refreshTabletsUsing: filtering out tablet %v in cell %v (cellsToWatch=%v)", topoproto.TabletAliasString(t.Tablet.GetAlias()), t.Tablet.GetAlias().GetCell(), cellsToWatch)
 				}
 			}
 		}()
+		log.Infof("refreshTabletsUsing: cell=%v total=%d matched=%d", cell, len(tablets), len(matchedTablets))
 
 		// Refresh the filtered tablets and forget stale tablets.
 		query := "select alias from vitess_tablet where cell = ?"
@@ -283,6 +287,7 @@ func refreshTabletsUsing(ctx context.Context, loader func(tabletAlias string), f
 // for a given shard. This function is meant to be called before or after a cluster-wide operation that we know will
 // change the replication information for the entire cluster drastically enough to warrant a full forceful refresh
 func forceRefreshAllTabletsInShard(ctx context.Context, keyspace, shard string, tabletsToIgnore []string) {
+	log.Infof("forceRefreshAllTabletsInShard: keyspace=%v shard=%v tabletsToIgnore=%v", keyspace, shard, tabletsToIgnore)
 	refreshCtx, refreshCancel := context.WithTimeout(ctx, topo.RemoteOperationTimeout)
 	defer refreshCancel()
 	refreshTabletsInKeyspaceShard(refreshCtx, keyspace, shard, func(tabletAlias string) {
@@ -310,8 +315,11 @@ func refreshTabletsInKeyspaceShard(ctx context.Context, keyspace, shard string, 
 	for _, t := range tablets {
 		if shouldWatchTablet(t.Tablet) {
 			matchedTablets = append(matchedTablets, t)
+		} else {
+			log.Infof("refreshTabletsInKeyspaceShard: filtering out tablet %v in cell %v (cellsToWatch=%v)", topoproto.TabletAliasString(t.Tablet.GetAlias()), t.Tablet.GetAlias().GetCell(), cellsToWatch)
 		}
 	}
+	log.Infof("refreshTabletsInKeyspaceShard: keyspace=%v shard=%v total=%d matched=%d", keyspace, shard, len(tablets), len(matchedTablets))
 	query := "select alias from vitess_tablet where keyspace = ? and shard = ?"
 	args := sqlutils.Args(keyspace, shard)
 	refreshTablets(matchedTablets, query, args, loader, forceRefresh, tabletsToIgnore)
