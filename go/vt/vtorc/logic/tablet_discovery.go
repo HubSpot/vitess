@@ -306,9 +306,15 @@ func refreshTabletsInKeyspaceShard(ctx context.Context, keyspace, shard string, 
 		log.Errorf("Error fetching tablets for keyspace/shard %v/%v: %v", keyspace, shard, err)
 		return
 	}
+	matchedTablets := make([]*topo.TabletInfo, 0, len(tablets))
+	for _, t := range tablets {
+		if shouldWatchTablet(t.Tablet) {
+			matchedTablets = append(matchedTablets, t)
+		}
+	}
 	query := "select alias from vitess_tablet where keyspace = ? and shard = ?"
 	args := sqlutils.Args(keyspace, shard)
-	refreshTablets(tablets, query, args, loader, forceRefresh, tabletsToIgnore)
+	refreshTablets(matchedTablets, query, args, loader, forceRefresh, tabletsToIgnore)
 }
 
 func refreshTablets(tablets []*topo.TabletInfo, query string, args []any, loader func(tabletAlias string), forceRefresh bool, tabletsToIgnore []string) {

@@ -1024,3 +1024,75 @@ func TestRefreshTabletsUsingCellsToWatch(t *testing.T) {
 	_, err = inst.ReadTablet(topoproto.TabletAliasString(tabCell2.Alias))
 	assert.Error(t, err)
 }
+
+func TestRefreshTabletsInKeyspaceShardCellsToWatch(t *testing.T) {
+	oldTs := ts
+	oldCellsToWatch := cellsToWatch
+	oldClustersToWatch := clustersToWatch
+	oldShardsToWatch := shardsToWatch
+	defer func() {
+		ts = oldTs
+		cellsToWatch = oldCellsToWatch
+		clustersToWatch = oldClustersToWatch
+		shardsToWatch = oldShardsToWatch
+		db.ClearVTOrcDatabase()
+	}()
+
+	cell2 := "zone-2"
+
+	tabCell1 := &topodatapb.Tablet{
+		Alias: &topodatapb.TabletAlias{
+			Cell: cell1,
+			Uid:  200,
+		},
+		Hostname:      hostname,
+		Keyspace:      keyspace,
+		Shard:         shard,
+		Type:          topodatapb.TabletType_REPLICA,
+		MysqlHostname: hostname,
+		MysqlPort:     200,
+	}
+	tabCell2 := &topodatapb.Tablet{
+		Alias: &topodatapb.TabletAlias{
+			Cell: cell2,
+			Uid:  201,
+		},
+		Hostname:      hostname,
+		Keyspace:      keyspace,
+		Shard:         shard,
+		Type:          topodatapb.TabletType_REPLICA,
+		MysqlHostname: hostname,
+		MysqlPort:     201,
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	ts = memorytopo.NewServer(ctx, cell1, cell2)
+	_, err := ts.GetOrCreateShard(context.Background(), keyspace, shard)
+	require.NoError(t, err)
+
+	err = ts.CreateTablet(context.Background(), tabCell1)
+	require.NoError(t, err)
+	err = ts.CreateTablet(context.Background(), tabCell2)
+	require.NoError(t, err)
+
+	clustersToWatch = nil
+	shardsToWatch = make(map[string][]*topodatapb.KeyRange)
+	cellsToWatch = []string{cell1}
+
+	var discoveredAliases []string
+	refreshTabletsInKeyspaceShard(ctx, keyspace, shard, func(tabletAlias string) {
+		discoveredAliases = append(discoveredAliases, tabletAlias)
+	}, true, nil)
+
+	assert.Contains(t, discoveredAliases, topoproto.TabletAliasString(tabCell1.Alias))
+	assert.NotContains(t, discoveredAliases, topoproto.TabletAliasString(tabCell2.Alias))
+
+	tabletFromDB, err := inst.ReadTablet(topoproto.TabletAliasString(tabCell1.Alias))
+	assert.NoError(t, err)
+	assert.NotNil(t, tabletFromDB)
+
+	_, err = inst.ReadTablet(topoproto.TabletAliasString(tabCell2.Alias))
+	assert.Error(t, err)
+}
