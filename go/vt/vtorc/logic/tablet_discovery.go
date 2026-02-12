@@ -144,9 +144,6 @@ func initializeShardsToWatch() error {
 
 // shouldWatchTablet checks if the given tablet is part of the watch list.
 func shouldWatchTablet(tablet *topodatapb.Tablet) bool {
-	if len(cellsToWatch) > 0 && !slices.Contains(cellsToWatch, tablet.GetAlias().GetCell()) {
-		return false
-	}
 	// If we are watching all keyspaces, then we want to watch this tablet too.
 	if len(shardsToWatch) == 0 {
 		return true
@@ -300,7 +297,7 @@ func refreshTabletInfoOfShard(ctx context.Context, keyspace, shard string) {
 }
 
 func refreshTabletsInKeyspaceShard(ctx context.Context, keyspace, shard string, loader func(tabletAlias string), forceRefresh bool, tabletsToIgnore []string) {
-	tablets, err := ts.GetTabletsByShard(ctx, keyspace, shard)
+	tablets, err := ts.GetTabletsByShardCell(ctx, keyspace, shard, cellsToWatch)
 	if err != nil {
 		log.Errorf("Error fetching tablets for keyspace/shard %v/%v: %v", keyspace, shard, err)
 		return

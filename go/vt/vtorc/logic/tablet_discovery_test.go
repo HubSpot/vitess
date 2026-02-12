@@ -107,16 +107,13 @@ var (
 
 func TestShouldWatchTablet(t *testing.T) {
 	oldClustersToWatch := clustersToWatch
-	oldCellsToWatch := cellsToWatch
 	defer func() {
 		clustersToWatch = oldClustersToWatch
-		cellsToWatch = oldCellsToWatch
 		shardsToWatch = nil
 	}()
 
 	testCases := []struct {
 		in                  []string
-		cells               []string
 		tablet              *topodatapb.Tablet
 		expectedShouldWatch bool
 	}{
@@ -216,59 +213,11 @@ func TestShouldWatchTablet(t *testing.T) {
 			},
 			expectedShouldWatch: false,
 		},
-		{
-			cells: nil,
-			tablet: &topodatapb.Tablet{
-				Alias:    &topodatapb.TabletAlias{Cell: "zone-1"},
-				Keyspace: keyspace,
-				Shard:    shard,
-			},
-			expectedShouldWatch: true,
-		},
-		{
-			cells: []string{"zone-1"},
-			tablet: &topodatapb.Tablet{
-				Alias:    &topodatapb.TabletAlias{Cell: "zone-1"},
-				Keyspace: keyspace,
-				Shard:    shard,
-			},
-			expectedShouldWatch: true,
-		},
-		{
-			cells: []string{"zone-2"},
-			tablet: &topodatapb.Tablet{
-				Alias:    &topodatapb.TabletAlias{Cell: "zone-1"},
-				Keyspace: keyspace,
-				Shard:    shard,
-			},
-			expectedShouldWatch: false,
-		},
-		{
-			in:    []string{keyspace},
-			cells: []string{"zone-1"},
-			tablet: &topodatapb.Tablet{
-				Alias:    &topodatapb.TabletAlias{Cell: "zone-1"},
-				Keyspace: keyspace,
-				Shard:    shard,
-			},
-			expectedShouldWatch: true,
-		},
-		{
-			in:    []string{keyspace},
-			cells: []string{"zone-2"},
-			tablet: &topodatapb.Tablet{
-				Alias:    &topodatapb.TabletAlias{Cell: "zone-1"},
-				Keyspace: keyspace,
-				Shard:    shard,
-			},
-			expectedShouldWatch: false,
-		},
 	}
 
 	for _, tt := range testCases {
-		t.Run(fmt.Sprintf("clusters=%v,cells=%v,Tablet-%v-%v-%v", strings.Join(tt.in, ","), strings.Join(tt.cells, ","), tt.tablet.GetAlias().GetCell(), tt.tablet.GetKeyspace(), tt.tablet.GetShard()), func(t *testing.T) {
+		t.Run(fmt.Sprintf("clusters=%v,Tablet-%v-%v", strings.Join(tt.in, ","), tt.tablet.GetKeyspace(), tt.tablet.GetShard()), func(t *testing.T) {
 			clustersToWatch = tt.in
-			cellsToWatch = tt.cells
 			err := initializeShardsToWatch()
 			require.NoError(t, err)
 			assert.Equal(t, tt.expectedShouldWatch, shouldWatchTablet(tt.tablet))
