@@ -24,6 +24,7 @@ import (
 	"vitess.io/vitess/go/sqltypes"
 	"vitess.io/vitess/go/test/vschemawrapper"
 	"vitess.io/vitess/go/vt/key"
+	"vitess.io/vitess/go/vt/log"
 	querypb "vitess.io/vitess/go/vt/proto/query"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	"vitess.io/vitess/go/vt/sqlparser"
@@ -148,9 +149,12 @@ func getPlannerFromQueryHint(stmt sqlparser.Statement) (plancontext.PlannerVersi
 }
 
 func buildRoutePlan(stmt sqlparser.Statement, reservedVars *sqlparser.ReservedVars, vschema plancontext.VSchema, f func(statement sqlparser.Statement, reservedVars *sqlparser.ReservedVars, schema plancontext.VSchema) (*planResult, error)) (*planResult, error) {
+	log.Infof("KEJ Building plan for query: %s, planner: %s", sqlparser.String(stmt), vschema.Planner())
 	if vschema.ShardDestination() != nil {
+		log.Infof("KEJ Bypassing the planner since the query is targeting a single shard %s: %s", vschema.ShardDestination(), sqlparser.String(stmt))
 		return buildPlanForBypass(stmt, reservedVars, vschema)
 	}
+	log.Infof("KEJ Not bypassing the planner")
 	return f(stmt, reservedVars, vschema)
 }
 
