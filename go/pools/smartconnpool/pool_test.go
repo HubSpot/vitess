@@ -1623,5 +1623,4 @@ func TestConnPoolNoResourceLeakOnTimeout(t *testing.T) {
 	if p.InUse() != 0 {
 		t.Fatalf("Expected in use connections to be 0 but were %v", p.InUse())
 	}
-
 }
