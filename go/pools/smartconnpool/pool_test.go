@@ -1609,8 +1609,8 @@ func TestConnPoolNoResourceLeakOnTimeout(t *testing.T) {
 	}
 
 	// waiter 2 should block on the priority queue but timeout waiting on the connection
-	ctx, _ := context.WithTimeout(priority.NewContext(context.Background(), priority.High), 1*time.Second)
-
+	ctx, cancel := context.WithTimeout(priority.NewContext(context.Background(), priority.High), 1*time.Second)
+	defer cancel()
 	_, err = p.Get(ctx, nil)
 	assert.EqualError(t, err, "connection pool timed out")
 

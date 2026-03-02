@@ -70,7 +70,7 @@ const (
 
 var ErrInvalidPriority = vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "Invalid priority value specified in query")
 
-var queryPriorityRegex = regexp.MustCompile("/\\*vt\\+ priority: ([A-Z]+) \\*/")
+var queryPriorityRegex = regexp.MustCompile(`/\*vt\+ priority: ([A-Z]+) \*/`)
 
 func isNonSpace(r rune) bool {
 	return !unicode.IsSpace(r)
