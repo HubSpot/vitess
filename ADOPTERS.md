@@ -22,4 +22,5 @@ This is an alphabetical list of known adopters of Vitess. Some have already gone
 * [Twitter](https://twitter.com)
 * [Vinted](https://www.vinted.com/)
 * [Weave](https://www.getweave.com)
+* [Kyle](localhost)
 * [YouTube](https://youtube.com)
