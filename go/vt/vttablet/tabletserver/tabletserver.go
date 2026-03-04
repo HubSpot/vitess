@@ -45,7 +45,6 @@ import (
 	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/logutil"
 	"vitess.io/vitess/go/vt/mysqlctl"
-	"vitess.io/vitess/go/vt/priority"
 	binlogdatapb "vitess.io/vitess/go/vt/proto/binlogdata"
 	querypb "vitess.io/vitess/go/vt/proto/query"
 	tabletmanagerdatapb "vitess.io/vitess/go/vt/proto/tabletmanagerdata"
@@ -886,7 +885,7 @@ func (tsv *TabletServer) Execute(ctx context.Context, target *querypb.Target, sq
 	if transactionID != 0 && reservedID != 0 && transactionID != reservedID {
 		return nil, vterrors.New(vtrpcpb.Code_INTERNAL, "[BUG] transactionID and reserveID must match if both are non-zero")
 	}
-	ctx = tsv.newContextWithPriority(ctx, sql)
+
 	return tsv.execute(ctx, target, sql, bindVariables, transactionID, reservedID, nil, options)
 }
 
@@ -986,7 +985,7 @@ func (tsv *TabletServer) StreamExecute(ctx context.Context, target *querypb.Targ
 	if transactionID != 0 && reservedID != 0 && transactionID != reservedID {
 		return vterrors.New(vtrpcpb.Code_INTERNAL, "[BUG] transactionID and reserveID must match if both are non-zero")
 	}
-	ctx = tsv.newContextWithPriority(ctx, sql)
+
 	return tsv.streamExecute(ctx, target, sql, bindVariables, transactionID, reservedID, nil, options, callback)
 }
 
@@ -1062,7 +1061,7 @@ func (tsv *TabletServer) BeginExecute(ctx context.Context, target *querypb.Targe
 			defer txDone()
 		}
 	}
-	ctx = tsv.newContextWithPriority(ctx, sql)
+
 	state, err := tsv.begin(ctx, target, postBeginQueries, reservedID, nil, options)
 	if err != nil {
 		return state, nil, err
@@ -1083,7 +1082,6 @@ func (tsv *TabletServer) BeginStreamExecute(
 	options *querypb.ExecuteOptions,
 	callback func(*sqltypes.Result) error,
 ) (queryservice.TransactionState, error) {
-	ctx = tsv.newContextWithPriority(ctx, sql)
 	state, err := tsv.begin(ctx, target, postBeginQueries, reservedID, nil, options)
 	if err != nil {
 		return state, err
@@ -2149,14 +2147,4 @@ func skipQueryPlanCache(options *querypb.ExecuteOptions) bool {
 
 func (tsv *TabletServer) getShard() string {
 	return tsv.sm.Target().Shard
-}
-
-// newContextWithPriority returns a context based on query priority if QoS is enabled
-func (tsv *TabletServer) newContextWithPriority(ctx context.Context, sql string) context.Context {
-	_, present := priority.FromContext(ctx)
-	if !present {
-		return priority.NewContext(ctx, priority.NewPriority(sqlparser.ExtractPriority(sql)))
-	}
-
-	return ctx
 }

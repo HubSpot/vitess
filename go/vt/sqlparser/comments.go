@@ -18,7 +18,6 @@ package sqlparser
 
 import (
 	"fmt"
-	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -69,8 +68,6 @@ const (
 )
 
 var ErrInvalidPriority = vterrors.Errorf(vtrpcpb.Code_INVALID_ARGUMENT, "Invalid priority value specified in query")
-
-var queryPriorityRegex = regexp.MustCompile(`/\*vt\+ priority: ([A-Z]+) \*/`)
 
 func isNonSpace(r rune) bool {
 	return !unicode.IsSpace(r)
@@ -200,16 +197,6 @@ func StripLeadingComments(sql string) string {
 
 func hasCommentPrefix(sql string) bool {
 	return len(sql) > 1 && ((sql[0] == '/' && sql[1] == '*') || (sql[0] == '-' && sql[1] == '-'))
-}
-
-func ExtractPriority(sql string) string {
-	priority := queryPriorityRegex.FindStringSubmatch(sql)
-	if len(priority) == 2 {
-		return priority[1]
-
-	} else {
-		return "UNKNOWN"
-	}
 }
 
 // ExtractMysqlComment extracts the version and SQL from a comment-only query
