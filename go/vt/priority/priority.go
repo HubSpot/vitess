@@ -20,7 +20,7 @@ const (
 	User
 	Critical
 
-	SupportedPriorities int = 6
+	SupportedPriorities int = int(Critical) + 1
 )
 
 func NewPriority(priority string) Priority {

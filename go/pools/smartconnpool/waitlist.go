@@ -207,32 +207,46 @@ func (wl *waitlist[D]) tryReturnConnSlow(conn *Pooled[D]) bool {
 	connSetting := conn.Conn.Setting()
 
 	wl.mu.Lock()
-
+	//we maintain the original vitess connection pool behavior that favors returning
+	//the connection to a waiter waiting for a connection with the same settings or
+	//a waiter that has reached the max age.
+	//The difference is that we do this in priority order
 	for pri := int(priority.Critical); pri >= int(priority.Penalized); pri-- {
 		queue := wl.pq.queues[pri]
 		front := queue.Front()
 		if front == nil {
 			continue
 		}
-
 		target := front
-
+		// iterate through the waitlist looking for either waiters that have been
+		// here too long, or a waiter that is looking exactly for the same Setting
+		// as the one we have in our connection.
 		for elem := front; elem != nil; elem = elem.Next() {
 			w := elem.Value
 			if w.age > maxAge || w.setting == connSetting {
 				target = elem
 				break
 			}
+			// this only ages the waiters that are being skipped over: we'll start
+			// aging the waiters in the back once they get to the front of the pool.
+			// the maxAge of 8 has been set empirically: smaller values cause clients
+			// with a specific setting to slightly starve, and aging all the clients
+			// in the list every time leads to unfairness when the system is at capacity
 			w.age++
 		}
 		wl.pq.removeElement(target)
 		wl.mu.Unlock()
 
+		// we have a target to return the connection to, simply write the connection
+		// into the waiter and signal their semaphore. they'll wake up to pick up the
+		// connection.
 		target.Value.conn = conn
 		target.Value.sema.notify(true)
 		return true
 	}
 	wl.mu.Unlock()
+	//maybe there isn't anybody to hand over the connection to, because we've
+	//raced with another client returning another connection
 	return false
 }
 
