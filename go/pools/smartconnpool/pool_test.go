@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"runtime"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -27,6 +28,8 @@ import (
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"vitess.io/vitess/go/vt/priority"
 )
 
 var (
@@ -1493,5 +1496,132 @@ func BenchmarkPoolCleanupIdleConnectionsPerformanceNoIdleConnections(b *testing.
 
 	for b.Loop() {
 		p.closeIdleResources(time.Now())
+	}
+}
+
+func TestRequestPriority(t *testing.T) {
+	var state TestState
+
+	p := NewPool(&Config[*TestConn]{
+		Capacity: 1,
+		LogWait:  state.LogWait,
+	}).Open(newConnector(&state), nil)
+	defer p.Close()
+
+	//use the only available connection in the pool
+	dbConn, err := p.Get(priority.NewContext(context.Background(), priority.Low), nil)
+	require.NoError(t, err)
+
+	var wg sync.WaitGroup
+	var mutex sync.Mutex
+	var executedQueries []priority.Priority
+	wg.Add(2)
+	//this will block
+	go func() {
+		defer wg.Done()
+		dbConn, err := p.Get(priority.NewContext(context.Background(), priority.Low), nil)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+			return
+
+		}
+		mutex.Lock()
+		defer mutex.Unlock()
+		executedQueries = append(executedQueries, priority.Low)
+		dbConn.Recycle()
+	}()
+
+	for {
+		runtime.Gosched()
+		if p.wait.waiting() == 1 {
+			break
+		}
+	}
+
+	go func() {
+		defer wg.Done()
+		dbConn, err := p.Get(priority.NewContext(context.Background(), priority.High), nil)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+			return
+
+		}
+		mutex.Lock()
+		defer mutex.Unlock()
+		executedQueries = append(executedQueries, priority.High)
+		dbConn.Recycle()
+	}()
+
+	for {
+		runtime.Gosched()
+		if p.wait.waiting() == 2 {
+			break
+		}
+	}
+
+	dbConn.Recycle()
+	wg.Wait()
+
+	if len(executedQueries) != 2 {
+		t.Errorf("Expected 2 queries to be executed but got %v", len(executedQueries))
+	}
+	if executedQueries[0] != priority.High {
+		t.Errorf("Expected query with highest priority to execute first but got  %v", executedQueries[0])
+	}
+	if executedQueries[1] != priority.Low {
+		t.Errorf("Expected query with lowest priority to execute second but got  %v", executedQueries[1])
+	}
+}
+
+func TestConnPoolNoResourceLeakOnTimeout(t *testing.T) {
+	var state TestState
+
+	p := NewPool(&Config[*TestConn]{
+		Capacity: 1,
+		LogWait:  state.LogWait,
+	}).Open(newConnector(&state), nil)
+	defer p.Close()
+
+	//use the only available connection in the pool
+	dbConn, err := p.Get(priority.NewContext(context.Background(), priority.Low), nil)
+	require.NoError(t, err)
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	// waiter 1
+	go func() {
+		defer wg.Done()
+		dbConn, err := p.Get(priority.NewContext(context.Background(), priority.Low), nil)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+			return
+
+		}
+		dbConn.Recycle()
+	}()
+
+	for {
+		runtime.Gosched()
+		if p.wait.waiting() == 1 {
+			break
+		}
+	}
+
+	// waiter 2 should block on the priority queue but timeout waiting on the connection
+	ctx, cancel := context.WithTimeout(priority.NewContext(context.Background(), priority.High), 1*time.Second)
+	defer cancel()
+	_, err = p.Get(ctx, nil)
+	assert.EqualError(t, err, "connection pool timed out")
+
+	//this connection should go to waiter 1
+	dbConn.Recycle()
+
+	wg.Wait()
+	if p.Available() != 1 {
+		t.Fatalf("Expected available connections to be 1 but were %v", p.Available())
+	}
+	if p.InUse() != 0 {
+		t.Fatalf("Expected in use connections to be 0 but were %v", p.InUse())
 	}
 }
