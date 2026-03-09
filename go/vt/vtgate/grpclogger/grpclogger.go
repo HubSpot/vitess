@@ -14,7 +14,6 @@ import (
 	query "vitess.io/vitess/go/vt/proto/query"
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	"vitess.io/vitess/go/vt/proto/vtgate"
-	"vitess.io/vitess/go/vt/servenv"
 	"vitess.io/vitess/go/vt/topo/topoproto"
 
 	"golang.org/x/net/context"
@@ -40,12 +39,10 @@ var (
 	log_channel = make(chan QueryLogResult, 10000)
 )
 
-func init() {
-	servenv.OnParse(func(fs *pflag.FlagSet) {
-		fs.BoolVar(&queryReplayLoggingEnabled, "query_replay_logging_enabled", false, "Whether to enable grpc query file logging or not")
-		fs.StringVar(&queryReplayLogPath, "query_replay_log_path", queryReplayLogPath, "The default path to log grpc requests to")
-		fs.StringVar(&queryReplayLogName, "query_replay_log_name", queryReplayLogName, "The default file logging name")
-	})
+func RegisterFlags(fs *pflag.FlagSet) {
+	fs.BoolVar(&queryReplayLoggingEnabled, "query_replay_logging_enabled", false, "Whether to enable grpc query file logging or not")
+	fs.StringVar(&queryReplayLogPath, "query_replay_log_path", queryReplayLogPath, "The default path to log grpc requests to")
+	fs.StringVar(&queryReplayLogName, "query_replay_log_name", queryReplayLogName, "The default file logging name")
 }
 
 func Init(unaryInterceptors *[]grpc.UnaryServerInterceptor) {

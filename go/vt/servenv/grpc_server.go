@@ -130,6 +130,7 @@ var (
 // `go/cmd/*` entrypoints should call this function before
 // ParseFlags(WithArgs)? if they wish to run a gRPC server.
 func RegisterGRPCServerFlags() {
+	OnParse(grpclogger.RegisterFlags)
 	OnParse(func(fs *pflag.FlagSet) {
 		fs.IntVar(&gRPCPort, "grpc_port", gRPCPort, "Port to listen on for gRPC calls. If zero, do not listen.")
 		fs.StringVar(&gRPCBindAddress, "grpc_bind_address", gRPCBindAddress, "Bind address for gRPC calls. If empty, listen on all addresses.")
