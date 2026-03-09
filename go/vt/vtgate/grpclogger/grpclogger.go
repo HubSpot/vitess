@@ -1,19 +1,21 @@
 package grpclogger
 
 import (
-	"flag"
 	"log"
 	"os"
 	"strings"
 	"time"
-	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
-	"vitess.io/vitess/go/vt/topo/topoproto"
 
 	"github.com/natefinch/lumberjack"
+	"github.com/spf13/pflag"
 	"github.com/sirupsen/logrus"
 	"google.golang.org/grpc"
+
 	query "vitess.io/vitess/go/vt/proto/query"
+	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	"vitess.io/vitess/go/vt/proto/vtgate"
+	"vitess.io/vitess/go/vt/servenv"
+	"vitess.io/vitess/go/vt/topo/topoproto"
 
 	"golang.org/x/net/context"
 )
@@ -31,22 +33,28 @@ type QueryLogResult struct {
 var (
 	FileLogger = logrus.New()
 
-	QueryReplayLoggingEnabled = flag.Bool("query_replay_logging_enabled", false, "Whether to enable grpc query file logging or not")
-
-	QueryReplayLogPath = flag.String("query_replay_log_path", "/vt/vtdataroot/tmp/", "The default path to log grpc requests to")
-
-	QueryReplayLogName = flag.String("query_replay_log_name", "vtgate_queries", "The default file logging name")
+	queryReplayLoggingEnabled bool
+	queryReplayLogPath        = "/vt/vtdataroot/tmp/"
+	queryReplayLogName        = "vtgate_queries"
 
 	log_channel = make(chan QueryLogResult, 10000)
 )
 
+func init() {
+	servenv.OnParse(func(fs *pflag.FlagSet) {
+		fs.BoolVar(&queryReplayLoggingEnabled, "query_replay_logging_enabled", false, "Whether to enable grpc query file logging or not")
+		fs.StringVar(&queryReplayLogPath, "query_replay_log_path", queryReplayLogPath, "The default path to log grpc requests to")
+		fs.StringVar(&queryReplayLogName, "query_replay_log_name", queryReplayLogName, "The default file logging name")
+	})
+}
+
 func Init(unaryInterceptors *[]grpc.UnaryServerInterceptor) {
-	if *QueryReplayLoggingEnabled {
+	if queryReplayLoggingEnabled {
 		*unaryInterceptors = append(*unaryInterceptors, loggingUnaryInterceptor)
 
 		podName := os.Getenv("POD_NAME")
-		fileNameWithPodName := *QueryReplayLogName + "-" + podName
-		fileNameAndPath := *QueryReplayLogPath + fileNameWithPodName
+		fileNameWithPodName := queryReplayLogName + "-" + podName
+		fileNameAndPath := queryReplayLogPath + fileNameWithPodName
 
 		log.Printf("Initializing logging library GRPCLogger and logrotater")
 		lumberjackLogRotater := lumberjack.Logger{
@@ -86,7 +94,7 @@ func loggingUnaryInterceptor(ctx context.Context, req interface{}, info *grpc.Un
 		if p, ok := req.(*vtgate.ExecuteRequest); ok {
 			if response, okResponse := invoker.(*vtgate.ExecuteResponse); okResponse {
 				// extract "Burrata" from Burrata:0@master or Burrata@master
-				keyspace, _, _, parseErr := topoproto.ParseDestination(p.Session.TargetString, topodatapb.TabletType_MASTER)
+				keyspace, tabletType, _, parseErr := topoproto.ParseDestination(p.Session.TargetString, topodatapb.TabletType_PRIMARY)
 				if parseErr != nil {
 					log.Printf("Failed to parse out keyspace from %v, err: %v", p.Session.TargetString, parseErr)
 					return invoker, err
@@ -104,7 +112,7 @@ func loggingUnaryInterceptor(ctx context.Context, req interface{}, info *grpc.Un
 				queryLogResult := QueryLogResult{
 					UtcTimeNow:      startTime.UTC().UnixNano() / int64(1000000),
 					Keyspace:        keyspace,
-					TabletType:      p.TabletType.String(),
+					TabletType:      tabletType.String(),
 					VtGateQuery:     p.Query,
 					QueryDurationMs: endTime.Sub(startTime).Milliseconds(),
 					QueryRowCount:   queryRowCount,
