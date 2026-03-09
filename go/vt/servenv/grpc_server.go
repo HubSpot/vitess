@@ -24,6 +24,8 @@ import (
 	"strconv"
 	"time"
 
+	"vitess.io/vitess/go/vt/vtgate/grpclogger"
+
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/spf13/pflag"
@@ -271,6 +273,9 @@ func interceptors() []grpc.ServerOption {
 	if grpccommon.EnableGRPCPrometheus() {
 		interceptors.Add(grpc_prometheus.StreamServerInterceptor, grpc_prometheus.UnaryServerInterceptor)
 	}
+
+	// for query replay grpc logging
+	grpclogger.Init(&interceptors.unaryInterceptors)
 
 	trace.AddGrpcServerOptions(interceptors.Add)
 
