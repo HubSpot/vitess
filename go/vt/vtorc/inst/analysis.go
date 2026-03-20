@@ -105,6 +105,7 @@ type DetectionAnalysis struct {
 	ClusterDetails   ClusterInfo
 	AnalyzedKeyspace string
 	AnalyzedShard    string
+	AnalyzedCell     string
 
 	// ShardPrimaryTermTimestamp is the primary term start time stored in the shard record.
 	ShardPrimaryTermTimestamp                 string

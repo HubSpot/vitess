@@ -23,6 +23,7 @@ import (
 
 	"vitess.io/vitess/go/vt/log"
 
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
@@ -362,4 +363,98 @@ func TestRecoverShardAnalyses(t *testing.T) {
 	require.Equal(t, inst.PrimaryHasPrimary, order[1])
 	// Concurrent recoveries come after, in any order.
 	require.ElementsMatch(t, []inst.AnalysisCode{inst.ReplicationStopped, inst.ReplicaIsWritable}, order[2:])
+}
+
+func TestCellsNoRecoverySkipsRecovery(t *testing.T) {
+	orcDb, err := db.OpenVTOrc()
+	require.NoError(t, err)
+	oldTs := ts
+	oldCellsNoRecovery := cellsNoRecovery
+	defer func() {
+		ts = oldTs
+		cellsNoRecovery = oldCellsNoRecovery
+		_, err = orcDb.Exec("delete from vitess_tablet")
+		require.NoError(t, err)
+	}()
+
+	tablet := &topodatapb.Tablet{
+		Alias: &topodatapb.TabletAlias{
+			Cell: "zone1",
+			Uid:  100,
+		},
+		Hostname:      "localhost",
+		MysqlHostname: "localhost",
+		MysqlPort:     1200,
+		Keyspace:      "ks",
+		Shard:         "-",
+		Type:          topodatapb.TabletType_PRIMARY,
+	}
+	err = inst.SaveTablet(tablet)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ts = memorytopo.NewServer(ctx, "zone1")
+
+	analysisEntry := &inst.DetectionAnalysis{
+		AnalyzedInstanceAlias: topoproto.TabletAliasString(tablet.Alias),
+		AnalyzedKeyspace:      "ks",
+		AnalyzedShard:         "-",
+		AnalyzedCell:          "zone1",
+		Analysis:              inst.DeadPrimary,
+	}
+
+	cellsNoRecovery = []string{"zone1"}
+	prevCount := countRecoverySkippedByCell.Counts()["zone1.RecoverDeadPrimary"]
+	err = executeCheckAndRecoverFunction(analysisEntry)
+	require.NoError(t, err)
+	newCount := countRecoverySkippedByCell.Counts()["zone1.RecoverDeadPrimary"]
+	assert.Greater(t, newCount, prevCount)
+}
+
+func TestCellsNoRecoveryDoesNotSkipOtherCells(t *testing.T) {
+	orcDb, err := db.OpenVTOrc()
+	require.NoError(t, err)
+	oldTs := ts
+	oldCellsNoRecovery := cellsNoRecovery
+	defer func() {
+		ts = oldTs
+		cellsNoRecovery = oldCellsNoRecovery
+		_, err = orcDb.Exec("delete from vitess_tablet")
+		require.NoError(t, err)
+	}()
+
+	tablet := &topodatapb.Tablet{
+		Alias: &topodatapb.TabletAlias{
+			Cell: "zone2",
+			Uid:  100,
+		},
+		Hostname:      "localhost",
+		MysqlHostname: "localhost",
+		MysqlPort:     1200,
+		Keyspace:      "ks",
+		Shard:         "-",
+		Type:          topodatapb.TabletType_REPLICA,
+	}
+	err = inst.SaveTablet(tablet)
+	require.NoError(t, err)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	ts = memorytopo.NewServer(ctx, "zone2")
+
+	analysisEntry := &inst.DetectionAnalysis{
+		AnalyzedInstanceAlias: topoproto.TabletAliasString(tablet.Alias),
+		AnalyzedKeyspace:      "ks",
+		AnalyzedShard:         "-",
+		AnalyzedCell:          "zone2",
+		Analysis:              inst.DeadPrimary,
+	}
+
+	cellsNoRecovery = []string{"zone1"}
+	prevSkipCount := countRecoverySkippedByCell.Counts()["zone2.RecoverDeadPrimary"]
+	err = executeCheckAndRecoverFunction(analysisEntry)
+	require.Error(t, err)
+	newSkipCount := countRecoverySkippedByCell.Counts()["zone2.RecoverDeadPrimary"]
+	assert.Equal(t, prevSkipCount, newSkipCount)
 }

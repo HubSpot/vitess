@@ -106,6 +106,8 @@ var (
 	// shardLockTimings measures the timing of LockShard operations.
 	shardLockTimingsActions = []string{"Lock", "Unlock"}
 	shardLockTimings        = stats.NewTimings("ShardLockTimings", "Timings of global shard locks", "Action", shardLockTimingsActions...)
+
+	countRecoverySkippedByCell = stats.NewCountersWithMultiLabels("RecoverySkippedByCell", "Recoveries skipped due to cells_no_recovery", []string{"Cell", "RecoveryType"})
 )
 
 // recoveryFunction is the code of the recovery function to be used
@@ -735,6 +737,14 @@ func executeCheckAndRecoverFunction(analysisEntry *inst.DetectionAnalysis) (err 
 	if err != nil {
 		logger.Errorf("executeCheckAndRecoverFunction: error inserting recovery detection record, aborting recovery: %+v", err)
 		return err
+	}
+
+	if len(cellsNoRecovery) > 0 && slices.Contains(cellsNoRecovery, analysisEntry.AnalyzedCell) {
+		recoveryName := getRecoverFunctionName(checkAndRecoverFunctionCode)
+		logger.Infof("CheckAndRecover: Tablet: %+v in cell %+v: NOT recovering (cell is in --cells_no_recovery)",
+			analysisEntry.AnalyzedInstanceAlias, analysisEntry.AnalyzedCell)
+		countRecoverySkippedByCell.Add([]string{analysisEntry.AnalyzedCell, recoveryName}, 1)
+		return nil
 	}
 
 	// Check for recovery being disabled globally
