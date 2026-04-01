@@ -292,7 +292,27 @@ func TestGetCheckAndRecoverFunctionCode(t *testing.T) {
 			ersEnabled:                   false,
 			convertTabletWithErrantGTIDs: false,
 			analysisCode:                 inst.ErrantGTIDDetected,
-			wantRecoveryFunction:         noRecoveryFunc,
+			wantRecoveryFunction:         recoverErrantGTIDDetectedFunc,
+		}, {
+			name:                 "DeadPrimary with global ERS enabled and keyspace ERS disabled",
+			ersEnabled:           true,
+			analysisCode:         inst.DeadPrimary,
+			wantRecoveryFunction: recoverDeadPrimaryFunc,
+		}, {
+			name:                 "DeadPrimary with global+keyspace ERS enabled and shard ERS disabled",
+			ersEnabled:           true,
+			analysisCode:         inst.DeadPrimary,
+			wantRecoveryFunction: recoverDeadPrimaryFunc,
+		}, {
+			name:                 "UnreachablePrimary",
+			ersEnabled:           true,
+			analysisCode:         inst.UnreachablePrimary,
+			wantRecoveryFunction: restartArbitraryDirectReplicaFunc,
+		}, {
+			name:                 "UnreachablePrimaryWithBrokenReplicas",
+			ersEnabled:           true,
+			analysisCode:         inst.UnreachablePrimaryWithBrokenReplicas,
+			wantRecoveryFunction: restartAllDirectReplicasFunc,
 		},
 	}
 

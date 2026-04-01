@@ -50,6 +50,7 @@ const (
 	ReplicaMisconfigured                   AnalysisCode = "ReplicaMisconfigured"
 	UnreachablePrimaryWithLaggingReplicas  AnalysisCode = "UnreachablePrimaryWithLaggingReplicas"
 	UnreachablePrimary                     AnalysisCode = "UnreachablePrimary"
+	UnreachablePrimaryWithBrokenReplicas   AnalysisCode = "UnreachablePrimaryWithBrokenReplicas"
 	PrimarySingleReplicaNotReplicating     AnalysisCode = "PrimarySingleReplicaNotReplicating"
 	PrimarySingleReplicaDead               AnalysisCode = "PrimarySingleReplicaDead"
 	AllPrimaryReplicasNotReplicating       AnalysisCode = "AllPrimaryReplicasNotReplicating"
@@ -145,6 +146,9 @@ type ReplicationAnalysis struct {
 	MaxReplicaGTIDErrant                      string
 	IsReadOnly                                bool
 	IsDiskStalled                             bool
+
+	AnalyzedKeyspaceEmergencyReparentDisabled bool
+	AnalyzedShardEmergencyReparentDisabled    bool
 }
 
 func (replicationAnalysis *ReplicationAnalysis) MarshalJSON() ([]byte, error) {
