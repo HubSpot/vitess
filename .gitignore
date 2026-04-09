@@ -97,3 +97,6 @@ report
 # thirdparty
 go/thirdparty/
 go/thirdparty/thirdparty.go
+
+go/flags/endtoend/count_flags.sh
+/coverage.out
