@@ -399,9 +399,10 @@ func TestWaitForConsistentKeyspaces(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
 			kew := KeyspaceEventWatcher{
-				keyspaces: tt.ksMap,
-				mu:        sync.Mutex{},
-				ts:        &fakeTopoServer{},
+				keyspaces:        tt.ksMap,
+				missingKeyspaces: make(map[string]time.Time),
+				mu:               sync.Mutex{},
+				ts:               &fakeTopoServer{},
 			}
 			err := kew.WaitForConsistentKeyspaces(ctx, tt.ksList)
 			if tt.errExpected != "" {
