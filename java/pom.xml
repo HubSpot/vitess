@@ -21,6 +21,7 @@
   <!-- NOTE: The artifactId of each module has the prefix "vitess-". For example,
     for the JDBC driver it is "vitess-jdbc". -->
   <modules>
+    <module>proto</module>
     <module>client</module>
     <module>example</module>
     <module>grpc-client</module>
