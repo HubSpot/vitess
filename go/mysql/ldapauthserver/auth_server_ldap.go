@@ -175,6 +175,14 @@ func (lud *LdapUserData) update() {
 	}
 	lud.updating = true
 	lud.Unlock()
+	// Clear updating on every return, not just the success path: a refresh that failed on an
+	// LDAP connect/bind/search error while leaving updating=true would make every later update()
+	// short-circuit on the check above, freezing this user's cached groups until process restart.
+	defer func() {
+		lud.Lock()
+		lud.updating = false
+		lud.Unlock()
+	}()
 	err := lud.asl.Client.Connect("tcp", &lud.asl.ServerConfig)
 	if err != nil {
 		log.Errorf("Error updating LDAP user data: %v", err)
@@ -189,7 +197,6 @@ func (lud *LdapUserData) update() {
 	lud.Lock()
 	lud.groups = groups
 	lud.lastUpdated = time.Now()
-	lud.updating = false
 	lud.Unlock()
 }
 

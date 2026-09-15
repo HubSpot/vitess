@@ -2279,6 +2279,66 @@ func TestPlayerStopPos(t *testing.T) {
 	))
 }
 
+// TestPlayerTransactionTimestampEmptyTransaction verifies that TransactionTimestamp
+// (which backs the VReplicationTransactionLagSeconds metric) advances when the stream
+// processes an empty/filtered transaction, i.e. a transaction that touches only tables
+// outside the stream's filter. Without this, an idle stream sharing a source with a busy
+// sibling would report an ever-growing lag even though it is fully caught up. Writes to
+// the unfiltered "no" table produce exactly these empty transactions on the target.
+func TestPlayerTransactionTimestampEmptyTransaction(t *testing.T) {
+	defer deleteTablet(addTablet(100))
+
+	execStatements(t, []string{
+		"create table yes(id int, val varchar(128), primary key(id))",
+		fmt.Sprintf("create table %s.yes(id int, val varchar(128), primary key(id))", vrepldb),
+		"create table no(id int, val varchar(128), primary key(id))",
+	})
+	defer execStatements(t, []string{
+		"drop table yes",
+		fmt.Sprintf("drop table %s.yes", vrepldb),
+		"drop table no",
+	})
+
+	filter := &binlogdatapb.Filter{
+		Rules: []*binlogdatapb.Rule{{
+			Match: "/yes",
+		}},
+	}
+	bls := &binlogdatapb.BinlogSource{
+		Keyspace: env.KeyspaceName,
+		Shard:    env.ShardName,
+		Filter:   filter,
+		OnDdl:    binlogdatapb.OnDDLAction_IGNORE,
+	}
+	cancel, id := startVReplication(t, bls, "")
+	defer cancel()
+
+	stats := globalStats.controllers[int32(id)].blpStats
+
+	// TransactionTimestamp is stored in whole seconds (source commit time). Wait past the
+	// current second so the upcoming empty transaction is guaranteed a strictly greater
+	// timestamp than anything set during stream startup. This is a source-clock-granularity
+	// requirement, not a synchronization wait; the actual wait for processing is below.
+	tsBefore := stats.TransactionTimestamp.Load()
+	time.Sleep(1100 * time.Millisecond)
+	markSecond := time.Now().Unix()
+	require.Greater(t, markSecond, tsBefore, "test setup: mark second should exceed any startup timestamp")
+
+	// Write only to the unfiltered "no" table: the target receives a timestamped, empty
+	// (rowless) transaction that the vplayer skips.
+	execStatements(t, []string{
+		"insert into no values(1, 'aaa')",
+	})
+
+	// With the fix, the skipped empty transaction advances TransactionTimestamp to the
+	// source commit time (>= markSecond). Without it, TransactionTimestamp never moves for
+	// this idle stream and this poll times out.
+	require.Eventually(t, func() bool {
+		return stats.TransactionTimestamp.Load() >= markSecond
+	}, 30*time.Second, 100*time.Millisecond,
+		"TransactionTimestamp did not advance on an empty/filtered transaction")
+}
+
 func TestPlayerStopAtOther(t *testing.T) {
 	t.Skip("This test was written to verify a bug fix, but is extremely flaky. Only a manual test is possible")
 

@@ -57,6 +57,8 @@ const baseInnoDBTableSizesPattern = `(?s).*SELECT.*its\.space = it\.space.*SUM\(
 
 var mustMatch = utils.MustMatchFn(".Mutex")
 
+const nonInnoDBTableSizesPattern = `(?s)SELECT t\.table_name.*engine != 'InnoDB'.*`
+
 // TestOpenAndReloadLegacy
 //
 // Runs with 5.7 env
@@ -1956,4 +1958,118 @@ func TestGetTableForPos(t *testing.T) {
 			require.NoError(t, fakedb.LastError())
 		})
 	}
+}
+func TestNonInnoDBTableSizesFallback(t *testing.T) {
+	db := fakesqldb.New(t)
+	defer db.Close()
+
+	innodbTable := "innodb_table"
+	rocksdbTable := "rocksdb_table"
+
+	db.MockQueriesForTable(innodbTable, &sqltypes.Result{
+		Fields: []*querypb.Field{{
+			Name: "pk",
+			Type: sqltypes.Int32,
+		}},
+	})
+	db.MockQueriesForTable(rocksdbTable, &sqltypes.Result{
+		Fields: []*querypb.Field{{
+			Name: "pk",
+			Type: sqltypes.Int32,
+		}},
+	})
+
+	se := newEngine(10*time.Second, 10*time.Second, 0, db, nil)
+	se.conns.Open(se.cp, se.cp, se.cp)
+	se.isOpen = true
+	se.tables = map[string]*Table{}
+	se.notifiers = make(map[string]notifier)
+	se.MakePrimary(true)
+
+	se.SkipMetaCheck = true
+	err := se.reload(context.Background(), false)
+	require.NoError(t, err)
+
+	se.SkipMetaCheck = false
+	se.lastChange = 0
+
+	db.AddQuery("SELECT UNIX_TIMESTAMP()", sqltypes.MakeTestResult(
+		sqltypes.MakeTestFields("UNIX_TIMESTAMP()", "int64"),
+		fmt.Sprintf("%d", time.Now().Unix()),
+	))
+
+	db.AddQuery(mysql.BaseShowTables, &sqltypes.Result{
+		Fields: mysql.BaseShowTablesFields,
+		Rows: [][]sqltypes.Value{
+			mysql.BaseShowTablesRow(innodbTable, false, ""),
+			mysql.BaseShowTablesRow(rocksdbTable, false, ""),
+		},
+	})
+
+	db.AddQueryPattern(baseInnoDBTableSizesPattern, &sqltypes.Result{
+		Fields: mysql.BaseInnoDBTableSizesFields,
+		Rows: [][]sqltypes.Value{
+			mysql.BaseInnoDBTableSizesRow("fakesqldb", innodbTable),
+		},
+	})
+
+	db.AddQueryPattern(nonInnoDBTableSizesPattern, &sqltypes.Result{
+		Fields: []*querypb.Field{
+			{Name: "table_name", Type: sqltypes.VarChar},
+			{Name: "file_size", Type: sqltypes.Int64},
+			{Name: "allocated_size", Type: sqltypes.Int64},
+		},
+		Rows: [][]sqltypes.Value{
+			{
+				sqltypes.MakeTrusted(sqltypes.VarChar, []byte(rocksdbTable)),
+				sqltypes.MakeTrusted(sqltypes.Int64, []byte("200")),
+				sqltypes.MakeTrusted(sqltypes.Int64, []byte("250")),
+			},
+		},
+	})
+
+	db.RejectQueryPattern(baseShowTablesWithSizesPattern, "should use InnoDB table sizes path")
+
+	db.AddQuery(mysql.BaseShowPrimary, &sqltypes.Result{
+		Fields: mysql.ShowPrimaryFields,
+		Rows: [][]sqltypes.Value{
+			mysql.ShowPrimaryRow(innodbTable, "pk"),
+			mysql.ShowPrimaryRow(rocksdbTable, "pk"),
+		},
+	})
+
+	db.AddQuery(mysql.ShowPartitons, &sqltypes.Result{})
+	db.AddQuery(mysql.ShowTableRowCountClusteredIndex, &sqltypes.Result{})
+	db.AddQuery(mysql.ShowIndexSizes, &sqltypes.Result{})
+	db.AddQuery(mysql.ShowIndexCardinalities, &sqltypes.Result{})
+	AddFakeInnoDBReadRowsResult(db, 10)
+
+	db.AddQuery(fmt.Sprintf(detectViewChange, sidecar.GetIdentifier()),
+		sqltypes.MakeTestResult(sqltypes.MakeTestFields("table_name", "varchar")))
+	db.AddQuery(fmt.Sprintf(readTableCreateTimes, sidecar.GetIdentifier()),
+		sqltypes.MakeTestResult(sqltypes.MakeTestFields("table_name|create_time", "varchar|int64")))
+	db.AddQuery(fmt.Sprintf(detectUdfChange, sidecar.GetIdentifier()), &sqltypes.Result{})
+
+	err = se.reload(context.Background(), true)
+	require.NoError(t, err)
+
+	assert.Equal(t, int64(100), se.tableFileSizeGauge.Counts()[innodbTable],
+		"InnoDB table should get size from innodb_tablespaces")
+	assert.Equal(t, int64(150), se.tableAllocatedSizeGauge.Counts()[innodbTable],
+		"InnoDB table should get allocated size from innodb_tablespaces")
+
+	assert.Equal(t, int64(200), se.tableFileSizeGauge.Counts()[rocksdbTable],
+		"RocksDB table should get size from non-InnoDB fallback")
+	assert.Equal(t, int64(250), se.tableAllocatedSizeGauge.Counts()[rocksdbTable],
+		"RocksDB table should get allocated size from non-InnoDB fallback")
+
+	rocksTable := se.tables[rocksdbTable]
+	require.NotNil(t, rocksTable, "RocksDB table should exist in schema engine")
+	assert.Equal(t, uint64(200), rocksTable.FileSize)
+	assert.Equal(t, uint64(250), rocksTable.AllocatedSize)
+
+	innoTable := se.tables[innodbTable]
+	require.NotNil(t, innoTable, "InnoDB table should exist in schema engine")
+	assert.Equal(t, uint64(100), innoTable.FileSize)
+	assert.Equal(t, uint64(150), innoTable.AllocatedSize)
 }

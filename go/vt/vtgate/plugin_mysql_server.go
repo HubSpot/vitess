@@ -23,6 +23,7 @@ import (
 	"os"
 	"os/signal"
 	"regexp"
+	"sort"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -42,8 +43,12 @@ import (
 	"vitess.io/vitess/go/vt/callinfo"
 	"vitess.io/vitess/go/vt/log"
 	querypb "vitess.io/vitess/go/vt/proto/query"
+	topodatapb "vitess.io/vitess/go/vt/proto/topodata"
 	vtgatepb "vitess.io/vitess/go/vt/proto/vtgate"
 	"vitess.io/vitess/go/vt/servenv"
+	"vitess.io/vitess/go/vt/topo/topoproto"
+
+	"vitess.io/vitess/go/thirdparty/hubspot/grpclogger"
 	"vitess.io/vitess/go/vt/sqlparser"
 	"vitess.io/vitess/go/vt/utils"
 	"vitess.io/vitess/go/vt/vtenv"
@@ -258,8 +263,11 @@ func (vh *vtgateHandler) ComQuery(c *mysql.Conn, query string, callback func(*sq
 		}
 	}()
 
+	startTime := time.Now()
+
 	if session.Options.Workload == querypb.ExecuteOptions_OLAP {
 		session, err := vh.vtg.StreamExecute(ctx, vh, session, query, make(map[string]*querypb.BindVariable), false, callback)
+		vh.logMySQLQuery(c, startTime, query, nil, nil, err)
 		if err != nil {
 			return sqlerror.NewSQLErrorFromError(err)
 		}
@@ -267,6 +275,7 @@ func (vh *vtgateHandler) ComQuery(c *mysql.Conn, query string, callback func(*sq
 		return nil
 	}
 	session, result, err := vh.vtg.Execute(ctx, vh, session, query, make(map[string]*querypb.BindVariable), false)
+	vh.logMySQLQuery(c, startTime, query, nil, []*sqltypes.Result{result}, err)
 
 	if err := sqlerror.NewSQLErrorFromError(err); err != nil {
 		return err
@@ -315,6 +324,8 @@ func (vh *vtgateHandler) ComQueryMulti(c *mysql.Conn, sql string, callback func(
 		}
 	}()
 
+	startTime := time.Now()
+
 	if session.Options.Workload == querypb.ExecuteOptions_OLAP {
 		if c.Capabilities&mysql.CapabilityClientMultiStatements != 0 {
 			session, err = vh.vtg.StreamExecuteMulti(ctx, vh, session, sql, callback)
@@ -326,6 +337,7 @@ func (vh *vtgateHandler) ComQueryMulti(c *mysql.Conn, sql string, callback func(
 				}()
 				return callback(sqltypes.QueryResponse{QueryResult: result}, false, firstPacket)
 			})
+			vh.logMySQLQuery(c, startTime, sql, nil, nil, err)
 		}
 		if err != nil {
 			return sqlerror.NewSQLErrorFromError(err)
@@ -347,6 +359,7 @@ func (vh *vtgateHandler) ComQueryMulti(c *mysql.Conn, sql string, callback func(
 	} else {
 		session, result, err = vh.vtg.Execute(ctx, vh, session, sql, make(map[string]*querypb.BindVariable), false)
 		queryResults = append(queryResults, sqltypes.QueryResponse{QueryResult: result, QueryError: sqlerror.NewSQLErrorFromError(err)})
+		vh.logMySQLQuery(c, startTime, sql, nil, []*sqltypes.Result{result}, err)
 	}
 
 	fillInTxStatusFlags(c, session)
@@ -447,8 +460,11 @@ func (vh *vtgateHandler) ComStmtExecute(c *mysql.Conn, prepare *mysql.PrepareDat
 		}
 	}()
 
+	startTime := time.Now()
+
 	if session.Options.Workload == querypb.ExecuteOptions_OLAP {
 		_, err := vh.vtg.StreamExecute(ctx, vh, session, prepare.PrepareStmt, prepare.BindVars, true, callback)
+		vh.logMySQLQuery(c, startTime, prepare.PrepareStmt, prepare.BindVars, nil, err)
 		if err != nil {
 			return sqlerror.NewSQLErrorFromError(err)
 		}
@@ -456,6 +472,7 @@ func (vh *vtgateHandler) ComStmtExecute(c *mysql.Conn, prepare *mysql.PrepareDat
 		return nil
 	}
 	_, qr, err := vh.vtg.Execute(ctx, vh, session, prepare.PrepareStmt, prepare.BindVars, true)
+	vh.logMySQLQuery(c, startTime, prepare.PrepareStmt, prepare.BindVars, []*sqltypes.Result{qr}, err)
 	if err != nil {
 		return sqlerror.NewSQLErrorFromError(err)
 	}
@@ -466,6 +483,40 @@ func (vh *vtgateHandler) ComStmtExecute(c *mysql.Conn, prepare *mysql.PrepareDat
 
 func (vh *vtgateHandler) WarningCount(c *mysql.Conn) uint16 {
 	return uint16(len(vh.session(c).GetWarnings()))
+}
+
+// logMySQLQuery logs MySQL protocol queries for replay following the same pattern as gRPC logging.
+// Row count extraction happens after early-return checks to avoid unnecessary work when logging is disabled.
+// Multi-statement batches are intentionally not logged to avoid replaying mixed DML/SELECT batches.
+// For single-result queries, wrap in a slice: []*sqltypes.Result{result}. For streaming queries, pass nil.
+func (vh *vtgateHandler) logMySQLQuery(c *mysql.Conn, startTime time.Time, sql string, bindVars map[string]*querypb.BindVariable, results []*sqltypes.Result, execErr error) {
+	if !grpclogger.QueryReplayLoggingEnabled {
+		return
+	}
+	if !grpclogger.IsSelectQuery(sql) {
+		return
+	}
+	session := vh.session(c)
+	keyspace, tabletType, _, parseErr := topoproto.ParseDestination(session.TargetString, topodatapb.TabletType_PRIMARY)
+	if parseErr != nil {
+		log.Errorf("Failed to parse keyspace from %v, err: %v", session.TargetString, parseErr)
+		return
+	}
+	var rowCount uint64
+	for _, r := range results {
+		if r != nil {
+			rowCount += r.RowsAffected
+		}
+	}
+	grpclogger.LogQuery(grpclogger.QueryLogResult{
+		UtcTimeNow:      startTime.UTC().UnixNano() / int64(1000000),
+		Keyspace:        keyspace,
+		TabletType:      tabletType.String(),
+		VtGateQuery:     &querypb.BoundQuery{Sql: sql, BindVariables: bindVars},
+		QueryDurationMs: time.Since(startTime).Milliseconds(),
+		QueryRowCount:   rowCount,
+		Error:           execErr != nil,
+	})
 }
 
 // ComRegisterReplica is part of the mysql.Handler interface.
@@ -594,10 +645,15 @@ func initMySQLProtocol(vtgate *VTGate) *mysqlServer {
 	}
 
 	// Initialize registered AuthServer implementations (or other plugins)
-	for _, initFn := range pluginInitializers {
-		initFn()
+	// sort pluginInitializers by priority
+	sort.Slice(pluginInitializers, func(i, j int) bool {
+		return pluginInitializers[i].priority < pluginInitializers[j].priority
+	})
+	for _, pluginInitializer := range pluginInitializers {
+		pluginInitializer.initializer()
 	}
 	authServer := mysql.GetAuthServer(mysqlAuthServerImpl)
+	log.Infof("using mysql auth server implementation: %s", mysqlAuthServerImpl)
 
 	// Check mysql-default-workload
 	var ok bool
@@ -824,9 +880,18 @@ func init() {
 	servenv.OnParseFor("vtcombo", registerPluginFlags)
 }
 
-var pluginInitializers []func()
+type pluginInitializer struct {
+	priority    int
+	initializer func()
+}
+
+var pluginInitializers []pluginInitializer
 
 // RegisterPluginInitializer lets plugins register themselves to be init'ed at servenv.OnRun-time
 func RegisterPluginInitializer(initializer func()) {
-	pluginInitializers = append(pluginInitializers, initializer)
+	RegisterPluginInitializerWithPriority(0, initializer)
+}
+
+func RegisterPluginInitializerWithPriority(initPriority int, initializer func()) {
+	pluginInitializers = append(pluginInitializers, pluginInitializer{initPriority, initializer})
 }

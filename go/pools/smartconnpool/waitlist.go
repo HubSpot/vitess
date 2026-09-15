@@ -20,8 +20,10 @@ import (
 	"context"
 	"runtime"
 	"sync"
+	"sync/atomic"
 
 	"vitess.io/vitess/go/list"
+	"vitess.io/vitess/go/vt/priority"
 )
 
 // waiter represents a client waiting for a connection in the waitlist
@@ -37,12 +39,57 @@ type waiter[C Connection] struct {
 	ctx context.Context
 	// age is the amount of cycles this client has been on the waitlist
 	age uint32
+	//priority is the priority of the waiter
+	priority priority.Priority
+}
+
+type priorityQueue[C Connection] struct {
+	queues                []*list.List[*waiter[C]]
+	waiterToQueuedElement map[*waiter[C]]*list.Element[*waiter[C]]
+	size                  atomic.Int64
+}
+
+func newPriorityQueue[C Connection](priorities int) *priorityQueue[C] {
+	pq := &priorityQueue[C]{
+		queues:                make([]*list.List[*waiter[C]], priorities),
+		waiterToQueuedElement: make(map[*waiter[C]]*list.Element[*waiter[C]]),
+	}
+	for i := range pq.queues {
+		pq.queues[i] = list.New[*waiter[C]]()
+	}
+	return pq
+}
+
+func (pq *priorityQueue[C]) add(waiter *waiter[C]) {
+	element := pq.queues[waiter.priority].PushBack(waiter)
+	pq.waiterToQueuedElement[waiter] = element
+	pq.size.Add(1)
+}
+
+func (pq *priorityQueue[C]) remove(waiter *waiter[C]) bool {
+	element, ok := pq.waiterToQueuedElement[waiter]
+	if !ok {
+		return false
+	}
+	pq.removeElement(element)
+	return true
+}
+
+func (pq *priorityQueue[C]) removeElement(element *list.Element[*waiter[C]]) {
+	request := element.Value
+	delete(pq.waiterToQueuedElement, request)
+	pq.queues[request.priority].Remove(element)
+	pq.size.Add(-1)
+}
+
+func (pq *priorityQueue[C]) len() int {
+	return int(pq.size.Load())
 }
 
 type waitlist[C Connection] struct {
 	nodes sync.Pool
 	mu    sync.Mutex
-	list  list.List[waiter[C]]
+	pq    *priorityQueue[C]
 }
 
 // waitForConn blocks until a connection with the given Setting is returned by another client,
@@ -60,18 +107,23 @@ func (wl *waitlist[C]) waitForConn(ctx context.Context, setting *Setting, closeC
 		wl.nodes.Put(elem)
 	}()
 
-	elem.Value = waiter[C]{conn: elem.Value.conn, setting: setting, ctx: ctx}
+	// Extract priority from context, default to Medium
+	pri, ok := priority.FromContext(ctx)
+	if !ok {
+		pri = priority.Medium
+	}
+
+	elem.Value = waiter[C]{conn: elem.Value.conn, setting: setting, ctx: ctx, priority: pri, age: 0}
 
 	wl.mu.Lock()
-	// add ourselves as a waiter at the end of the waitlist
-	wl.list.PushBackValue(elem)
+	wl.pq.add(&elem.Value)
 	wl.mu.Unlock()
 
 	select {
 	case <-closeChan:
 		// Pool was closed while we were waiting.
 		wl.mu.Lock()
-		removed := wl.list.RemoveIfPresent(elem)
+		removed := wl.pq.remove(&elem.Value)
 		wl.mu.Unlock()
 
 		if removed {
@@ -87,7 +139,7 @@ func (wl *waitlist[C]) waitForConn(ctx context.Context, setting *Setting, closeC
 		// Context expired. We need to try to remove ourselves from the waitlist to
 		// prevent another goroutine from trying to hand us a connection later on.
 		wl.mu.Lock()
-		removed := wl.list.RemoveIfPresent(elem)
+		removed := wl.pq.remove(&elem.Value)
 		wl.mu.Unlock()
 
 		if removed {
@@ -118,22 +170,24 @@ func waitResult[C Connection](ctx context.Context, conn *Pooled[C]) (*Pooled[C],
 }
 
 func (wl *waitlist[C]) maybeStarvingCount() (maybeStarving int) {
-	if wl.list.Len() == 0 {
-		return
+	if wl.pq.len() == 0 {
+		return 0
 	}
-
 	wl.mu.Lock()
 	defer wl.mu.Unlock()
 
-	// count the waiters that no returner has aged yet; they may be starving.
-	// Waiters whose context has already expired cannot use a connection and
-	// are only listed until a returner evicts them, so they don't count.
-	for e := wl.list.Front(); e != nil; e = e.Next() {
-		if e.Value.ctx.Err() != nil {
-			continue
-		}
-		if e.Value.age == 0 {
-			maybeStarving++
+	// Count the waiters that no returner has aged yet (age == 0); they may be
+	// starving. Waiters whose context has already expired cannot use a
+	// connection and are only listed until a returner evicts them, so they
+	// don't count.
+	for i := 0; i < int(priority.SupportedPriorities); i++ {
+		for elem := wl.pq.queues[i].Front(); elem != nil; elem = elem.Next() {
+			if elem.Value.ctx.Err() != nil {
+				continue
+			}
+			if elem.Value.age == 0 {
+				maybeStarving++
+			}
 		}
 	}
 
@@ -145,7 +199,7 @@ func (wl *waitlist[C]) maybeStarvingCount() (maybeStarving int) {
 // waiter has expired, the connection is not handed over at all.
 func (wl *waitlist[D]) tryReturnConn(conn *Pooled[D]) bool {
 	// fast path: if there's nobody waiting there's nothing to do
-	if wl.list.Len() == 0 {
+	if wl.pq.len() == 0 {
 		return false
 	}
 	// split the slow path into a separate function to enable inlining
@@ -154,65 +208,78 @@ func (wl *waitlist[D]) tryReturnConn(conn *Pooled[D]) bool {
 
 func (wl *waitlist[D]) tryReturnConnSlow(conn *Pooled[D]) bool {
 	const maxAge = 8
-	var (
-		target      *list.Element[waiter[D]]
-		next        *list.Element[waiter[D]]
-		connSetting = conn.Conn.Setting()
-	)
+
+	connSetting := conn.Conn.Setting()
 
 	wl.mu.Lock()
-	// iterate through the waitlist looking for either waiters that have been
-	// here too long, or a waiter that is looking exactly for the same Setting
-	// as the one we have in our connection.
-	for e := wl.list.Front(); e != nil; e = next {
-		next = e.Next() // capture before any Remove unlinks e
+	// we maintain the original vitess connection pool behavior that favors returning
+	// the connection to a waiter waiting for a connection with the same settings or
+	// a waiter that has reached the max age.
+	// The difference is that we do this in priority order.
+	for pri := int(priority.Critical); pri >= int(priority.Penalized); pri-- {
+		queue := wl.pq.queues[pri]
 
-		// Evict waiters whose context has already expired: they cannot use the
-		// connection, and removing them here is what keeps the list from
-		// accumulating a dead prefix that every later return must re-scan. Wake
-		// them with a nil so they stop waiting. This send can't block while we
-		// hold the mutex: the channel is buffered and a listed waiter's buffer
-		// is always empty, since only a returner sends and only while removing
-		// the waiter from the list.
-		if e.Value.ctx.Err() != nil {
-			wl.list.Remove(e)
-			e.Value.conn <- nil
+		var (
+			target *list.Element[*waiter[D]]
+			next   *list.Element[*waiter[D]]
+		)
+		// iterate through this priority's waitlist looking for either waiters
+		// that have been here too long, or a waiter that is looking exactly for
+		// the same Setting as the one we have in our connection.
+		for elem := queue.Front(); elem != nil; elem = next {
+			next = elem.Next() // capture before any Remove unlinks elem
+			w := elem.Value
+
+			// Evict waiters whose context has already expired: they cannot use the
+			// connection, and removing them here is what keeps the list from
+			// accumulating a dead prefix that every later return must re-scan. Wake
+			// them with a nil so they stop waiting. This send can't block while we
+			// hold the mutex: the channel is buffered and a listed waiter's buffer
+			// is always empty, since only a returner sends and only while removing
+			// the waiter from the list.
+			if w.ctx.Err() != nil {
+				wl.pq.removeElement(elem)
+				w.conn <- nil
+				continue
+			}
+			if target == nil {
+				// the front-most live waiter is the fallback handover target
+				target = elem
+			}
+			if w.age > maxAge || w.setting == connSetting {
+				target = elem
+				break
+			}
+			// this only ages the waiters that are being skipped over: we'll start
+			// aging the waiters in the back once they get to the front of the pool.
+			// the maxAge of 8 has been set empirically: smaller values cause clients
+			// with a specific setting to slightly starve, and aging all the clients
+			// in the list every time leads to unfairness when the system is at capacity
+			w.age++
+		}
+
+		// every waiter in this priority had an expired context; try the next
+		// priority down.
+		if target == nil {
 			continue
 		}
-		if target == nil {
-			// the front-most live waiter is the fallback handover target
-			target = e
-		}
-		if e.Value.age > maxAge || e.Value.setting == connSetting {
-			target = e
-			break
-		}
-		// this only ages the waiters that are being skipped over: we'll start
-		// aging the waiters in the back once they get to the front of the pool.
-		// the maxAge of 8 has been set empirically: smaller values cause clients
-		// with a specific setting to slightly starve, and aging all the clients
-		// in the list every time leads to unfairness when the system is at capacity
-		e.Value.age++
-	}
-	if target != nil {
-		wl.list.Remove(target)
+
+		wl.pq.removeElement(target)
+		wl.mu.Unlock()
+
+		// hand the connection to the live target. The channel is buffered, so the
+		// send completes without waiting for the waiter to be scheduled.
+		target.Value.conn <- conn
+		// Allow the goroutine waiting on the channel to start running _now_.
+		runtime.Gosched()
+		return true
 	}
 	wl.mu.Unlock()
 
 	// maybe there isn't anybody to hand over the connection to, because we've
 	// raced with another client returning another connection, or because all
 	// the waiters in the list have an expired context
-	if target == nil {
-		return false
-	}
-
-	// hand the connection to the live target. The channel is buffered, so the
-	// send completes without waiting for the waiter to be scheduled.
-	target.Value.conn <- conn
-	// Allow the goroutine waiting on the channel to start running _now_.
-	runtime.Gosched()
-
-	return true
+	return false
 }
 
 func (wl *waitlist[C]) init() {
@@ -223,9 +290,9 @@ func (wl *waitlist[C]) init() {
 			Value: waiter[C]{conn: make(chan *Pooled[C], 1)},
 		}
 	}
-	wl.list.Init()
+	wl.pq = newPriorityQueue[C](priority.SupportedPriorities)
 }
 
 func (wl *waitlist[C]) waiting() int {
-	return wl.list.Len()
+	return wl.pq.len()
 }

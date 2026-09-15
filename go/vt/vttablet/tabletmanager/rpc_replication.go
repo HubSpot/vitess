@@ -935,7 +935,7 @@ func (tm *TabletManager) setReplicationSourceLocked(ctx context.Context, parentA
 		if err != nil {
 			return err
 		}
-		primarySid, err := replication.ParseSID(primaryStatus.ServerUuid)
+		primarySid, err := replication.ParseSID(hubspotUpgradeFromV14Fix(ctx, tm, primaryStatus.ServerUuid, parent))
 		if err != nil {
 			return err
 		}

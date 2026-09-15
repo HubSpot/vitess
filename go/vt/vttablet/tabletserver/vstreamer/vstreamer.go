@@ -907,6 +907,13 @@ func (vs *vstreamer) buildTableColumns(tm *mysql.TableMap) ([]*querypb.Field, er
 		}
 		return fields, nil
 	}
+	if st == nil {
+		if vs.filter.FieldEventMode == binlogdatapb.Filter_ERR_ON_MISMATCH {
+			log.Infof("No schema found for table %s", tm.Name)
+			return nil, fmt.Errorf("unknown table %v in schema", tm.Name)
+		}
+		return fields, nil
+	}
 
 	if len(st.Fields) < len(tm.Types) {
 		if vs.filter.FieldEventMode == binlogdatapb.Filter_ERR_ON_MISMATCH {

@@ -53,3 +53,49 @@ func TestValidateClearText(t *testing.T) {
 	require.Error(t, err, "AuthServerLdap validated invalid credentials.")
 
 }
+
+// flakyLdapClient fails the first Connect and then behaves normally, so a test can drive
+// update() through a failed refresh followed by a successful one.
+type flakyLdapClient struct {
+	connectAttempts int
+}
+
+func (c *flakyLdapClient) Connect(network string, config *ServerConfig) error {
+	c.connectAttempts++
+	if c.connectAttempts == 1 {
+		return fmt.Errorf("simulated LDAP connect failure")
+	}
+	return nil
+}
+func (c *flakyLdapClient) Close() {}
+func (c *flakyLdapClient) Bind(username, password string) error { return nil }
+func (c *flakyLdapClient) Search(searchRequest *ldap.SearchRequest) (*ldap.SearchResult, error) {
+	return &ldap.SearchResult{
+		Entries: []*ldap.Entry{
+			{Attributes: []*ldap.EntryAttribute{{Name: "cn", Values: []string{"refreshedgroup"}}}},
+		},
+	}, nil
+}
+
+// A refresh that fails on an LDAP error must still clear the updating latch. Otherwise every
+// later update() short-circuits on the updating check and the user's cached groups freeze
+// until the process restarts.
+func TestFailedRefreshDoesNotFreezeFutureUpdates(t *testing.T) {
+	client := &flakyLdapClient{}
+	asl := &AuthServerLdap{
+		Client:         client,
+		User:           "testuser",
+		Password:       "testpass",
+		UserDnPattern:  "%s",
+		RefreshSeconds: 1,
+	}
+	lud := &LdapUserData{asl: asl, groups: []string{"stalegroup"}, username: "testuser"}
+
+	// First refresh fails at Connect; cached groups are left untouched.
+	lud.update()
+	require.Equal(t, []string{"stalegroup"}, lud.groups, "failed refresh should not change cached groups")
+
+	// The failed refresh must not have latched updating=true: a second refresh has to succeed.
+	lud.update()
+	require.Equal(t, []string{"refreshedgroup"}, lud.groups, "a refresh after an earlier failure must succeed, but the updating latch was left set")
+}

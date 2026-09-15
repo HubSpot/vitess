@@ -32,6 +32,9 @@ type Connection interface {
 
 type Pooled[C Connection] struct {
 	next        atomic.Pointer[Pooled[C]]
+	onStack     atomic.Bool  // set while this conn is on a clean/settings stack, so Push can log a double-return (diagnostic)
+	pushSite    atomic.Int32 // committed site of the push that currently holds this conn on a stack (diagnostic)
+	pendingSite atomic.Int32 // site the returning path stashes before pushing; committed to pushSite on claim (diagnostic)
 	timeCreated timestamp
 	timeUsed    timestamp
 	pool        *ConnPool[C]

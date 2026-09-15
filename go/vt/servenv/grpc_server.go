@@ -24,6 +24,8 @@ import (
 	"strconv"
 	"time"
 
+	"vitess.io/vitess/go/thirdparty/hubspot/grpclogger"
+
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_prometheus "github.com/grpc-ecosystem/go-grpc-prometheus"
 	"github.com/spf13/pflag"
@@ -133,6 +135,14 @@ var (
 	gRPCEnableOptionalTLS bool
 	// gRPCServerCA if specified will combine server cert and server CA.
 	gRPCServerCA string
+	// gRPCCertGlobal, gRPCKeyGlobal and gRPCGlobalSNI enable a second,
+	// SNI-selected server certificate: a client connecting with TLS SNI equal to
+	// gRPCGlobalSNI is served gRPCCertGlobal/gRPCKeyGlobal; all other clients are
+	// served the default gRPCCert/gRPCKey. Used for cross-hublet clients that can
+	// only trust a globally-replicated CA.
+	gRPCCertGlobal string
+	gRPCKeyGlobal  string
+	gRPCGlobalSNI  string
 )
 
 // RegisterGRPCServerFlags registers flags required to run a gRPC server via Run
@@ -158,6 +168,9 @@ func RegisterGRPCServerFlags() {
 		utils.SetFlagStringVar(fs, &gRPCCRL, "grpc-crl", gRPCCRL, "path to a certificate revocation list in PEM format, client certificates will be further verified against this file during TLS handshake")
 		utils.SetFlagBoolVar(fs, &gRPCEnableOptionalTLS, "grpc-enable-optional-tls", gRPCEnableOptionalTLS, "enable optional TLS mode when a server accepts both TLS and plain-text connections on the same port")
 		utils.SetFlagStringVar(fs, &gRPCServerCA, "grpc-server-ca", gRPCServerCA, "path to server CA in PEM format, which will be combine with server cert, return full certificate chain to clients")
+		utils.SetFlagStringVar(fs, &gRPCCertGlobal, "grpc-cert-global", gRPCCertGlobal, "additional server certificate presented when a client connects with TLS SNI matching grpc-global-sni; requires grpc-key-global")
+		utils.SetFlagStringVar(fs, &gRPCKeyGlobal, "grpc-key-global", gRPCKeyGlobal, "server private key for grpc-cert-global")
+		utils.SetFlagStringVar(fs, &gRPCGlobalSNI, "grpc-global-sni", gRPCGlobalSNI, "TLS SNI/authority that selects grpc-cert-global instead of grpc-cert")
 		utils.SetFlagDurationVar(fs, &gRPCKeepaliveTime, "grpc-server-keepalive-time", gRPCKeepaliveTime, "After a duration of this time, if the server doesn't see any activity, it pings the client to see if the transport is still alive.")
 		utils.SetFlagDurationVar(fs, &gRPCKeepaliveTimeout, "grpc-server-keepalive-timeout", gRPCKeepaliveTimeout, "After having pinged for keepalive check, the server waits for a duration of Timeout and if no activity is seen even after that the connection is closed.")
 	})
@@ -213,7 +226,13 @@ func createGRPCServer() {
 
 	var opts []grpc.ServerOption
 	if gRPCCert != "" && gRPCKey != "" {
-		config, err := vttls.ServerConfig(gRPCCert, gRPCKey, gRPCCA, gRPCCRL, gRPCServerCA, tls.VersionTLS12)
+		var config *tls.Config
+		var err error
+		if gRPCCertGlobal != "" && gRPCKeyGlobal != "" {
+			config, err = vttls.ServerConfigWithGlobal(gRPCCert, gRPCKey, gRPCCA, gRPCCRL, gRPCServerCA, gRPCCertGlobal, gRPCKeyGlobal, gRPCGlobalSNI, tls.VersionTLS12)
+		} else {
+			config, err = vttls.ServerConfig(gRPCCert, gRPCKey, gRPCCA, gRPCCRL, gRPCServerCA, tls.VersionTLS12)
+		}
 		if err != nil {
 			log.Exitf("Failed to log gRPC cert/key/ca: %v", err)
 		}
@@ -290,6 +309,8 @@ func interceptors() []grpc.ServerOption {
 	if grpccommon.EnableGRPCPrometheus() {
 		interceptors.Add(grpc_prometheus.StreamServerInterceptor, grpc_prometheus.UnaryServerInterceptor)
 	}
+
+	grpclogger.Init(&interceptors.unaryInterceptors)
 
 	trace.AddGrpcServerOptions(interceptors.Add)
 

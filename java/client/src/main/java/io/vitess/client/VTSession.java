@@ -92,6 +92,23 @@ public class VTSession {
   }
 
   /**
+   * Returns whether vtgate has latched this session into the failed-transaction state.
+   *
+   * <p>vtgate sets this after an in-flight transaction is aborted by a fatal event such as a
+   * PlannedReparentShard or primary shutdown (surfaced to the client as VT15001). While it is set,
+   * every subsequent statement fails with VT09032 ("previous transaction failed. Issue a ROLLBACK
+   * to resolve the failure.") until an explicit ROLLBACK clears it. The flag lives on the session
+   * cookie, so it survives across statements and pooled-connection reuse. Note that the shard
+   * sessions are torn down when the flag is set, so {@link #isInTransaction()} returns false even
+   * though a ROLLBACK is still required to make the session usable again.</p>
+   *
+   * @return true if a ROLLBACK is required before this session can run further queries
+   */
+  public boolean isErrorUntilRollback() {
+    return this.session.getErrorUntilRollback();
+  }
+
+  /**
    * Returns this session's transaction isolation level.
    *
    * @return Transaction Isolation Level of the Session

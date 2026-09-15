@@ -97,6 +97,7 @@ type Stats struct {
 	heartbeat      int64
 
 	ReplicationLagSeconds atomic.Int64
+	TransactionTimestamp  atomic.Int64
 	History               *history.History
 
 	State atomic.Value

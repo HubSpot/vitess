@@ -1,0 +1,35 @@
+syntax = "proto3";
+
+package hubspot.vtickets.grpc;
+
+import "vtickets.proto";
+
+option java_package = "com.hubspot.vtickets.proto.grpc";
+option go_package = "vitess.io/vitess/go/vt/proto/vtickets/grpc";
+option java_outer_classname = "VTicketRpc";
+
+
+// implemented by both Hublet + Global services
+service VTicketService {
+  // fetches and persists a batch of tickets
+  rpc Get(GetVTicketRequest) returns (vtickets.GetVTicketResponse) {}
+
+  // read-only call to view the current ranges persisted on the service
+  rpc ViewTickets(ViewVTicketsRequest) returns (vtickets.ViewVTicketsResponse) {}
+
+  // read-only call to view all of the current ranges persisted on the service
+  rpc ViewAllTickets(ViewAllVTicketsRequest) returns (vtickets.ViewAllVTicketsResponse) {}
+
+  // for Kube readiness / liveness checks
+  rpc Healthcheck(HealthcheckRequest) returns (vtickets.HealthcheckResponse) {}
+}
+
+service GlobalVTicketService {
+  // creates or updates a ticket to start from a specific value
+  rpc SetTicket(SetGlobalVTicketRequest) returns (vtickets.SetGlobalVTicketResponse) {}
+}
+
+service HubletVTicketService {
+  // clears the available tickets, forcing a refresh from the global service on the next request
+  rpc ClearTicket(ClearHubletVTicketsRequest) returns (vtickets.ClearHubletVTicketsResponse) {}
+}

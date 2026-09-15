@@ -130,6 +130,17 @@ message AutoIncrement {
   string column = 1;
   // The sequence must match a table of type SEQUENCE.
   string sequence = 2;
+  // if set to true, uses vtickets instead of sequences
+  // for auto-increment ids
+  bool use_v_tickets = 3;
+  // if sharing a vticket with another keyspace (eg. copying)
+  // defaults to the current keyspace
+  // can be combined with VTicketSourceTable
+  string v_ticket_source_keyspace = 4;
+  // if sharing a vticket with another table (eg. copying)
+  // defaults to the current table
+  // can be combined with VTicketSourceKeyspace
+  string v_ticket_source_table = 5;
 }
 
 // Column describes a column.

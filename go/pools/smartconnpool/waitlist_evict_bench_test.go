@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"vitess.io/vitess/go/list"
+	"vitess.io/vitess/go/vt/priority"
 )
 
 // injectWaiter appends a synthetic waitlist entry with no goroutine behind it.
@@ -31,12 +32,13 @@ import (
 func injectWaiter(wl *waitlist[*TestConn], ctx context.Context) {
 	elem := &list.Element[waiter[*TestConn]]{
 		Value: waiter[*TestConn]{
-			ctx:  ctx,
-			conn: make(chan *Pooled[*TestConn], 1),
+			ctx:      ctx,
+			conn:     make(chan *Pooled[*TestConn], 1),
+			priority: priority.Medium,
 		},
 	}
 	wl.mu.Lock()
-	wl.list.PushBackValue(elem)
+	wl.pq.add(&elem.Value)
 	wl.mu.Unlock()
 }
 

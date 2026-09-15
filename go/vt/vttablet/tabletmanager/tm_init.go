@@ -1056,7 +1056,7 @@ func (tm *TabletManager) initializeReplication(ctx context.Context, tabletType t
 	if err != nil {
 		return "", err
 	}
-	primarySid, err := replication.ParseSID(primaryStatus.ServerUuid)
+	primarySid, err := replication.ParseSID(hubspotUpgradeFromV14Fix(ctx, tm, primaryStatus.ServerUuid, currentPrimary))
 	if err != nil {
 		return "", err
 	}

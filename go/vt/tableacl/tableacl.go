@@ -68,10 +68,14 @@ var acls = make(map[string]acl.Factory)
 var defaultACL string
 
 type tableACL struct {
-	// mutex protects entries, config, and callback
+	// mutex protects entries, overrides, config, and callback
 	sync.RWMutex
 	entries aclEntries
 	config  *tableaclpb.Config
+
+	// overrides are always checked first; if a table doesn't match here it falls through to entries.
+	overrides aclEntries
+
 	// callback is executed on successful reload.
 	callback func()
 	// ACL Factory override for testing
@@ -136,40 +140,49 @@ func InitFromProto(config *tableaclpb.Config) error {
 	return currentTableACL.Set(config)
 }
 
-// load loads configurations from a proto-defined Config
-// If err is nil, then entries is guaranteed to be non-nil (though possibly empty).
-func load(config *tableaclpb.Config, newACL func([]string) (acl.ACL, error)) (entries aclEntries, err error) {
+// load loads configurations from a proto-defined Config.
+// If err is nil, then entries and overrides are guaranteed to be non-nil (though possibly empty).
+func load(config *tableaclpb.Config, newACL func([]string) (acl.ACL, error)) (entries aclEntries, overrides aclEntries, err error) {
 	if err := ValidateProto(config); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	entries = aclEntries{}
+	overrides = aclEntries{}
 	for _, group := range config.TableGroups {
 		readers, err := newACL(group.Readers)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		writers, err := newACL(group.Writers)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		admins, err := newACL(group.Admins)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
+
+		entry := aclEntry{
+			groupName: group.Name,
+			acl: map[Role]acl.ACL{
+				READER: readers,
+				WRITER: writers,
+				ADMIN:  admins,
+			},
+		}
+
 		for _, tableNameOrPrefix := range group.TableNamesOrPrefixes {
-			entries = append(entries, aclEntry{
-				tableNameOrPrefix: tableNameOrPrefix,
-				groupName:         group.Name,
-				acl: map[Role]acl.ACL{
-					READER: readers,
-					WRITER: writers,
-					ADMIN:  admins,
-				},
-			})
+			entry.tableNameOrPrefix = tableNameOrPrefix
+			if group.IsOverride {
+				overrides = append(overrides, entry)
+			} else {
+				entries = append(entries, entry)
+			}
 		}
 	}
 	sort.Sort(entries)
-	return entries, nil
+	sort.Sort(overrides)
+	return entries, overrides, nil
 }
 
 func (tacl *tableACL) aclFactory() (acl.Factory, error) {
@@ -184,12 +197,13 @@ func (tacl *tableACL) Set(config *tableaclpb.Config) error {
 	if err != nil {
 		return err
 	}
-	entries, err := load(config, factory.New)
+	entries, overrides, err := load(config, factory.New)
 	if err != nil {
 		return err
 	}
 	tacl.Lock()
 	tacl.entries = entries
+	tacl.overrides = overrides
 	tacl.config = config.CloneVT()
 	callback := tacl.callback
 	tacl.Unlock()
@@ -210,8 +224,15 @@ func (tacl *tableACL) Valid() bool {
 // ValidateProto returns an error if the given proto has problems
 // that would cause InitFromProto to fail.
 func ValidateProto(config *tableaclpb.Config) (err error) {
-	t := patricia.NewTrie()
+	// Maintain separate tries for standard and override entries. A table may overlap between
+	// a standard group and an override group, but not within either category.
+	trieRegular := patricia.NewTrie()
+	trieOverride := patricia.NewTrie()
 	for _, group := range config.TableGroups {
+		t := trieRegular
+		if group.IsOverride {
+			t = trieOverride
+		}
 		for _, name := range group.TableNamesOrPrefixes {
 			var prefix patricia.Prefix
 			if strings.HasSuffix(name, "%") {
@@ -237,25 +258,44 @@ func ValidateProto(config *tableaclpb.Config) (err error) {
 	return nil
 }
 
-// Authorized returns the list of entities who have the specified role on a tablel.
+// Authorized returns the list of entities who have the specified role on a table.
 func Authorized(table string, role Role) *ACLResult {
 	return currentTableACL.Authorized(table, role)
 }
 
+// Authorized checks the overrides ACL list first; if there's no matching entry in overrides
+// it falls back to the standard entries list.
 func (tacl *tableACL) Authorized(table string, role Role) *ACLResult {
 	tacl.RLock()
 	defer tacl.RUnlock()
+
+	if r := tacl.overrides.checkEntries(table, role); r != nil {
+		return r
+	}
+	if r := tacl.entries.checkEntries(table, role); r != nil {
+		return r
+	}
+	return &ACLResult{
+		ACL:       acl.DenyAllACL{},
+		GroupName: "",
+	}
+}
+
+// checkEntries returns the matching ACLResult for the given table and role, or nil if no
+// entry in the sorted slice matches. A nil return signals the caller to fall through to the
+// next ACL layer rather than denying.
+func (entries aclEntries) checkEntries(table string, role Role) *ACLResult {
 	start := 0
-	end := len(tacl.entries)
+	end := len(entries)
 	for start < end {
 		mid := start + (end-start)/2
-		val := tacl.entries[mid].tableNameOrPrefix
+		val := entries[mid].tableNameOrPrefix
 		if table == val || (strings.HasSuffix(val, "%") && strings.HasPrefix(table, val[:len(val)-1])) {
-			acl, ok := tacl.entries[mid].acl[role]
+			acl, ok := entries[mid].acl[role]
 			if ok {
 				return &ACLResult{
 					ACL:       acl,
-					GroupName: tacl.entries[mid].groupName,
+					GroupName: entries[mid].groupName,
 				}
 			}
 			break
@@ -265,10 +305,7 @@ func (tacl *tableACL) Authorized(table string, role Role) *ACLResult {
 			start = mid + 1
 		}
 	}
-	return &ACLResult{
-		ACL:       acl.DenyAllACL{},
-		GroupName: "",
-	}
+	return nil
 }
 
 // GetCurrentConfig returns a copy of current tableacl configuration.

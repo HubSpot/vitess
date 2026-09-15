@@ -18,9 +18,42 @@ package smartconnpool
 
 import (
 	"runtime"
+	"sync/atomic"
 
 	"vitess.io/vitess/go/atomic2"
+	"vitess.io/vitess/go/vt/log"
 )
+
+// stackDoublePush counts connections observed being pushed onto a stack while
+// already on one (a double-return). It backs the double-push diagnostic and is
+// asserted by tests; it does not affect pool behavior.
+var stackDoublePush atomic.Int64
+
+// pushSite identifies which return path pushed a connection onto a stack. It is
+// recorded on the connection at push time so the double-push diagnostic can
+// report both ends of a double-return: which path put the connection on the
+// stack first, and which path pushed it again.
+type pushSite int32
+
+const (
+	pushSiteUnknown      pushSite = iota
+	pushSiteRecycle               // put(): a client returning a connection via Recycle
+	pushSiteIdleWorker            // closeIdleResources: the idle reaper returning/reopening conns
+	pushSiteExpireWorker          // tryReturnAnyConn: the expire worker feeding starving waiters
+)
+
+func (p pushSite) String() string {
+	switch p {
+	case pushSiteRecycle:
+		return "recycle"
+	case pushSiteIdleWorker:
+		return "idle-worker"
+	case pushSiteExpireWorker:
+		return "expire-worker"
+	default:
+		return "unknown"
+	}
+}
 
 // connStack is a lock-free stack for Connection objects. It is safe to
 // use from several goroutines.
@@ -44,6 +77,30 @@ type connStack[C Connection] struct {
 }
 
 func (s *connStack[C]) Push(item *Pooled[C]) {
+	// Claim the on-stack marker before the item becomes visible on the stack.
+	// The item cannot be popped until the CAS below links it in, so nothing can
+	// clear the marker in this window; Pop clears it only after it has unlinked
+	// the item. That keeps the marker consistent with stack membership in
+	// correct single-ownership operation.
+	if item.onStack.CompareAndSwap(false, true) {
+		// We put it on the stack; commit the site the returning path stashed on
+		// the conn (pendingSite) so a later double-push can name where the
+		// connection was first placed.
+		item.pushSite.Store(item.pendingSite.Load())
+	} else {
+		// The marker was already set: this same *Pooled is already on a stack,
+		// so this push puts it on twice (a double-return) -- the corruption
+		// behind the "timestampBusy when borrowing a time" panic. Log both ends
+		// (the path that first placed it and this second push) plus the culprit
+		// stack; the borrow() panic only ever shows the victim that pops the
+		// duplicate afterwards. Do not panic here: Push can run on a background
+		// worker that no recover() covers. The push itself proceeds unchanged.
+		stackDoublePush.Add(1)
+		var buf [8192]byte
+		n := runtime.Stack(buf[:], false)
+		log.Errorf("smartconnpool: connection double-pushed onto a stack (double-return); first push via %s, second push via %s; culprit stack:\n%s",
+			pushSite(item.pushSite.Load()), pushSite(item.pendingSite.Load()), buf[:n])
+	}
 	for {
 		oldHead, popCount := s.top.Load()
 		item.next.Store(oldHead)
@@ -64,6 +121,7 @@ func (s *connStack[C]) Pop() (*Pooled[C], bool) {
 		newHead := oldHead.next.Load()
 		if s.top.CompareAndSwap(oldHead, popCount, newHead, popCount+1) {
 			oldHead.next.Store(nil)
+			oldHead.onStack.Store(false)
 			return oldHead, true
 		}
 		runtime.Gosched()

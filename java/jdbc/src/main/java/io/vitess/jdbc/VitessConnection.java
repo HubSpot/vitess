@@ -143,6 +143,10 @@ public class VitessConnection extends ConnectionProperties implements Connection
    */
   public void setAutoCommit(boolean autoCommit) throws SQLException {
     checkOpen();
+    // Clearing the autocommit boundary is a natural point to reset a session that vtgate has
+    // latched into the failed-transaction state (VT09032) - e.g. a connection pool restoring
+    // autocommit before handing the connection back out.
+    clearFailedTransactionIfNeeded();
     if (this.vtSession.isAutoCommit() != autoCommit) { //If same then no-op
       //Old Transaction Needs to be committed as per JDBC 4.1 Spec.
       if (isInTransaction()) {
@@ -173,13 +177,38 @@ public class VitessConnection extends ConnectionProperties implements Connection
   public void rollback() throws SQLException {
     checkOpen();
     checkAutoCommit(Constants.SQLExceptionMessages.ROLLBACK_WHEN_AUTO_COMMIT_TRUE);
-    if (isInTransaction()) {
+    // needsRollback() (rather than isInTransaction()) so that a session vtgate has latched into
+    // the failed-transaction state is cleared even after its shard sessions were torn down - the
+    // exact situation left behind when a reparent aborts an in-flight transaction.
+    if (needsRollback()) {
       rollbackTx();
     }
   }
 
   private void rollbackTx() throws SQLException {
     executeCommand("rollback");
+  }
+
+  /**
+   * Returns whether a ROLLBACK still needs to be sent to vtgate - either because a transaction is
+   * open, or because the session is latched in the failed-transaction (VT09032) state.
+   */
+  private boolean needsRollback() {
+    return isInTransaction() || this.vtSession.isErrorUntilRollback();
+  }
+
+  /**
+   * If vtgate has latched this session into the failed-transaction state (VT09032), issue an
+   * explicit ROLLBACK to clear it. That ROLLBACK is the only thing that resets vtgate's
+   * {@code error_until_rollback} flag. Unlike {@link #rollback()} this deliberately bypasses the
+   * autocommit check and the in-transaction guard, because after a reparent the latch persists
+   * with autocommit enabled and with no live shard sessions. Without this, a pooled connection
+   * keeps failing every subsequent statement with VT09032 until it is physically recycled.
+   */
+  private void clearFailedTransactionIfNeeded() throws SQLException {
+    if (this.vtSession.isErrorUntilRollback()) {
+      rollbackTx();
+    }
   }
 
   private void executeCommand(String sql) throws SQLException {
@@ -195,7 +224,11 @@ public class VitessConnection extends ConnectionProperties implements Connection
     if (!this.closed) { //no-op when Connection already closed
       try {
         if (isInTransaction()) { //Rolling back active transaction on close
-          this.rollback();
+          this.rollback(); //its ROLLBACK also clears any failed-transaction latch
+        } else {
+          //No active transaction, but clear a lingering failed-transaction latch (e.g. left by a
+          //reparent) so the ROLLBACK reaches vtgate before the physical connection goes away.
+          clearFailedTransactionIfNeeded();
         }
         closeAllOpenStatements();
       } finally {
@@ -235,6 +268,13 @@ public class VitessConnection extends ConnectionProperties implements Connection
   private boolean metadataNullOrClosed() throws SQLException {
     return null == databaseMetaData || null == databaseMetaData.getConnection() || databaseMetaData
         .getConnection().isClosed();
+  }
+
+  public void resetCachedMetaData() throws SQLException {
+    synchronized (VitessConnection.class) {
+      databaseMetaData = null;
+    }
+    getMetaData();
   }
 
   public boolean isReadOnly() throws SQLException {
@@ -418,13 +458,32 @@ public class VitessConnection extends ConnectionProperties implements Connection
   }
 
   /**
-   * TODO : This method should actually validate the connection.
+   * Reports whether this connection is still usable.
+   *
+   * <p>Besides the closed check, this detects a session that vtgate has latched into the
+   * failed-transaction state (VT09032) - e.g. after a reparent aborted an in-flight transaction.
+   * Such a session keeps failing every statement until an explicit ROLLBACK clears it, and neither
+   * HikariCP (VT09032 carries an empty SQLState) nor the previous no-op validation would ever evict
+   * it. We first try to heal the connection in place by issuing that ROLLBACK; if it cannot be
+   * cleared (e.g. vtgate is transiently unreachable mid-reparent) we report the connection invalid
+   * so the pool discards and replaces it.</p>
    */
   public boolean isValid(int timeout) throws SQLException {
     if (timeout < 0) {
       throw new SQLException(Constants.SQLExceptionMessages.TIMEOUT_NEGATIVE);
     }
-    return closed ? Boolean.FALSE : Boolean.TRUE;
+    if (this.closed) {
+      return false;
+    }
+    if (this.vtSession.isErrorUntilRollback()) {
+      try {
+        rollbackTx();
+      } catch (SQLException ignored) {
+        return false;
+      }
+      return !this.vtSession.isErrorUntilRollback();
+    }
+    return true;
   }
 
   /**
@@ -754,10 +813,13 @@ public class VitessConnection extends ConnectionProperties implements Connection
     if (metadataNullOrClosed()) {
       String versionValue;
 
+      String systemQueryDirectives = String.format(" %s", getSystemQueryDirectives());
+
       try (VitessStatement vitessStatement = new VitessStatement(
           this); ResultSet resultSet = vitessStatement.executeQuery(
           "SHOW VARIABLES WHERE VARIABLE_NAME IN (\'transaction_isolation\',\'INNODB_VERSION\', "
-              + "\'lower_case_table_names\')")) {
+              + "\'lower_case_table_names\')"
+              + systemQueryDirectives)) {
         while (resultSet.next()) {
           dbVariables.put(resultSet.getString(1), resultSet.getString(2));
         }

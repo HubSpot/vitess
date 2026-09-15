@@ -104,6 +104,10 @@ message MaterializeSettings {
 
   // ReferenceTables is set to a csv list of tables, if the materialization is for reference tables.
   repeated string reference_tables = 18;
+
+  // AutoStart specifies whether to start the workflow after creating it.
+  // If not set, defaults to true for backwards compatibility.
+  optional bool auto_start = 19;
 }
 
 /* Data types for VtctldServer */

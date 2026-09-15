@@ -18,6 +18,7 @@ package vreplication
 
 import (
 	"fmt"
+	"math"
 	"sort"
 	"strings"
 	"sync"
@@ -435,6 +436,39 @@ func (st *vrStats) register() {
 			result := make(map[string]int64, len(st.controllers))
 			for _, ct := range st.controllers {
 				result[ct.source.Keyspace+"."+ct.source.Shard+"."+ct.workflow+"."+fmt.Sprintf("%v", ct.id)] = ct.blpStats.Heartbeat()
+			}
+			return result
+		})
+
+	stats.NewGaugesFuncWithMultiLabels(
+		"VReplicationTransactionLagSeconds",
+		"vreplication true end-to-end transaction lag per stream",
+		[]string{"source_keyspace", "source_shard", "workflow", "counts"},
+		func() map[string]int64 {
+			st.mu.Lock()
+			defer st.mu.Unlock()
+			result := make(map[string]int64, len(st.controllers))
+			now := time.Now().Unix()
+			for _, ct := range st.controllers {
+				key := ct.source.Keyspace + "." + ct.source.Shard + "." + ct.workflow + "." + fmt.Sprintf("%v", ct.id)
+				state := ct.blpStats.State.Load()
+				if state != nil && state.(string) == "Copying" {
+					result[key] = math.MaxInt64
+					continue
+				}
+				trxTs := ct.blpStats.TransactionTimestamp.Load()
+				heartbeat := ct.blpStats.Heartbeat()
+				var lastTs int64
+				if heartbeat > trxTs {
+					lastTs = heartbeat
+				} else {
+					lastTs = trxTs
+				}
+				if lastTs == 0 {
+					result[key] = math.MaxInt64
+				} else {
+					result[key] = now - lastTs
+				}
 			}
 			return result
 		})

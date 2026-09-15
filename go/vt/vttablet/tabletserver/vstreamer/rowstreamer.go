@@ -31,6 +31,7 @@ import (
 	"vitess.io/vitess/go/vt/dbconfigs"
 	"vitess.io/vitess/go/vt/log"
 	"vitess.io/vitess/go/vt/logutil"
+	vtschema "vitess.io/vitess/go/vt/schema"
 	"vitess.io/vitess/go/vt/sqlparser"
 	"vitess.io/vitess/go/vt/vterrors"
 	vttablet "vitess.io/vitess/go/vt/vttablet/common"
@@ -157,6 +158,20 @@ func (rs *rowStreamer) buildPlan() error {
 	st, err := rs.se.GetTableForPos(rs.ctx, fromTable, "")
 	if err != nil {
 		return err
+	}
+	if st == nil {
+		if vtschema.IsInternalOperationTableName(fromTable.String()) {
+			if err := rs.se.Reload(rs.ctx); err != nil {
+				return err
+			}
+			st, err = rs.se.GetTableForPos(rs.ctx, fromTable, "")
+			if err != nil {
+				return err
+			}
+		}
+		if st == nil {
+			return fmt.Errorf("table %s not found in schema engine", fromTable)
+		}
 	}
 	ti := &Table{
 		Name: st.Name,

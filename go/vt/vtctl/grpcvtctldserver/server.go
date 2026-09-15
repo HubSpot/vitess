@@ -3325,9 +3325,15 @@ func (s *VtctldServer) PlannedReparentShard(ctx context.Context, req *vtctldatap
 		Shard:    req.Shard,
 	}
 
+	// ev is always non-nil (initialized as &events.Reparent{} before the reparent call), but
+	// ev.ShardInfo may be zero-valued if reparentShardLocked returned before populating it, and
+	// ev.NewPrimary is nil whenever no primary was elected (e.g. error paths). Guard both to avoid
+	// a nil pointer dereference in the response building code.
 	if ev != nil {
-		resp.Keyspace = ev.ShardInfo.Keyspace()
-		resp.Shard = ev.ShardInfo.ShardName()
+		if k := ev.ShardInfo.Keyspace(); k != "" {
+			resp.Keyspace = k
+			resp.Shard = ev.ShardInfo.ShardName()
+		}
 
 		if ev.NewPrimary != nil && !topoproto.TabletAliasIsZero(ev.NewPrimary.Alias) {
 			resp.PromotedPrimary = ev.NewPrimary.Alias

@@ -34,6 +34,7 @@ import (
 var (
 	createOptions = struct {
 		SourceKeyspace string
+		MountName      string
 		TableSettings  tableSettings
 	}{}
 
@@ -111,6 +112,14 @@ func commandCreate(cmd *cobra.Command, args []string) error {
 		TabletSelectionPreference: tsp,
 		ReferenceTables:           common.CreateOptions.ReferenceTables,
 		WorkflowOptions:           workflowOptions,
+		ExternalCluster:           createOptions.MountName,
+		OnDdl:                     common.CreateOptions.OnDDL,
+		DeferSecondaryKeys:        common.CreateOptions.DeferSecondaryKeys,
+	}
+
+	if cmd.Flags().Changed("auto-start") {
+		autoStart := common.CreateOptions.AutoStart
+		ms.AutoStart = &autoStart
 	}
 
 	createOptions.TableSettings.parser, err = sqlparser.New(sqlparser.Options{

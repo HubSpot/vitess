@@ -1056,7 +1056,11 @@ func (wr *Wrangler) Materialize(ctx context.Context, ms *vtctldatapb.Materialize
 	if err != nil {
 		return err
 	}
-	return mz.startStreams(ctx)
+	if ms.AutoStart == nil || ms.GetAutoStart() {
+		return mz.startStreams(ctx)
+	}
+	wr.Logger().Infof("Streams will not be started since auto_start is set to false")
+	return nil
 }
 
 func (wr *Wrangler) buildMaterializer(ctx context.Context, ms *vtctldatapb.MaterializeSettings) (*materializer, error) {

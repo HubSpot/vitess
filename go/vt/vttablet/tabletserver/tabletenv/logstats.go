@@ -81,6 +81,9 @@ func NewLogStats(ctx context.Context, methodName string, config streamlog.QueryL
 func (stats *LogStats) Send() {
 	stats.EndTime = time.Now()
 	StatsLogger.Send(stats)
+	if currentConfig.EnableAggregateQueryTimings {
+		TimingStatistics.recordStats(stats)
+	}
 }
 
 // ImmediateCaller returns the immediate caller stored in LogStats.Ctx

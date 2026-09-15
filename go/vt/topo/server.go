@@ -47,6 +47,7 @@ import (
 	"fmt"
 	"path"
 	"sync"
+	"sync/atomic"
 
 	"github.com/spf13/pflag"
 	"golang.org/x/sync/semaphore"
@@ -140,6 +141,13 @@ type Server struct {
 	// factory allows the creation of connections to various backends.
 	// It is set at construction time.
 	factory Factory
+
+	// globalServerAddr is the address used for the global cell connection.
+	globalServerAddr string
+
+	// cellsViaGlobal when true causes ConnForCell to route cell-level
+	// connections through globalServerAddr instead of CellInfo.ServerAddress.
+	cellsViaGlobal atomic.Bool
 
 	// mu protects the following fields.
 	mu sync.Mutex
@@ -236,6 +244,7 @@ func NewWithFactory(factory Factory, serverAddress, root string) (*Server, error
 		globalCell:         conn,
 		globalReadOnlyCell: connReadOnly,
 		factory:            factory,
+		globalServerAddr:   serverAddress,
 		cellConns:          make(map[string]cellConn),
 	}, nil
 }
@@ -305,8 +314,11 @@ func (ts *Server) ConnForCell(ctx context.Context, cell string) (Conn, error) {
 
 	// Connect to the cell topo server, while holding the lock.
 	// This ensures only one connection is established at any given time.
-	// Create the connection and cache it
-	conn, err := ts.factory.Create(cell, ci.ServerAddress, ci.Root)
+	serverAddr := ci.ServerAddress
+	if ts.cellsViaGlobal.Load() {
+		serverAddr = ts.globalServerAddr
+	}
+	conn, err := ts.factory.Create(cell, serverAddr, ci.Root)
 	switch {
 	case err == nil:
 		cellReadSem := semaphore.NewWeighted(DefaultReadConcurrency)
@@ -391,6 +403,7 @@ func (ts *Server) OpenExternalVitessClusterServer(ctx context.Context, clusterNa
 	if externalTopo == nil {
 		return nil, fmt.Errorf("unable to open external topo for config %s", clusterName)
 	}
+	externalTopo.cellsViaGlobal.Store(true)
 	return externalTopo, nil
 }
 

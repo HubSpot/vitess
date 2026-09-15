@@ -747,6 +747,11 @@ func (vp *vplayer) applyEvent(ctx context.Context, event *binlogdatapb.VEvent, m
 
 		if !vp.vr.dbClient.InTransaction {
 			// We're skipping an empty transaction. We may have to save the position on inactivity.
+			// Nothing to apply, so the stream is caught up past this source commit time: advance
+			// the transaction timestamp so an idle stream doesn't report ever-growing lag.
+			if event.Timestamp != 0 {
+				vp.vr.stats.TransactionTimestamp.Store(event.Timestamp)
+			}
 			vp.unsavedEvent = event
 			return nil
 		}
@@ -756,6 +761,9 @@ func (vp *vplayer) applyEvent(ctx context.Context, event *binlogdatapb.VEvent, m
 		}
 		if err := vp.commit(); err != nil {
 			return err
+		}
+		if event.Timestamp != 0 {
+			vp.vr.stats.TransactionTimestamp.Store(event.Timestamp)
 		}
 		if posReached {
 			return io.EOF

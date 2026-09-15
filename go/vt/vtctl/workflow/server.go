@@ -824,13 +824,16 @@ func (s *Server) Materialize(ctx context.Context, ms *vtctldatapb.MaterializeSet
 		TabletSelectionPreference: ms.TabletSelectionPreference,
 		WorkflowType:              mz.getWorkflowType(),
 		DeferSecondaryKeys:        ms.DeferSecondaryKeys,
-		AutoStart:                 true,
+		AutoStart:                 ms.AutoStart == nil || ms.GetAutoStart(),
 		StopAfterCopy:             ms.StopAfterCopy,
 	})
 	if err != nil {
 		return err
 	}
-	return mz.startStreams(ctx)
+	if ms.AutoStart == nil || ms.GetAutoStart() {
+		return mz.startStreams(ctx)
+	}
+	return nil
 }
 
 // WorkflowAddTables adds specified tables to the existing workflow.

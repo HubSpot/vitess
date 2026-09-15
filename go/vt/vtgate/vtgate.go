@@ -65,10 +65,11 @@ import (
 )
 
 var (
-	normalizeQueries    = true
-	streamBufferSize    = 32 * 1024
-	schemaTrackerHcName = "SchemaTracker"
-	txResolverHcName    = "TxResolver"
+	normalizeQueries       = true
+	expandTupleComparisons = false
+	streamBufferSize       = 32 * 1024
+	schemaTrackerHcName    = "SchemaTracker"
+	txResolverHcName       = "TxResolver"
 
 	terseErrors      bool
 	truncateErrorLen int
@@ -173,6 +174,7 @@ var (
 func registerFlags(fs *pflag.FlagSet) {
 	fs.String("transaction-mode", "MULTI", "SINGLE: disallow multi-db transactions, MULTI: allow multi-db transactions with best effort commit, TWOPC: allow multi-db transactions with 2pc commit")
 	utils.SetFlagBoolVar(fs, &normalizeQueries, "normalize-queries", normalizeQueries, "Rewrite queries with bind vars. Turn this off if the app itself sends normalized queries with bind vars.")
+	utils.SetFlagBoolVar(fs, &expandTupleComparisons, "expand-tuple-comparisons", expandTupleComparisons, "Expand tuple comparisons like (a,b) > (1,2) into equivalent OR/AND expressions to improve index usage.")
 	fs.BoolVar(&terseErrors, "vtgate-config-terse-errors", terseErrors, "prevent bind vars from escaping in returned errors")
 	fs.IntVar(&truncateErrorLen, "truncate-error-len", truncateErrorLen, "truncate errors sent to client if they are longer than this value (0 means do not truncate)")
 	utils.SetFlagIntVar(fs, &streamBufferSize, "stream-buffer-size", streamBufferSize, "the number of bytes sent from vtgate for each stream call. It's recommended to keep this value in sync with vttablet's query-server-config-stream-buffer-size.")
@@ -376,11 +378,12 @@ func Init(
 	plans := DefaultPlanCache()
 
 	eConfig := ExecutorConfig{
-		Normalize:           normalizeQueries,
-		StreamSize:          streamBufferSize,
-		AllowScatter:        !noScatter,
-		WarmingReadsPercent: warmingReadsPercent,
-		QueryLogToFile:      queryLogToFile,
+		Normalize:              normalizeQueries,
+		ExpandTupleComparisons: expandTupleComparisons,
+		StreamSize:             streamBufferSize,
+		AllowScatter:           !noScatter,
+		WarmingReadsPercent:    warmingReadsPercent,
+		QueryLogToFile:         queryLogToFile,
 	}
 
 	executor := NewExecutor(ctx, env, serv, cell, resolver, eConfig, warnShardedOnly, plans, si, pv, dynamicConfig)

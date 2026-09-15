@@ -223,6 +223,58 @@ func ServerConfig(cert, key, ca, crl, serverCA string, minTLSVersion uint16) (*t
 	return config, nil
 }
 
+// ServerConfigWithGlobal behaves like ServerConfig but additionally loads a
+// second, independently-rooted "global" server certificate and installs an
+// SNI-based GetCertificate callback: a client whose TLS SNI (ServerName)
+// matches globalSNI is served the global leaf, while every other client is
+// served the default (per-DC) leaf that ServerConfig loads. This lets a single
+// gRPC listener present two independent server identities without affecting
+// existing clients (which never send globalSNI). The client-CA trust store
+// (ClientCAs/ClientAuth) is shared by both leaves, so bundling additional CAs
+// into `ca` widens accepted client certs for both.
+//
+// If globalCert/globalKey/globalSNI are empty, it is exactly ServerConfig.
+func ServerConfigWithGlobal(cert, key, ca, crl, serverCA, globalCert, globalKey, globalSNI string, minTLSVersion uint16) (*tls.Config, error) {
+	config, err := ServerConfig(cert, key, ca, crl, serverCA, minTLSVersion)
+	if err != nil {
+		return nil, err
+	}
+
+	// No global leaf requested: behave exactly like ServerConfig.
+	if globalCert == "" && globalKey == "" && globalSNI == "" {
+		return config, nil
+	}
+	// Partial config is a deployment error. Fail fast rather than silently
+	// serving only the default leaf, which would leave cross-hublet clients
+	// failing later with an opaque TLS handshake error.
+	if globalCert == "" || globalKey == "" || globalSNI == "" {
+		return nil, vterrors.Errorf(vtrpc.Code_INVALID_ARGUMENT,
+			"grpc global server cert requires cert, key and SNI all set (cert=%q, key=%q, sni=%q)",
+			globalCert, globalKey, globalSNI)
+	}
+
+	// Loaded bare: unlike the default leaf (which combines with --grpc-server-ca
+	// when set), no CA chain is stapled here, so the global cert file must itself
+	// bundle any intermediates it needs.
+	globalCertificates, err := loadTLSCertificate(globalCert, globalKey)
+	if err != nil {
+		return nil, err
+	}
+
+	// Capture both leaves up front; GetCertificate must not do I/O on the hot path.
+	defaultLeaf := config.Certificates[0]
+	globalLeaf := (*globalCertificates)[0]
+
+	config.GetCertificate = func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
+		if hello.ServerName == globalSNI {
+			return &globalLeaf, nil
+		}
+		return &defaultLeaf, nil
+	}
+
+	return config, nil
+}
+
 var certPools = sync.Map{}
 
 func loadx509CertPool(ca string) (*x509.CertPool, error) {
@@ -363,4 +415,39 @@ func doLoadAndCombineTLSCertificates(ca, cert, key string) error {
 	combinedTLSCertificates.Store(combinedTLSIdentifier, &certificate)
 
 	return nil
+}
+
+// ClearCertificateCache clears the cached certificates for the given paths.
+// This allows certificates to be reloaded from disk on the next call to
+// ClientConfig or ServerConfig. After calling this function, the next call
+// to load certificates will read fresh data from the filesystem.
+//
+// Parameters:
+//   - cert: Path to the certificate file (can be empty)
+//   - key: Path to the key file (can be empty)
+//   - ca: Path to the CA certificate file (can be empty)
+//   - crl: Path to the CRL file (can be empty, currently not cached but included for completeness)
+//   - serverCA: Path to the server CA file used for combined certificate loading (can be empty)
+//
+// Note: This function is thread-safe and can be called concurrently.
+func ClearCertificateCache(cert, key, ca, crl, serverCA string) {
+	// Clear CA certificate pool cache
+	if ca != "" {
+		onceByKeys.Delete(ca)
+		certPools.Delete(ca)
+	}
+
+	// Clear TLS certificate cache (cert + key pair)
+	if cert != "" && key != "" {
+		tlsIdentifier := tlsCertificatesIdentifier(cert, key)
+		onceByKeys.Delete(tlsIdentifier)
+		tlsCertificates.Delete(tlsIdentifier)
+	}
+
+	// Clear combined TLS certificate cache (used by ServerConfig when serverCA is provided)
+	if serverCA != "" && cert != "" && key != "" {
+		combinedTLSIdentifier := tlsCertificatesIdentifier(serverCA, cert, key)
+		onceByKeys.Delete(combinedTLSIdentifier)
+		combinedTLSCertificates.Delete(combinedTLSIdentifier)
+	}
 }

@@ -183,6 +183,15 @@ public class ConnectionProperties {
       "If grpcRetriesEnabled is set, what multiplier should be used to increase exponential "
           + "backoff on each retry.",
       1.6);
+  private StringConnectionProperty grpcChannelProvider = new StringConnectionProperty(
+      "grpcChannelBuilderProvider",
+      "Class name of a NettyChannelBuilderProvider implementation to use for gRPC connections",
+      null, null);
+  private StringConnectionProperty systemQueryDirectives = new StringConnectionProperty(
+      "systemQueryDirectives",
+      "Directives appended to system/metadata queries the driver issues on its own behalf "
+          + "(e.g. connection initialization). Example: /*vt+ priority: CRITICAL*/",
+      "", null);
   // TLS-related configs
   private BooleanConnectionProperty useSSL = new BooleanConnectionProperty(
       Constants.Property.USE_SSL, "Whether this connection should use transport-layer security",
@@ -253,6 +262,12 @@ public class ConnectionProperties {
       "Pass on tracing span ids when communicating with Vitess",
       "off",
       new String[]{"off", "opentracing"});
+
+  private LongConnectionProperty slowQueryLoggingThresholdMillis =
+      new LongConnectionProperty("slowQueryLoggingThresholdMillis",
+          "The threshold in millis, to log queries that exceed it."
+              + " Set to -1 to disable. Defaults to -1.",
+          Constants.DEFAULT_SLOW_QUERY_LOGGING_THRESHOLD_MILLIS);
 
   // Caching of some hot properties to avoid casting over and over
   private Topodata.TabletType tabletTypeCache;
@@ -511,6 +526,22 @@ public class ConnectionProperties {
     this.grpcRetryBackoffMultiplier = grpcRetryBackoffMultiplier;
   }
 
+  public String getGrpcChannelProvider() {
+    return grpcChannelProvider.getValueAsString();
+  }
+
+  public void setGrpcChannelProvider(String grpcChannelProvider) {
+    this.grpcChannelProvider.setValue(grpcChannelProvider);
+  }
+
+  public String getSystemQueryDirectives() {
+    return systemQueryDirectives.getValueAsString();
+  }
+
+  public void setSystemQueryDirectives(String systemQueryDirectives) {
+    this.systemQueryDirectives.setValue(systemQueryDirectives);
+  }
+
   public boolean getUseSSL() {
     return useSSL.getValueAsBoolean();
   }
@@ -593,6 +624,14 @@ public class ConnectionProperties {
 
   public boolean getUseTracing() {
     return useTracing.getValueAsString().equalsIgnoreCase("opentracing");
+  }
+
+  public long getSlowQueryLoggingThresholdMillis() {
+    return slowQueryLoggingThresholdMillis.getValueAsLong();
+  }
+
+  public void setSlowQueryLoggingThresholdMillis(long slowQueryLoggingThresholdMillis) {
+    this.slowQueryLoggingThresholdMillis.setValue(slowQueryLoggingThresholdMillis);
   }
 
   public String getTarget() {

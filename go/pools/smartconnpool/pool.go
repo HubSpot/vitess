@@ -483,6 +483,7 @@ func (pool *ConnPool[C]) put(conn *Pooled[C]) {
 		}
 	}
 
+	conn.pendingSite.Store(int32(pushSiteRecycle))
 	pool.tryReturnConn(conn)
 }
 
@@ -539,11 +540,13 @@ func (pool *ConnPool[C]) pop(stack *connStack[C]) *Pooled[C] {
 func (pool *ConnPool[C]) tryReturnAnyConn() bool {
 	if conn := pool.pop(&pool.clean); conn != nil {
 		conn.timeUsed.update()
+		conn.pendingSite.Store(int32(pushSiteExpireWorker))
 		return pool.tryReturnConn(conn)
 	}
 	for u := 0; u <= stackMask; u++ {
 		if conn := pool.pop(&pool.settings[u]); conn != nil {
 			conn.timeUsed.update()
+			conn.pendingSite.Store(int32(pushSiteExpireWorker))
 			return pool.tryReturnConn(conn)
 		}
 	}
@@ -930,6 +933,7 @@ func (pool *ConnPool[C]) closeIdleResources(now time.Time) {
 		//
 		// Neither of these is better or worse than the other.
 		for _, conn := range validConnections {
+			conn.pendingSite.Store(int32(pushSiteIdleWorker))
 			pool.tryReturnConn(conn)
 		}
 
@@ -963,6 +967,7 @@ func (pool *ConnPool[C]) closeIdleResources(now time.Time) {
 					break
 				}
 				if pool.active.CompareAndSwap(open, open+1) {
+					conn.pendingSite.Store(int32(pushSiteIdleWorker))
 					pool.tryReturnConn(conn)
 					break
 				}

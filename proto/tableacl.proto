@@ -29,6 +29,8 @@ message TableGroupSpec {
   repeated string readers = 3;
   repeated string writers = 4;
   repeated string admins = 5;
+  // Indicates ACL for this group overrides other ACLs
+  bool is_override = 100;
 }
 
 message Config {

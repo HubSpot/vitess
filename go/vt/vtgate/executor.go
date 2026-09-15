@@ -107,9 +107,10 @@ func init() {
 // the abilities of the underlying vttablets.
 type (
 	ExecutorConfig struct {
-		Name       string
-		Normalize  bool
-		StreamSize int
+		Name                   string
+		Normalize              bool
+		ExpandTupleComparisons bool
+		StreamSize             int
 		// AllowScatter will fail planning if set to false and a plan contains any scatter queries
 		AllowScatter        bool
 		WarmingReadsPercent int
@@ -1236,6 +1237,10 @@ func (e *Executor) getCachedOrBuildPlan(
 	stmt, reservedVars, err := parseAndValidateQuery(query, e.env.Parser())
 	if err != nil {
 		return nil, false, nil, err
+	}
+
+	if e.config.ExpandTupleComparisons {
+		stmt = sqlparser.ExpandTupleComparisons(stmt)
 	}
 
 	defer func() {

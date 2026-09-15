@@ -75,6 +75,76 @@ func TestInitWithValidConfig(t *testing.T) {
 	}
 }
 
+var overrideAclJSON = `{
+  "table_groups": [
+    {
+      "name": "group01",
+      "table_names_or_prefixes": ["%"],
+      "readers": ["vt"],
+      "writers": ["vt"]
+    },
+    {
+      "name": "override",
+      "table_names_or_prefixes": ["test_table"],
+      "readers": ["test"],
+      "is_override": true
+    }
+  ]
+}`
+
+func TestInitWithValidOverrideConfig(t *testing.T) {
+	tacl := tableACL{factory: &simpleacl.Factory{}}
+	f, err := os.CreateTemp("", "tableacl-override")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	if _, err := io.WriteString(f, overrideAclJSON); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := tacl.init(f.Name(), func() {}); err != nil {
+		t.Fatal(err)
+	}
+}
+
+var overlappingOverrideAclJSON = `{
+  "table_groups": [
+    {
+      "name": "override_a",
+      "table_names_or_prefixes": ["test_table%"],
+      "readers": ["test"],
+      "is_override": true
+    },
+    {
+      "name": "override_b",
+      "table_names_or_prefixes": ["test_table_2"],
+      "readers": ["test"],
+      "is_override": true
+    }
+  ]
+}`
+
+func TestInitWithOverlappingOverrideConfig(t *testing.T) {
+	tacl := tableACL{factory: &simpleacl.Factory{}}
+	f, err := os.CreateTemp("", "tableacl-override-invalid")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(f.Name())
+	if _, err := io.WriteString(f, overlappingOverrideAclJSON); err != nil {
+		t.Fatal(err)
+	}
+	if err := f.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := tacl.init(f.Name(), func() {}); err == nil {
+		t.Fatal("init should fail because two override entries overlap")
+	}
+}
+
 func TestInitWithEmptyConfig(t *testing.T) {
 	tacl := tableACL{factory: &simpleacl.Factory{}}
 	f, err := os.CreateTemp("", "tableacl")
@@ -196,6 +266,52 @@ func TestTableACLAuthorize(t *testing.T) {
 	}
 	if !readerACL.IsMember(&querypb.VTGateCallerID{Username: "u2"}) {
 		t.Fatalf("user u2 should have reader permission to table test_data_any")
+	}
+}
+
+func TestTableACLAuthorizeWithOverride(t *testing.T) {
+	tacl := tableACL{factory: &simpleacl.Factory{}}
+	config := &tableaclpb.Config{
+		TableGroups: []*tableaclpb.TableGroupSpec{
+			{
+				Name:                 "group01",
+				TableNamesOrPrefixes: []string{"%"},
+				Readers:              []string{"u1", "u2"},
+				Writers:              []string{"u1", "u2"},
+				Admins:               []string{"u1", "u2"},
+			},
+			{
+				Name:                 "group02-override",
+				TableNamesOrPrefixes: []string{"global_table"},
+				Readers:              []string{"u1", "u2"},
+				Writers:              []string{"u1"},
+				IsOverride:           true,
+			},
+		},
+	}
+	if err := tacl.Set(config); err != nil {
+		t.Fatalf("Set(<override config>) = %v, want: nil", err)
+	}
+
+	// Wildcard applies to non-overridden tables: both users can write.
+	if !tacl.Authorized("regular_table", WRITER).IsMember(&querypb.VTGateCallerID{Username: "u1"}) {
+		t.Fatalf("u1 should have WRITER on regular_table via wildcard")
+	}
+	if !tacl.Authorized("regular_table", WRITER).IsMember(&querypb.VTGateCallerID{Username: "u2"}) {
+		t.Fatalf("u2 should have WRITER on regular_table via wildcard")
+	}
+
+	// Override applies to global_table: only u1 keeps WRITER; u2 loses it.
+	if !tacl.Authorized("global_table", WRITER).IsMember(&querypb.VTGateCallerID{Username: "u1"}) {
+		t.Fatalf("u1 should retain WRITER on global_table via override")
+	}
+	if tacl.Authorized("global_table", WRITER).IsMember(&querypb.VTGateCallerID{Username: "u2"}) {
+		t.Fatalf("u2 should NOT have WRITER on global_table because override strips it")
+	}
+
+	// Both users still have READER on global_table per the override's readers list.
+	if !tacl.Authorized("global_table", READER).IsMember(&querypb.VTGateCallerID{Username: "u2"}) {
+		t.Fatalf("u2 should have READER on global_table via override")
 	}
 }
 

@@ -457,6 +457,39 @@ func populateInnoDBStats(ctx context.Context, conn *connpool.Conn) (map[string]*
 	return innodbTablesStats, nil
 }
 
+// populateNonInnoDBStats fetches table sizes from information_schema.tables for
+// tables using non-InnoDB storage engines (e.g. RocksDB/MyRocks). These tables
+// do not appear in information_schema.innodb_tables or innodb_tablespaces, so
+// populateInnoDBStats will not return size data for them. This function provides
+// a fallback using data_length + index_length from information_schema.tables.
+// Note: both file_size and allocated_size return the same value because
+// information_schema.tables does not distinguish between the two for
+// non-InnoDB engines. This matches the approach taken in the v14 RocksDB patch.
+func populateNonInnoDBStats(ctx context.Context, conn *connpool.Conn) map[string]*Table {
+	query := `SELECT t.table_name,
+		COALESCE(t.data_length, 0) + COALESCE(t.index_length, 0),
+		COALESCE(t.data_length, 0) + COALESCE(t.index_length, 0)
+	FROM information_schema.tables t
+	WHERE t.table_schema = database()
+		AND t.engine IS NOT NULL
+		AND t.engine != 'InnoDB'
+		AND t.table_type = 'BASE TABLE'`
+
+	results, err := conn.Exec(ctx, query, maxTableCount, false)
+	if err != nil {
+		log.Warningf("Failed to fetch non-InnoDB table sizes: %v", err)
+		return nil
+	}
+	stats := make(map[string]*Table, len(results.Rows))
+	for _, row := range results.Rows {
+		tableName := row[0].ToString()
+		fileSize, _ := row[1].ToCastUint64()
+		allocatedSize, _ := row[2].ToCastUint64()
+		stats[tableName] = &Table{FileSize: fileSize, AllocatedSize: allocatedSize}
+	}
+	return stats
+}
+
 // reload reloads the schema. It can also be used to initialize it.
 func (se *Engine) reload(ctx context.Context, includeStats bool) error {
 	start := time.Now()
@@ -487,10 +520,12 @@ func (se *Engine) reload(ctx context.Context, includeStats bool) error {
 	}
 
 	var innodbTablesStats map[string]*Table
+	var nonInnodbTablesStats map[string]*Table
 	if includeStats {
 		if innodbTablesStats, err = populateInnoDBStats(ctx, conn.Conn); err != nil {
 			return err
 		}
+		nonInnodbTablesStats = populateNonInnoDBStats(ctx, conn.Conn)
 		// Since the InnoDB table size query is available to us on this MySQL version, we should use it.
 		// We therefore don't want to query for table sizes in getTableData()
 		includeStats = false
@@ -545,6 +580,9 @@ func (se *Engine) reload(ctx context.Context, includeStats bool) error {
 		if innodbTablesStats != nil {
 			innodbTableName := fmt.Sprintf("%s/%s", charset.TablenameToFilename(databaseName), charset.TablenameToFilename(tableName))
 			innodbTable = innodbTablesStats[innodbTableName]
+		}
+		if innodbTable == nil && nonInnodbTablesStats != nil {
+			innodbTable = nonInnodbTablesStats[tableName]
 		}
 		curTables[tableName] = true
 		createTime, _ := row[2].ToCastInt64()

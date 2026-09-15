@@ -94,6 +94,10 @@ func registerCommands(root *cobra.Command) {
 	create.Flags().IntVar(&common.CreateOptions.TruncateUILen, "sql-max-length-ui", 512, "truncate queries in debug UIs to the given length (default 512)")
 	create.Flags().IntVar(&common.CreateOptions.TruncateErrLen, "sql-max-length-errors", 0, "truncate queries in error logs to the given length (default unlimited)")
 	create.Flags().StringSliceVarP(&common.CreateOptions.ReferenceTables, "reference-tables", "r", nil, "Used to specify the reference tables to materialize on every target shard.")
+	create.Flags().StringVar(&common.CreateOptions.OnDDL, "on-ddl", "IGNORE", "What to do when DDL is encountered in the VReplication stream. Possible values are IGNORE, STOP, EXEC, and EXEC_IGNORE.")
+	create.Flags().BoolVar(&common.CreateOptions.DeferSecondaryKeys, "defer-secondary-keys", true, "Defer secondary index creation for a table until after it has been copied.")
+	create.Flags().StringVar(&createOptions.MountName, "mount-name", "", "Name of the external cluster mounted using the Mount command.")
+	create.Flags().BoolVar(&common.CreateOptions.AutoStart, "auto-start", true, "Start the workflow after creating it.")
 	base.AddCommand(create)
 
 	update.Flags().StringSliceVar(&updateOptions.AddReferenceTables, "add-reference-tables", nil, "Used to specify the reference tables to be added to the existing workflow")

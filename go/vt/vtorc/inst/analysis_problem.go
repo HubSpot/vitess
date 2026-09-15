@@ -309,7 +309,7 @@ var detectionAnalysisProblems = []*DetectionAnalysisProblem{
 		Meta: &DetectionAnalysisProblemMeta{
 			Analysis:    ErrantGTIDDetected,
 			Description: "Tablet has errant GTIDs",
-			Priority:    detectionAnalysisPriorityMedium,
+			Priority:    detectionAnalysisPriorityLow,
 		},
 		MatchFunc: func(a *DetectionAnalysis, ca *clusterAnalysis, primary, tablet *topodatapb.Tablet, isInvalid, isStaleBinlogCoordinates bool) bool {
 			return topo.IsReplicaType(a.TabletType) && a.ErrantGTID != ""

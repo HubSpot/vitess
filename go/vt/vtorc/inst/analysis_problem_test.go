@@ -282,12 +282,41 @@ func TestCompareDetectionAnalysisProblems(t *testing.T) {
 			},
 			expected: -1,
 		},
+		{
+			// ReplicationStopped (Medium) must outrank ErrantGTIDDetected (Low) so that
+			// fixReplica runs when a replica's IO thread is broken, rather than
+			// NoRecoveryAction hiding behind the errant-GTID classification.
+			name: "ReplicationStopped outranks ErrantGTIDDetected",
+			a:    GetDetectionAnalysisProblem(ReplicationStopped),
+			b:    GetDetectionAnalysisProblem(ErrantGTIDDetected),
+			expected: -1,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.expected, compareDetectionAnalysisProblems(tt.a, tt.b))
 		})
 	}
+}
+
+// TestErrantGTIDDetectedPriority verifies that ErrantGTIDDetected is lower priority than
+// ReplicationStopped. When a replica's IO thread is broken (e.g. pointing at a stale source
+// IP after a rolling restart), vtorc detects both conditions. ReplicationStopped must win so
+// that fixReplica runs and reconnects the tablet to the correct primary, rather than
+// ErrantGTIDDetected producing a NoRecoveryAction that leaves the tablet stranded.
+func TestErrantGTIDDetectedPriority(t *testing.T) {
+	replicationStopped := GetDetectionAnalysisProblem(ReplicationStopped)
+	require.NotNil(t, replicationStopped)
+	errantGTID := GetDetectionAnalysisProblem(ErrantGTIDDetected)
+	require.NotNil(t, errantGTID)
+
+	assert.Less(t, replicationStopped.GetPriority(), errantGTID.GetPriority(),
+		"ReplicationStopped must have a higher priority (lower int) than ErrantGTIDDetected")
+
+	problems := []*DetectionAnalysisProblem{errantGTID, replicationStopped}
+	sortDetectionAnalysisMatchedProblems(problems)
+	assert.Equal(t, ReplicationStopped, problems[0].Meta.Analysis,
+		"ReplicationStopped must sort before ErrantGTIDDetected")
 }
 
 func TestGroupDetectionAnalysesByShard(t *testing.T) {

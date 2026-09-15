@@ -17,7 +17,6 @@
 package io.vitess.client.grpc;
 
 import io.grpc.CallCredentials;
-import io.grpc.ClientInterceptor;
 import io.grpc.LoadBalancer;
 import io.grpc.LoadBalancerProvider;
 import io.grpc.LoadBalancerRegistry;
@@ -27,10 +26,13 @@ import io.grpc.netty.NegotiationType;
 import io.grpc.netty.NettyChannelBuilder;
 import io.netty.handler.ssl.SslContext;
 import io.netty.handler.ssl.SslContextBuilder;
-import io.opentracing.contrib.grpc.ClientTracingInterceptor;
 import io.vitess.client.Context;
 import io.vitess.client.RpcClient;
 import io.vitess.client.RpcClientFactory;
+import io.vitess.client.grpc.error.DefaultErrorHandler;
+import io.vitess.client.grpc.error.ErrorHandler;
+import io.vitess.client.grpc.DefaultChannelBuilderProvider;
+import io.vitess.client.grpc.netty.NettyChannelBuilderProvider;
 import io.vitess.client.grpc.tls.TlsOptions;
 
 import java.io.File;
@@ -54,8 +56,8 @@ import javax.net.ssl.SSLException;
  */
 public class GrpcClientFactory implements RpcClientFactory {
 
-  private RetryingInterceptorConfig config;
-  private final boolean useTracing;
+  private NettyChannelBuilderProvider nettyChannelBuilderProvider;
+  private ErrorHandler errorHandler;
   private CallCredentials callCredentials;
   private String loadBalancerPolicy;
   private NameResolver.Factory nameResolverFactory;
@@ -64,9 +66,18 @@ public class GrpcClientFactory implements RpcClientFactory {
     this(RetryingInterceptorConfig.noOpConfig(), true);
   }
 
+  public GrpcClientFactory(RetryingInterceptorConfig config) {
+    this(config, true);
+  }
+
   public GrpcClientFactory(RetryingInterceptorConfig config, boolean useTracing) {
-    this.config = config;
-    this.useTracing = useTracing;
+    this(new DefaultChannelBuilderProvider(config, useTracing), new DefaultErrorHandler());
+  }
+
+  public GrpcClientFactory(NettyChannelBuilderProvider nettyChannelBuilderProvider,
+                           ErrorHandler errorHandler) {
+    this.nettyChannelBuilderProvider = nettyChannelBuilderProvider;
+    this.errorHandler = errorHandler;
   }
 
   public GrpcClientFactory setCallCredentials(CallCredentials value) {
@@ -98,10 +109,8 @@ public class GrpcClientFactory implements RpcClientFactory {
    */
   @Override
   public RpcClient create(Context ctx, String target) {
-    ClientInterceptor[] interceptors = getClientInterceptors();
     NettyChannelBuilder channel = channelBuilder(target)
-        .negotiationType(NegotiationType.PLAINTEXT)
-        .intercept(interceptors);
+        .negotiationType(NegotiationType.PLAINTEXT);
     if (loadBalancerPolicy != null) {
       channel.defaultLoadBalancingPolicy(loadBalancerPolicy);
     }
@@ -113,17 +122,6 @@ public class GrpcClientFactory implements RpcClientFactory {
         : new GrpcClient(channel.build(), ctx);
   }
 
-  private ClientInterceptor[] getClientInterceptors() {
-    RetryingInterceptor retryingInterceptor = new RetryingInterceptor(config);
-    ClientInterceptor[] interceptors;
-    if (useTracing) {
-      ClientTracingInterceptor tracingInterceptor = new ClientTracingInterceptor();
-      interceptors = new ClientInterceptor[]{retryingInterceptor, tracingInterceptor};
-    } else {
-      interceptors = new ClientInterceptor[]{retryingInterceptor};
-    }
-    return interceptors;
-  }
 
   /**
    * <p>This method constructs NettyChannelBuilder object that will be used to create
@@ -144,7 +142,7 @@ public class GrpcClientFactory implements RpcClientFactory {
    *     by default dns.
    */
   protected NettyChannelBuilder channelBuilder(String target) {
-    return NettyChannelBuilder.forTarget(target);
+    return nettyChannelBuilderProvider.getChannelBuilder(target);
   }
 
   /**
@@ -203,11 +201,9 @@ public class GrpcClientFactory implements RpcClientFactory {
       throw new RuntimeException(exc);
     }
 
-    ClientInterceptor[] interceptors = getClientInterceptors();
-
     return new GrpcClient(
         channelBuilder(target).negotiationType(NegotiationType.TLS).sslContext(sslContext)
-            .intercept(interceptors).build(), ctx);
+            .build(), ctx);
   }
 
   /**

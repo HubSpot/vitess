@@ -93,5 +93,9 @@ report
 # mise files
 .mise.toml
 /errors/
+
+# HubSpot thirdparty (bootstrapped via vitess-hubspot/bootstrap-development.sh)
+go/thirdparty/
+
 go/flags/endtoend/count_flags.sh
 /coverage.out

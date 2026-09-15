@@ -25,6 +25,9 @@ import io.vitess.client.VTGateConnection;
 import io.vitess.client.grpc.GrpcClientFactory;
 import io.vitess.client.grpc.RetryingInterceptorConfig;
 import io.vitess.client.grpc.tls.TlsOptions;
+import io.vitess.client.grpc.error.DefaultErrorHandler;
+import io.vitess.client.grpc.netty.NettyChannelBuilderProvider;
+import io.vitess.client.grpc.DefaultChannelBuilderProvider;
 import io.vitess.util.Constants.Property;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -33,7 +36,6 @@ import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Random;
 import java.util.Timer;
 import java.util.TimerTask;
@@ -47,11 +49,15 @@ public class VitessVTGateManager {
 
   private static Logger logger = LogManager.getLogger(VitessVTGateManager.class);
   /*
-  Current implementation have one VTGateConnection for ip-port-username combination
+  Current implementation have one VTGateConnection for ip-port-username-keyspace combination
   */
   private static ConcurrentHashMap<String, VTGateConnection> vtGateConnHashMap =
       new ConcurrentHashMap<>();
-  private static Timer vtgateConnRefreshTimer = null;
+  // One SSL-refresh timer per connection identifier. A single shared timer captured the first
+  // connection's hostInfo and, on keystore rotation, rebuilt every keyspace's connection using
+  // that one host -- collapsing all keyspaces onto one vtgate (see sql-team-issues#6323).
+  private static ConcurrentHashMap<String, Timer> vtgateConnRefreshTimerMap =
+      new ConcurrentHashMap<>();
   private static Timer vtgateClosureTimer = null;
   private static long vtgateClosureDelaySeconds = 0L;
 
@@ -77,15 +83,17 @@ public class VitessVTGateManager {
             updateVtGateConnHashMap(identifier, hostInfo, connection);
           }
           if (connection.getUseSSL() && connection.getRefreshConnection()
-              && vtgateConnRefreshTimer == null) {
+              && !vtgateConnRefreshTimerMap.containsKey(identifier)) {
             logger.info(
                 "ssl vtgate connection detected -- installing connection refresh based on ssl "
-                    + "keystore modification");
-            vtgateConnRefreshTimer = new Timer("ssl-refresh-vtgate-conn", true);
+                    + "keystore modification for {}", identifier);
+            Timer vtgateConnRefreshTimer =
+                new Timer("ssl-refresh-vtgate-conn-" + identifier, true);
+            vtgateConnRefreshTimerMap.put(identifier, vtgateConnRefreshTimer);
             vtgateConnRefreshTimer.scheduleAtFixedRate(new TimerTask() {
                   @Override
                   public void run() {
-                    refreshUpdatedSSLConnections(hostInfo, connection);
+                    refreshUpdatedSSLConnections(identifier, hostInfo, connection);
                   }
                 }, TimeUnit.SECONDS.toMillis(connection.getRefreshSeconds()),
                 TimeUnit.SECONDS.toMillis(connection.getRefreshSeconds()));
@@ -132,23 +140,21 @@ public class VitessVTGateManager {
     vtGateConnHashMap.put(identifier, getVtGateConn(hostInfo, connection));
   }
 
-  private static void refreshUpdatedSSLConnections(VitessJDBCUrl.HostInfo hostInfo,
-      VitessConnection connection) {
+  private static void refreshUpdatedSSLConnections(String identifier,
+      VitessJDBCUrl.HostInfo hostInfo, VitessConnection connection) {
     synchronized (VitessVTGateManager.class) {
-      int updatedCount = 0;
-      for (Map.Entry<String, VTGateConnection> entry : vtGateConnHashMap.entrySet()) {
-        if (entry.getValue() instanceof RefreshableVTGateConnection) {
-          RefreshableVTGateConnection existing = (RefreshableVTGateConnection) entry.getValue();
-          if (existing.checkKeystoreUpdates()) {
-            updatedCount++;
-            VTGateConnection old = vtGateConnHashMap
-                .replace(entry.getKey(), getVtGateConn(hostInfo, connection));
-            closeRefreshedConnection(old);
-          }
+      // Only refresh the connection this timer owns, rebuilt with its OWN hostInfo/connection.
+      // The previous implementation iterated every cached connection and rebuilt each one with a
+      // single captured hostInfo, which pointed all keyspaces at one vtgate (sql-team-issues#6323).
+      VTGateConnection vtGateConnection = vtGateConnHashMap.get(identifier);
+      if (vtGateConnection instanceof RefreshableVTGateConnection) {
+        RefreshableVTGateConnection existing = (RefreshableVTGateConnection) vtGateConnection;
+        if (existing.checkKeystoreUpdates()) {
+          VTGateConnection old = vtGateConnHashMap
+              .replace(identifier, getVtGateConn(hostInfo, connection));
+          closeRefreshedConnection(old);
+          logger.info("refreshed vtgate connection {} due to keystore update", identifier);
         }
-      }
-      if (updatedCount > 0) {
-        logger.info("refreshed {} vtgate connections due to keystore update", updatedCount);
       }
     }
   }
@@ -191,18 +197,20 @@ public class VitessVTGateManager {
                                                 VitessConnection connection) {
     final Context context = connection.createContext(connection.getTimeout());
     RetryingInterceptorConfig retryingConfig = getRetryingInterceptorConfig(connection);
+    NettyChannelBuilderProvider channelProvider = getChannelProviderFromProperties(connection, retryingConfig);
     GrpcClientFactory grpcClientFactory =
-        new GrpcClientFactory(retryingConfig, connection.getUseTracing());
+        new GrpcClientFactory(channelProvider, new DefaultErrorHandler());
     if (connection.getUseSSL()) {
       TlsOptions tlsOptions = getTlsOptions(connection);
       RpcClient rpcClient = grpcClientFactory
           .createTls(context, hostInfo.toString(), tlsOptions);
       return new RefreshableVTGateConnection(rpcClient,
           tlsOptions.getKeyStore().getPath(),
-          tlsOptions.getTrustStore().getPath());
+          tlsOptions.getTrustStore().getPath(),
+          connection.getSlowQueryLoggingThresholdMillis());
     } else {
       RpcClient client = grpcClientFactory.create(context, hostInfo.toString());
-      return new VTGateConnection(client);
+      return new VTGateConnection(client, connection.getSlowQueryLoggingThresholdMillis());
     }
   }
 
@@ -248,8 +256,30 @@ public class VitessVTGateManager {
       }
     }
     vtGateConnHashMap.clear();
+    for (Timer timer : vtgateConnRefreshTimerMap.values()) {
+      timer.cancel();
+    }
+    vtgateConnRefreshTimerMap.clear();
     if (null != exception) {
       throw exception;
     }
   }
+
+  private static NettyChannelBuilderProvider getChannelProviderFromProperties(
+      VitessConnection connection, RetryingInterceptorConfig retryingConfig) {
+    String providerClassName = connection.getGrpcChannelProvider();
+    if (providerClassName != null && !providerClassName.isEmpty()) {
+      try {
+        Class<?> providerClass = Class.forName(providerClassName);
+        Object provider = providerClass.getDeclaredConstructor().newInstance();
+        if (provider instanceof NettyChannelBuilderProvider) {
+          return (NettyChannelBuilderProvider) provider;
+        }
+      } catch (Exception e) {
+        logger.error("Failed to instantiate grpcChannelBuilderProvider: " + providerClassName, e);
+      }
+    }
+    return new DefaultChannelBuilderProvider(retryingConfig, connection.getUseTracing());
+  }
+
 }

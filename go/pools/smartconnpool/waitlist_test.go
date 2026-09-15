@@ -27,6 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"vitess.io/vitess/go/list"
+	"vitess.io/vitess/go/vt/priority"
 )
 
 func TestWaitlistPoolCloseWithMultipleWaiters(t *testing.T) {
@@ -77,12 +78,13 @@ func TestWaitlistPoolCloseWithMultipleWaiters(t *testing.T) {
 func pushWaiter(wl *waitlist[*TestConn], ctx context.Context) *list.Element[waiter[*TestConn]] {
 	elem := &list.Element[waiter[*TestConn]]{
 		Value: waiter[*TestConn]{
-			ctx:  ctx,
-			conn: make(chan *Pooled[*TestConn], 1),
+			ctx:      ctx,
+			conn:     make(chan *Pooled[*TestConn], 1),
+			priority: priority.Medium,
 		},
 	}
 	wl.mu.Lock()
-	wl.list.PushBackValue(elem)
+	wl.pq.add(&elem.Value)
 	wl.mu.Unlock()
 	return elem
 }
@@ -226,8 +228,8 @@ func TestWaitlistClaimedWaiterStillReceivesAfterExpiry(t *testing.T) {
 	// with the context expiring before the handoff send: remove the element
 	// and cancel under the mutex, so the waiter can't self-remove first.
 	wl.mu.Lock()
-	elem := wl.list.Front()
-	wl.list.Remove(elem)
+	elem := wl.pq.queues[priority.Medium].Front()
+	wl.pq.removeElement(elem)
 	cancel()
 	wl.mu.Unlock()
 

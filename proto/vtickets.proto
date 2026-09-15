@@ -1,0 +1,94 @@
+syntax = "proto3";
+
+package hubspot.vtickets;
+
+option java_package = "com.hubspot.vtickets.proto";
+option java_outer_classname = "VTicketProto";
+option go_package = "vitess.io/vitess/go/vt/proto/vtickets";
+option java_multiple_files = true;
+
+// represents integer range [lower, upper)
+message VTicketRange {
+  int64 lower = 1;
+  int64 upper = 2;
+}
+
+message VTicketRanges {
+  repeated VTicketRange ranges = 1;
+}
+
+// pulls a batch of tickets from the tickets server.
+// the response may contain ranges larger than `minimumTickets`
+// if the upstream service has determined the requested batch
+// sizes are too small for the current throughput
+message GetVTicketRequest {
+  string keyspace = 1;
+  string table = 2;
+  int32 minimumTickets = 3;
+  bool bigIntColumn = 4;
+}
+
+message GetVTicketResponse {
+  string keyspace = 1;
+  string table = 2;
+  VTicketRanges vticket_ranges = 3;
+}
+
+// read-only view of available tickets on the tickets server
+message ViewVTicketsRequest {
+  string keyspace = 1;
+  string table = 2;
+}
+
+message ViewVTicketsResponse {
+  string keyspace = 1;
+  string table = 2;
+  VTicketRanges vticket_ranges = 3;
+}
+
+// healthcheck
+message HealthcheckRequest {
+}
+
+message HealthcheckResponse {
+}
+
+// get all stored VTickets
+message ViewAllVTicketsRequest {
+}
+
+message ViewAllVTicketsResponse {
+  repeated ViewVTicketsResponse vtickets = 1;
+}
+
+// creates or updates a VTicket to a new value
+message SetGlobalVTicketRequest {
+  string keyspace = 1;
+  string table = 2;
+  int64 nextTicketId = 3;
+
+  // by default, we'll disallow setting the ticket id lower than what has been issued
+  bool allowDecrease = 4;
+}
+
+message SetGlobalVTicketResponse {
+  string keyspace = 1;
+  string table = 2;
+  int64 nextTicketId = 3;
+  bool successful = 4;
+}
+
+// clear the tickets available on a Hublet
+message ClearHubletVTicketsRequest {
+  string keyspace = 1;
+  string table = 2;
+  // optional: a specific range to remove. lower bound must be <= the persisted lower bound
+  // so that the persisted ranges do not fragment
+  VTicketRange vticketRange = 3;
+}
+
+message ClearHubletVTicketsResponse {
+  string keyspace = 1;
+  string table = 2;
+  bool successful = 3;
+}
